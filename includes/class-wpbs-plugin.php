@@ -152,9 +152,7 @@ class WPBS_Plugin
 		wp_enqueue_style('wpbs-frontend');
 
 		wp_register_script('wpbs-gallery', WPBS_PLUGIN_URL . 'assets/js/wpbs-gallery.js', array(), WPBS_VERSION, true);
-		if (is_singular(WPBS_POST_TYPE) || (isset($post) && $post && isset($post->post_content) && has_shortcode($post->post_content, 'wpbs_boat_single'))) {
-			wp_enqueue_script('wpbs-gallery');
-		}
+		wp_enqueue_script('wpbs-gallery');
 
 		$settings = WPBS_Utils::get_settings();
 		$vars = array(

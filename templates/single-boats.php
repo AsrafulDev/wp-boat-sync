@@ -60,9 +60,36 @@ while (have_posts()) : the_post();
 	$gallery_ids  = array_values(array_unique(array_filter(array_map('intval', $gallery_ids))));
 	$total_images = count($gallery_ids);
 
+	// Get embedded videos
+	$video_urls_raw = get_post_meta($post_id, 'wpbs_embedded_video_urls', true);
+	$video_urls = array();
+	if ($video_urls_raw) {
+		$video_urls = array_filter(array_map('trim', explode("\n", $video_urls_raw)));
+	}
+	$has_videos = !empty($video_urls);
+	$total_media = $total_images + count($video_urls);
+
 	$main_id    = !empty($gallery_ids) ? (int)$gallery_ids[0] : 0;
 	$main_large = $main_id ? wp_get_attachment_image_url($main_id, 'large') : '';
 	$main_full  = $main_id ? wp_get_attachment_image_url($main_id, 'full') : '';
+
+	// Build gallery items array for JS lightbox (images + videos)
+	$gallery_items = array();
+	foreach ($gallery_ids as $idx => $aid) {
+		$gallery_items[] = array(
+			'type' => 'image',
+			'thumb' => wp_get_attachment_image_url($aid, 'thumbnail'),
+			'large' => wp_get_attachment_image_url($aid, 'large'),
+			'full' => wp_get_attachment_image_url($aid, 'full'),
+		);
+	}
+	foreach ($video_urls as $vurl) {
+		$gallery_items[] = array(
+			'type' => 'video',
+			'url' => $vurl,
+			'thumb' => '', // Video thumbnail placeholder
+		);
+	}
 
 	// Price formatting
 	$price_display = '';
@@ -91,17 +118,17 @@ while (have_posts()) : the_post();
 		<!-- Main Content Column -->
 		<div class="wpbs-single-main">
 			<!-- Gallery -->
-			<div class="wpbs-gallery">
-				<div class="wpbs-gallery__main">
+			<div class="wpbs-gallery" data-wpbs-gallery>
+				<div class="wpbs-gallery__main" data-wpbs-lightbox-trigger>
 					<?php if ($main_large) : ?>
-					<a href="<?php echo esc_url($main_full ?: $main_large); ?>" target="_blank" class="wpbs-gallery__main-link" id="wpbs-main-link">
+					<div class="wpbs-gallery__main-link" id="wpbs-main-link" data-index="0">
 						<img id="wpbs-main-img" class="wpbs-gallery__main-img" src="<?php echo esc_url($main_large); ?>" alt="<?php the_title_attribute(); ?>">
-					</a>
+					</div>
 					<?php else : ?>
 					<img class="wpbs-gallery__main-img" src="<?php echo esc_url(plugin_dir_url(WPBS_PLUGIN_FILE) . 'assets/images/boat-placeholder.png'); ?>" alt="<?php the_title_attribute(); ?>">
 					<?php endif; ?>
 
-					<?php if ($total_images > 1) : ?>
+					<?php if ($total_media > 1) : ?>
 					<button type="button" class="wpbs-gallery__nav wpbs-gallery__nav--prev" aria-label="Previous" data-wpbs-nav="prev">
 						<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
 					</button>
@@ -110,15 +137,15 @@ while (have_posts()) : the_post();
 					</button>
 					<?php endif; ?>
 
-					<?php if ($total_images > 0) : ?>
-					<button type="button" class="wpbs-gallery__view-btn">
+					<?php if ($total_media > 0) : ?>
+					<button type="button" class="wpbs-gallery__view-btn" data-wpbs-open-lightbox>
 						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-						View <?php echo $total_images; ?> Photos
+						View <?php echo $total_images; ?> Photos<?php echo $has_videos ? ' & Video' : ''; ?>
 					</button>
 					<?php endif; ?>
 				</div>
 
-				<?php if ($total_images > 1) : ?>
+				<?php if ($total_media > 1) : ?>
 				<div class="wpbs-gallery__thumbs" role="list">
 					<?php foreach (array_slice($gallery_ids, 0, 20) as $i => $aid) :
 						$aid   = (int)$aid;
@@ -127,10 +154,31 @@ while (have_posts()) : the_post();
 						$full  = wp_get_attachment_image_url($aid, 'full');
 						if (!$thumb || !$large) continue;
 					?>
-					<button type="button" class="wpbs-gallery__thumb<?php echo $i === 0 ? ' is-active' : ''; ?>" data-index="<?php echo $i; ?>" data-large="<?php echo esc_url($large); ?>" data-full="<?php echo esc_url($full ?: $large); ?>">
+					<button type="button" class="wpbs-gallery__thumb<?php echo $i === 0 ? ' is-active' : ''; ?>" data-index="<?php echo $i; ?>" data-type="image" data-large="<?php echo esc_url($large); ?>" data-full="<?php echo esc_url($full ?: $large); ?>">
 						<img src="<?php echo esc_url($thumb); ?>" alt="" loading="lazy">
 					</button>
 					<?php endforeach; ?>
+					<?php 
+					// Add video thumbnails
+					$video_index = count($gallery_ids);
+					foreach ($video_urls as $vurl) :
+						// Try to extract YouTube/Vimeo thumbnail
+						$video_thumb = '';
+						if (preg_match('/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/', $vurl, $m) || preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $vurl, $m)) {
+							$video_thumb = 'https://img.youtube.com/vi/' . $m[1] . '/mqdefault.jpg';
+						} elseif (preg_match('/vimeo\.com\/(\d+)/', $vurl, $m)) {
+							$video_thumb = ''; // Vimeo requires API call
+						}
+					?>
+					<button type="button" class="wpbs-gallery__thumb wpbs-gallery__thumb--video" data-index="<?php echo $video_index; ?>" data-type="video" data-video-url="<?php echo esc_url($vurl); ?>">
+						<?php if ($video_thumb) : ?>
+						<img src="<?php echo esc_url($video_thumb); ?>" alt="Video" loading="lazy">
+						<?php endif; ?>
+						<span class="wpbs-gallery__thumb-play">
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+						</span>
+					</button>
+					<?php $video_index++; endforeach; ?>
 				</div>
 				<?php endif; ?>
 			</div>
@@ -395,8 +443,33 @@ while (have_posts()) : the_post();
 	<?php endif; ?>
 </div>
 
+<!-- Lightbox Modal -->
+<div class="wpbs-lightbox" id="wpbs-lightbox" style="display:none;">
+	<div class="wpbs-lightbox__overlay"></div>
+	<div class="wpbs-lightbox__container">
+		<button type="button" class="wpbs-lightbox__close" aria-label="Close">
+			<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+		</button>
+		<button type="button" class="wpbs-lightbox__nav wpbs-lightbox__nav--prev" aria-label="Previous">
+			<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+		</button>
+		<button type="button" class="wpbs-lightbox__nav wpbs-lightbox__nav--next" aria-label="Next">
+			<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+		</button>
+		<div class="wpbs-lightbox__content">
+			<img class="wpbs-lightbox__img" id="wpbs-lightbox-img" src="" alt="">
+			<div class="wpbs-lightbox__video" id="wpbs-lightbox-video" style="display:none;"></div>
+		</div>
+		<div class="wpbs-lightbox__counter"><span id="wpbs-lightbox-current">1</span> / <span id="wpbs-lightbox-total"><?php echo $total_media; ?></span></div>
+		<div class="wpbs-lightbox__thumbs" id="wpbs-lightbox-thumbs"></div>
+	</div>
+</div>
+
 <script>
-// Simple tab switching
+// Gallery items data for lightbox
+var wpbsGalleryItems = <?php echo json_encode($gallery_items); ?>;
+
+// Tab switching
 document.addEventListener('DOMContentLoaded', function() {
 	var tabBtns = document.querySelectorAll('.wpbs-tabs__btn');
 	var tabPanes = document.querySelectorAll('.wpbs-tab-pane');
@@ -408,6 +481,131 @@ document.addEventListener('DOMContentLoaded', function() {
 			tabPanes.forEach(function(p) {
 				p.style.display = p.getAttribute('data-pane') === tab ? 'block' : 'none';
 			});
+		});
+	});
+
+	// Lightbox functionality
+	var lightbox = document.getElementById('wpbs-lightbox');
+	var lightboxImg = document.getElementById('wpbs-lightbox-img');
+	var lightboxVideo = document.getElementById('wpbs-lightbox-video');
+	var lightboxCurrent = document.getElementById('wpbs-lightbox-current');
+	var currentIndex = 0;
+	var totalItems = wpbsGalleryItems.length;
+
+	function openLightbox(index) {
+		currentIndex = index || 0;
+		showItem(currentIndex);
+		lightbox.style.display = 'flex';
+		document.body.style.overflow = 'hidden';
+	}
+
+	function closeLightbox() {
+		lightbox.style.display = 'none';
+		document.body.style.overflow = '';
+		lightboxVideo.innerHTML = '';
+		lightboxVideo.style.display = 'none';
+	}
+
+	function showItem(index) {
+		if (index < 0) index = totalItems - 1;
+		if (index >= totalItems) index = 0;
+		currentIndex = index;
+
+		var item = wpbsGalleryItems[index];
+		if (!item) return;
+
+		if (item.type === 'image') {
+			lightboxImg.src = item.full || item.large || '';
+			lightboxImg.style.display = 'block';
+			lightboxVideo.innerHTML = '';
+			lightboxVideo.style.display = 'none';
+		} else if (item.type === 'video') {
+			lightboxImg.style.display = 'none';
+			var videoUrl = item.url;
+			var embedHtml = '';
+			// YouTube
+			if (videoUrl.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/) || videoUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/)) {
+				var vid = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)[1];
+				embedHtml = '<iframe src="https://www.youtube.com/embed/' + vid + '?autoplay=1" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+			}
+			// Vimeo
+			else if (videoUrl.match(/vimeo\.com\/(\d+)/)) {
+				var vid = videoUrl.match(/vimeo\.com\/(\d+)/)[1];
+				embedHtml = '<iframe src="https://player.vimeo.com/video/' + vid + '?autoplay=1" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+			}
+			// Direct video
+			else {
+				embedHtml = '<video src="' + videoUrl + '" controls autoplay style="max-width:100%;max-height:80vh;"></video>';
+			}
+			lightboxVideo.innerHTML = embedHtml;
+			lightboxVideo.style.display = 'flex';
+		}
+
+		lightboxCurrent.textContent = index + 1;
+	}
+
+	function nextItem() { showItem(currentIndex + 1); }
+	function prevItem() { showItem(currentIndex - 1); }
+
+	// Event listeners
+	document.querySelectorAll('[data-wpbs-open-lightbox]').forEach(function(el) {
+		el.addEventListener('click', function(e) {
+			e.preventDefault();
+			var idx = parseInt(el.getAttribute('data-index') || '0', 10);
+			openLightbox(idx);
+		});
+	});
+
+	// Lightbox trigger on main image area (but not on nav buttons)
+	var mainArea = document.querySelector('[data-wpbs-lightbox-trigger]');
+	if (mainArea) {
+		mainArea.addEventListener('click', function(e) {
+			// Don't open lightbox if clicking on nav buttons or view button
+			if (e.target.closest('.wpbs-gallery__nav') || e.target.closest('.wpbs-gallery__view-btn')) {
+				return;
+			}
+			e.preventDefault();
+			var mainLink = mainArea.querySelector('.wpbs-gallery__main-link');
+			var idx = mainLink ? parseInt(mainLink.getAttribute('data-index') || '0', 10) : 0;
+			openLightbox(idx);
+		});
+	}
+
+	lightbox.querySelector('.wpbs-lightbox__close')?.addEventListener('click', closeLightbox);
+	lightbox.querySelector('.wpbs-lightbox__overlay')?.addEventListener('click', closeLightbox);
+	lightbox.querySelector('.wpbs-lightbox__nav--next')?.addEventListener('click', nextItem);
+	lightbox.querySelector('.wpbs-lightbox__nav--prev')?.addEventListener('click', prevItem);
+
+	// Keyboard navigation
+	document.addEventListener('keydown', function(e) {
+		if (lightbox.style.display !== 'flex') return;
+		if (e.key === 'Escape') closeLightbox();
+		if (e.key === 'ArrowRight') nextItem();
+		if (e.key === 'ArrowLeft') prevItem();
+	});
+
+	// Gallery thumbnail clicks (update main image and open lightbox on second click)
+	var lastClickedIndex = -1;
+	document.querySelectorAll('.wpbs-gallery__thumb').forEach(function(thumb) {
+		thumb.addEventListener('click', function() {
+			var idx = parseInt(thumb.getAttribute('data-index') || '0', 10);
+			var type = thumb.getAttribute('data-type') || 'image';
+
+			// Update all thumbs active state
+			document.querySelectorAll('.wpbs-gallery__thumb').forEach(function(t) { t.classList.remove('is-active'); });
+			thumb.classList.add('is-active');
+
+			// Update main image
+			var mainImg = document.getElementById('wpbs-main-img');
+			if (mainImg && type === 'image') {
+				mainImg.src = thumb.getAttribute('data-large') || '';
+			}
+
+			// Double-click or video opens lightbox
+			if (type === 'video' || idx === lastClickedIndex) {
+				openLightbox(idx);
+			}
+			lastClickedIndex = idx;
 		});
 	});
 });

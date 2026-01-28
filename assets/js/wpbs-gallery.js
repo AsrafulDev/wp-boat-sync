@@ -1,12 +1,72 @@
 (function () {
   'use strict';
 
+  /*--------------------------------------------------------------
+    Card Slider (Archive Page)
+  --------------------------------------------------------------*/
+  function initCardSlider(slider) {
+    var slides = slider.querySelectorAll('.wpbs-card-slider__slide');
+    var dots = slider.querySelectorAll('.wpbs-card-slider__dot');
+    var prevBtn = slider.querySelector('.wpbs-card-slider__nav--prev');
+    var nextBtn = slider.querySelector('.wpbs-card-slider__nav--next');
+    var currentIndex = 0;
+    var total = slides.length;
+
+    if (total <= 1) {
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
+      return;
+    }
+
+    function showSlide(index) {
+      if (index < 0) index = total - 1;
+      if (index >= total) index = 0;
+      currentIndex = index;
+
+      slides.forEach(function (s, i) {
+        s.classList.toggle('is-active', i === currentIndex);
+      });
+      dots.forEach(function (d, i) {
+        d.classList.toggle('is-active', i === currentIndex);
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showSlide(currentIndex - 1);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showSlide(currentIndex + 1);
+      });
+    }
+
+    dots.forEach(function (dot, i) {
+      dot.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showSlide(i);
+      });
+    });
+
+    showSlide(0);
+  }
+
+  /*--------------------------------------------------------------
+    Single Boat Gallery
+  --------------------------------------------------------------*/
   function initGallery(root) {
-    var mainLink = root.querySelector('[data-wpbs-main-link], #wpbs-main-link, .wpbs-gallery__main-link');
-    var mainImg = root.querySelector('[data-wpbs-main-img], #wpbs-main-img, .wpbs-gallery__main-img');
-    var thumbs = root.querySelectorAll('[data-wpbs-thumb], .wpbs-gallery__thumb');
-    var prevBtn = root.querySelector('[data-wpbs-nav="prev"], .wpbs-gallery__nav--prev');
-    var nextBtn = root.querySelector('[data-wpbs-nav="next"], .wpbs-gallery__nav--next');
+    var mainLink = root.querySelector('.wpbs-gallery__main-link, #wpbs-main-link');
+    var mainImg = root.querySelector('.wpbs-gallery__main-img, #wpbs-main-img');
+    var thumbs = root.querySelectorAll('.wpbs-gallery__thumb');
+    var prevBtn = root.querySelector('.wpbs-gallery__nav--prev, [data-wpbs-nav="prev"]');
+    var nextBtn = root.querySelector('.wpbs-gallery__nav--next, [data-wpbs-nav="next"]');
     var counter = root.querySelector('#wpbs-img-index');
 
     if (!mainImg || !thumbs || thumbs.length === 0) {
@@ -27,17 +87,19 @@
       });
 
       var btn = thumbs[currentIndex];
+      var type = btn.getAttribute('data-type') || 'image';
       var large = btn.getAttribute('data-large') || btn.getAttribute('data-full');
       var full = btn.getAttribute('data-full') || large;
       var alt = btn.getAttribute('data-alt') || '';
 
-      if (large && mainImg) {
+      // Only update main image for image types
+      if (type === 'image' && large && mainImg) {
         mainImg.setAttribute('src', large);
         if (alt) mainImg.setAttribute('alt', alt);
       }
 
       if (mainLink && full) {
-        mainLink.setAttribute('href', full);
+        mainLink.setAttribute('data-index', currentIndex);
       }
 
       if (counter) {
@@ -57,13 +119,17 @@
     });
 
     if (prevBtn) {
-      prevBtn.addEventListener('click', function () {
+      prevBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         setActive(currentIndex - 1);
       });
     }
 
     if (nextBtn) {
-      nextBtn.addEventListener('click', function () {
+      nextBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         setActive(currentIndex + 1);
       });
     }
@@ -81,7 +147,14 @@
     setActive(0);
   }
 
+  /*--------------------------------------------------------------
+    Init on DOM Ready
+  --------------------------------------------------------------*/
   document.addEventListener('DOMContentLoaded', function () {
+    // Card sliders (archive page)
+    document.querySelectorAll('.wpbs-card-slider').forEach(initCardSlider);
+
+    // Single boat gallery
     document.querySelectorAll('[data-wpbs-gallery], .wpbs-gallery').forEach(initGallery);
   });
 })();

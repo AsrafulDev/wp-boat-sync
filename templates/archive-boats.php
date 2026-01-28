@@ -47,10 +47,18 @@ $total = $GLOBALS['wp_query']->found_posts ?? 0;
 			$condition = get_post_meta($post_id, 'wpbs_condition', true);
 			$is_sold   = $status && strtolower((string)$status) !== 'active';
 
-			// Count images
+			// Build gallery from attachment IDs (up to 4 images)
 			$gallery_ids = get_post_meta($post_id, 'wpbs_gallery_attachment_ids', true);
-			$photo_count = is_array($gallery_ids) ? count($gallery_ids) : 0;
-			if (has_post_thumbnail()) $photo_count = max(1, $photo_count);
+			if (!is_array($gallery_ids)) {
+				$gallery_ids = array();
+			}
+			$featured_id = (int)get_post_thumbnail_id($post_id);
+			if ($featured_id) {
+				array_unshift($gallery_ids, $featured_id);
+			}
+			$gallery_ids  = array_values(array_unique(array_filter(array_map('intval', $gallery_ids))));
+			$slider_images = array_slice($gallery_ids, 0, 4);
+			$total_images = count($gallery_ids);
 
 			// Price formatting
 			$price_display = '';
@@ -64,21 +72,47 @@ $total = $GLOBALS['wp_query']->found_posts ?? 0;
 			}
 			?>
 			<article class="wpbs-card">
-				<a href="<?php the_permalink(); ?>">
-					<div class="wpbs-card__media">
-						<?php if (has_post_thumbnail()) : the_post_thumbnail('medium_large'); endif; ?>
-						<?php if ($is_sold) : ?>
-						<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--sold">Sold</span></div>
-						<?php elseif ($condition && strtolower($condition) === 'new') : ?>
-						<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--new">New</span></div>
+				<div class="wpbs-card__media wpbs-card-slider" data-wpbs-card-slider>
+					<a href="<?php the_permalink(); ?>" class="wpbs-card-slider__link">
+						<?php if (!empty($slider_images)) : ?>
+							<?php foreach ($slider_images as $idx => $img_id) :
+								$img_url = wp_get_attachment_image_url($img_id, 'medium_large');
+								if (!$img_url) continue;
+							?>
+							<div class="wpbs-card-slider__slide<?php echo $idx === 0 ? ' is-active' : ''; ?>">
+								<img src="<?php echo esc_url($img_url); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy">
+							</div>
+							<?php endforeach; ?>
+						<?php elseif (has_post_thumbnail()) : ?>
+							<div class="wpbs-card-slider__slide is-active"><?php the_post_thumbnail('medium_large'); ?></div>
 						<?php endif; ?>
-						<?php if ($photo_count > 0) : ?>
-						<div class="wpbs-card__photo-count">
-							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-							<?php echo $photo_count; ?>
-						</div>
-						<?php endif; ?>
+					</a>
+					<?php if (count($slider_images) > 1) : ?>
+					<button type="button" class="wpbs-card-slider__nav wpbs-card-slider__nav--prev" aria-label="Previous">
+						<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+					</button>
+					<button type="button" class="wpbs-card-slider__nav wpbs-card-slider__nav--next" aria-label="Next">
+						<svg viewBox="0 0 24 24"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+					</button>
+					<div class="wpbs-card-slider__dots">
+						<?php foreach ($slider_images as $idx => $img_id) : ?>
+						<span class="wpbs-card-slider__dot<?php echo $idx === 0 ? ' is-active' : ''; ?>"></span>
+						<?php endforeach; ?>
 					</div>
+					<?php endif; ?>
+					<?php if ($is_sold) : ?>
+					<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--sold">Sold</span></div>
+					<?php elseif ($condition && strtolower($condition) === 'new') : ?>
+					<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--new">New</span></div>
+					<?php endif; ?>
+					<?php if ($total_images > 0) : ?>
+					<div class="wpbs-card__photo-count">
+						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+						<?php echo $total_images; ?>
+					</div>
+					<?php endif; ?>
+				</div>
+				<a href="<?php the_permalink(); ?>" class="wpbs-card__body-link">
 					<div class="wpbs-card__body">
 						<?php if ($price_display) : ?>
 						<div class="wpbs-card__price"><?php echo esc_html($price_display); ?></div>
@@ -97,7 +131,7 @@ $total = $GLOBALS['wp_query']->found_posts ?? 0;
 						<?php endif; ?>
 					</div>
 				</a>
-				<div class="wpbs-card__actions" style="padding:0 14px 14px;">
+				<div class="wpbs-card__actions">
 					<a href="<?php the_permalink(); ?>#contact" class="wpbs-card__btn wpbs-card__btn--primary">Contact Seller</a>
 				</div>
 			</article>
