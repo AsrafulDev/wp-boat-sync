@@ -61,7 +61,7 @@ class WPBS_Sync
 
 		// If a previous PHP request died mid-job (timeout/fatal), jobs can remain stuck in "processing" forever.
 		// Recover those stale locks so the queue can continue.
-		$this->recover_stale_processing_jobs(20 * MINUTE_IN_SECONDS);
+		$this->recover_stale_processing_jobs(10 * MINUTE_IN_SECONDS);
 
 		$jobs = $this->lock_next_jobs($batch_size);
 		if (empty($jobs)) {
@@ -630,7 +630,7 @@ class WPBS_Sync
 		$q = new WP_Query(array(
 			'post_type' => WPBS_POST_TYPE,
 			'post_status' => 'any',
-			'posts_per_page' => 20,
+			'posts_per_page' => 10,
 			'fields' => 'ids',
 			'no_found_rows' => true,
 			'meta_query' => array(
@@ -1153,13 +1153,19 @@ class WPBS_Sync
 		$settings = WPBS_Utils::get_settings();
 		$days = max(1, (int)$settings['delete_after_days']);
 
-		$is_active = strtolower((string)$sales_status) === 'active';
+		// Treat empty/missing status as active (boat is available)
+		$status_lower = strtolower(trim((string)$sales_status));
+		$is_active = ($status_lower === '' || $status_lower === 'active' || $status_lower === 'available');
 		$soldout_at = $post_id ? get_post_meta($post_id, '_wpbs_soldout_at', true) : '';
 
 		if ($is_active) {
 			if ($post_id) {
 				delete_post_meta($post_id, '_wpbs_soldout_at');
 				$this->unschedule_delete($document_id);
+				// Ensure the post is published if it was previously drafted
+				if (get_post_status($post_id) === 'draft') {
+					wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));
+				}
 			}
 			return;
 		}

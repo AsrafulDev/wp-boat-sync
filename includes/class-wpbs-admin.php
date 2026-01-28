@@ -54,8 +54,8 @@ class WPBS_Admin
 			wp_localize_script('wpbs-admin-queue', 'WPBS_QUEUE', array(
 				'ajaxUrl' => admin_url('admin-ajax.php'),
 				'nonce' => wp_create_nonce('wpbs_queue_ajax'),
-				'tickMs' => 2000,
-				'batchSize' => 3,
+				'tickMs' => 1000,
+				'batchSize' => 10,
 			));
 			wp_enqueue_script('wpbs-admin-queue');
 			wp_enqueue_script('wpbs-admin-queue-recover');
@@ -74,8 +74,8 @@ class WPBS_Admin
 		wp_localize_script('wpbs-admin-worker-popup', 'WPBS_WORKER', array(
 			'ajaxUrl' => admin_url('admin-ajax.php'),
 			'nonce' => wp_create_nonce('wpbs_queue_worker_ajax'),
-			'tickMs' => 1000,
-			'batchSize' => 1,
+			'tickMs' => 500,
+			'batchSize' => 5,
 		));
 		wp_enqueue_script('wpbs-admin-worker-popup');
 
@@ -512,9 +512,8 @@ class WPBS_Admin
 
 		echo '<div class="card" style="min-width:220px;flex:1;">';
 		echo '<h2 style="margin-top:0;">Queue</h2>';
-		echo '<p><strong>Pending:</strong> ' . esc_html((string)$dash['queueCounts']['pending']) . '</p>';
-		echo '<p><strong>Processing:</strong> ' . esc_html((string)$dash['queueCounts']['processing']) . '</p>';
-		echo '<p><strong>Failed:</strong> ' . esc_html((string)$dash['queueCounts']['failed']) . '</p>';
+		echo '<p><strong>Complete:</strong> ' . esc_html((string)$dash['queueCounts']['done']) . ' &nbsp; <strong>Processing:</strong> ' . esc_html((string)$dash['queueCounts']['processing']) . '</p>';
+		echo '<p><strong>Pending:</strong> ' . esc_html((string)$dash['queueCounts']['pending']) . ' &nbsp; <strong>Failed:</strong> ' . esc_html((string)$dash['queueCounts']['failed']) . '</p>';
 		echo '<p><strong>Speed:</strong> ' . esc_html($speed_label) . '</p>';
 		echo '<p><strong>ETA (estimate):</strong> ' . esc_html($eta_label) . '</p>';
 		echo '</div>';
@@ -522,7 +521,7 @@ class WPBS_Admin
 
 		echo '<div style="display:grid;grid-template-columns: 2fr 1fr; gap:12px; align-items:stretch;">';
 		echo '<div class="card" style="max-width:100%;">';
-		echo '<h2 style="margin-top:0;">Sync activity (last 30 days)</h2>';
+		echo '<h2 style="margin-top:0;">Sync activity (last 7 days hourly)</h2>';
 		echo '<div style="height:260px;"><canvas id="wpbsChartSync" aria-label="Sync activity chart" role="img"></canvas></div>';
 		echo '</div>';
 		echo '<div class="card">';
@@ -577,9 +576,10 @@ class WPBS_Admin
 			. '<div id="wpbs-worker-progress" style="height:10px; background:#f0f0f1; border-radius:999px; overflow:hidden;">'
 			. '<div id="wpbs-worker-progress-bar" style="height:10px; width:0%; background:#2271b1;"></div>'
 			. '</div>'
-			. '<div style="display:flex; gap:14px; margin-top:12px;">'
-			. '<div><strong>Pending:</strong> <span id="wpbs-worker-pending">0</span></div>'
+			. '<div style="display:flex; gap:14px; margin-top:12px; flex-wrap:wrap;">'
+			. '<div><strong>Complete:</strong> <span id="wpbs-worker-done">0</span></div>'
 			. '<div><strong>Processing:</strong> <span id="wpbs-worker-processing">0</span></div>'
+			. '<div><strong>Pending:</strong> <span id="wpbs-worker-pending">0</span></div>'
 			. '<div><strong>Failed:</strong> <span id="wpbs-worker-failed">0</span></div>'
 			. '</div>'
 			. '<div style="margin-top:14px;">'
@@ -666,6 +666,7 @@ class WPBS_Admin
 		$queue_counts = array(
 			'pending' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='pending'"),
 			'processing' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='processing'"),
+			'done' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='done'"),
 			'failed' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='failed'"),
 		);
 
@@ -684,6 +685,7 @@ class WPBS_Admin
 		$hourly_map = array(
 			'pending' => array(),
 			'processing' => array(),
+			'done' => array(),
 			'failed' => array(),
 		);
 		$since_mysql = wp_date('Y-m-d H:00:00', $start_ts);
@@ -692,7 +694,7 @@ class WPBS_Admin
 				"SELECT DATE_FORMAT(updated_at, '%%Y-%%m-%%d %%H:00:00') AS h, status, COUNT(*) AS c
 				 FROM {$queue_table}
 				 WHERE updated_at >= %s
-				   AND status IN ('pending','processing','failed')
+				   AND status IN ('pending','processing','done','failed')
 				 GROUP BY h, status
 				 ORDER BY h ASC",
 				$since_mysql
@@ -713,11 +715,13 @@ class WPBS_Admin
 			'labels' => $labels_hours,
 			'pending' => array(),
 			'processing' => array(),
+			'done' => array(),
 			'failed' => array(),
 		);
 		foreach ($keys_hours as $hk) {
 			$queue_hourly['pending'][] = isset($hourly_map['pending'][$hk]) ? (int)$hourly_map['pending'][$hk] : 0;
 			$queue_hourly['processing'][] = isset($hourly_map['processing'][$hk]) ? (int)$hourly_map['processing'][$hk] : 0;
+			$queue_hourly['done'][] = isset($hourly_map['done'][$hk]) ? (int)$hourly_map['done'][$hk] : 0;
 			$queue_hourly['failed'][] = isset($hourly_map['failed'][$hk]) ? (int)$hourly_map['failed'][$hk] : 0;
 		}
 
@@ -746,27 +750,34 @@ class WPBS_Admin
 		$last_sync_at = $wpdb->get_var("SELECT MAX(last_sync_at) FROM {$boats_table}");
 		$last_sync_at = $last_sync_at ? (string)$last_sync_at : '';
 
-		$days = 30;
-		$today = gmdate('Y-m-d');
+		// Sync activity: last 7 days hourly (168 hours)
+		$sync_hours = 7 * 24; // 168 hours = 7 days
+		$sync_end_ts = current_time('timestamp');
+		$sync_start_ts = $sync_end_ts - (($sync_hours - 1) * HOUR_IN_SECONDS);
 		$labels = array();
 		$values = array();
-		$map = array();
-
-		$since = gmdate('Y-m-d', strtotime('-' . ($days - 1) . ' days'));
+		$sync_keys = array();
+		
+		for ($i = 0; $i < $sync_hours; $i++) {
+			$ts = $sync_start_ts + ($i * HOUR_IN_SECONDS);
+			$sync_keys[] = wp_date('Y-m-d H:00:00', $ts);
+			$labels[] = wp_date('m-d H:00', $ts);
+		}
+		
+		$sync_since_mysql = wp_date('Y-m-d H:00:00', $sync_start_ts);
+		$sync_map = array();
 		$series_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT DATE(last_sync_at) AS d, COUNT(*) AS c FROM {$boats_table} WHERE last_sync_at IS NOT NULL AND last_sync_at >= %s GROUP BY DATE(last_sync_at) ORDER BY d ASC",
-				$since
+				"SELECT DATE_FORMAT(last_sync_at, '%%Y-%%m-%%d %%H:00:00') AS h, COUNT(*) AS c FROM {$boats_table} WHERE last_sync_at IS NOT NULL AND last_sync_at >= %s GROUP BY h ORDER BY h ASC",
+				$sync_since_mysql
 			),
 			ARRAY_A
 		);
 		foreach ($series_rows as $sr) {
-			$map[(string)$sr['d']] = (int)$sr['c'];
+			$sync_map[(string)$sr['h']] = (int)$sr['c'];
 		}
-		for ($i = $days - 1; $i >= 0; $i--) {
-			$d = gmdate('Y-m-d', strtotime($today . ' -' . $i . ' days'));
-			$labels[] = $d;
-			$values[] = isset($map[$d]) ? (int)$map[$d] : 0;
+		foreach ($sync_keys as $sk) {
+			$values[] = isset($sync_map[$sk]) ? (int)$sync_map[$sk] : 0;
 		}
 
 		return array(
@@ -970,6 +981,7 @@ class WPBS_Admin
 		global $wpdb;
 		$queue_table = WPBS_DB::table_queue();
 		return array(
+			'done' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='done'"),
 			'pending' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='pending'"),
 			'processing' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='processing'"),
 			'failed' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='failed'"),

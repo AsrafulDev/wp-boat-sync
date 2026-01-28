@@ -6,7 +6,7 @@
 	}
 
 	var modal, overlay, closeBtn, stopBtn;
-	var statusLine, pendingEl, processingEl, failedEl;
+	var statusLine, doneEl, pendingEl, processingEl, failedEl;
 	var progressOuter, progressInner;
 	var intervalId = null;
 	var initialRemaining = null;
@@ -29,10 +29,12 @@
 	}
 
 	function setCounts(counts) {
+		var d = counts && typeof counts.done !== 'undefined' ? parseInt(counts.done, 10) : 0;
 		var p = counts && typeof counts.pending !== 'undefined' ? parseInt(counts.pending, 10) : 0;
 		var pr = counts && typeof counts.processing !== 'undefined' ? parseInt(counts.processing, 10) : 0;
 		var f = counts && typeof counts.failed !== 'undefined' ? parseInt(counts.failed, 10) : 0;
 
+		if (doneEl) doneEl.textContent = String(d);
 		if (pendingEl) pendingEl.textContent = String(p);
 		if (processingEl) processingEl.textContent = String(pr);
 		if (failedEl) failedEl.textContent = String(f);
@@ -144,6 +146,7 @@
 		stopBtn = document.getElementById('wpbs-worker-stop');
 
 		statusLine = document.getElementById('wpbs-worker-status');
+		doneEl = document.getElementById('wpbs-worker-done');
 		pendingEl = document.getElementById('wpbs-worker-pending');
 		processingEl = document.getElementById('wpbs-worker-processing');
 		failedEl = document.getElementById('wpbs-worker-failed');

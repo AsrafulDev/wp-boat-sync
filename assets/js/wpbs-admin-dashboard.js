@@ -82,10 +82,10 @@
           labels: data.queueHourly.labels,
           datasets: [
             {
-              label: 'Pending',
-              data: data.queueHourly.pending || [],
-              borderColor: '#f59e0b',
-              backgroundColor: 'rgba(245,158,11,0.12)',
+              label: 'Complete',
+              data: data.queueHourly.done || [],
+              borderColor: '#16a34a',
+              backgroundColor: 'rgba(22,163,74,0.12)',
               pointRadius: 1,
               tension: 0.25,
               fill: false
@@ -95,6 +95,15 @@
               data: data.queueHourly.processing || [],
               borderColor: '#0b5fff',
               backgroundColor: 'rgba(11,95,255,0.12)',
+              pointRadius: 1,
+              tension: 0.25,
+              fill: false
+            },
+            {
+              label: 'Pending',
+              data: data.queueHourly.pending || [],
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245,158,11,0.12)',
               pointRadius: 1,
               tension: 0.25,
               fill: false
@@ -127,12 +136,12 @@
       new Chart(queueCanvas.getContext('2d'), {
         type: 'bar',
         data: {
-          labels: ['Pending', 'Processing', 'Failed'],
+          labels: ['Complete', 'Processing', 'Pending', 'Failed'],
           datasets: [
             {
               label: 'Jobs',
-              data: [data.queueCounts.pending || 0, data.queueCounts.processing || 0, data.queueCounts.failed || 0],
-              backgroundColor: ['#f59e0b', '#0b5fff', '#ef4444']
+              data: [data.queueCounts.done || 0, data.queueCounts.processing || 0, data.queueCounts.pending || 0, data.queueCounts.failed || 0],
+              backgroundColor: ['#16a34a', '#0b5fff', '#f59e0b', '#ef4444']
             }
           ]
         },
