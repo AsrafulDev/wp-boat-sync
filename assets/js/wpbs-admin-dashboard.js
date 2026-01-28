@@ -73,9 +73,57 @@
       });
     }
 
-    // Queue bar chart
+    // Queue chart (hourly if available)
     var queueCanvas = $('#wpbsChartQueue');
-    if (queueCanvas && data.queueCounts) {
+    if (queueCanvas && data.queueHourly && data.queueHourly.labels) {
+      new Chart(queueCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: data.queueHourly.labels,
+          datasets: [
+            {
+              label: 'Pending',
+              data: data.queueHourly.pending || [],
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245,158,11,0.12)',
+              pointRadius: 1,
+              tension: 0.25,
+              fill: false
+            },
+            {
+              label: 'Processing',
+              data: data.queueHourly.processing || [],
+              borderColor: '#0b5fff',
+              backgroundColor: 'rgba(11,95,255,0.12)',
+              pointRadius: 1,
+              tension: 0.25,
+              fill: false
+            },
+            {
+              label: 'Failed',
+              data: data.queueHourly.failed || [],
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239,68,68,0.12)',
+              pointRadius: 1,
+              tension: 0.25,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          },
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { mode: 'index', intersect: false }
+          }
+        }
+      });
+    } else if (queueCanvas && data.queueCounts) {
+      // Fallback: current snapshot
       new Chart(queueCanvas.getContext('2d'), {
         type: 'bar',
         data: {

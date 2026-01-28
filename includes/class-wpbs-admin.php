@@ -28,6 +28,7 @@ class WPBS_Admin
 		add_action('wp_ajax_wpbs_queue_worker_tick', array($this, 'ajax_queue_worker_tick'));
 		add_action('wp_ajax_wpbs_dedupe_start', array($this, 'ajax_dedupe_start'));
 		add_action('wp_ajax_wpbs_dedupe_tick', array($this, 'ajax_dedupe_tick'));
+		add_action('wp_ajax_wpbs_queue_recover_processing', array($this, 'ajax_queue_recover_processing'));
 	}
 
 	public function enqueue_admin_assets($hook)
@@ -41,6 +42,13 @@ class WPBS_Admin
 			return;
 		}
 
+		wp_register_script('wpbs-admin-queue-recover', WPBS_PLUGIN_URL . 'assets/js/wpbs-admin-queue-recover.js', array('jquery'), WPBS_VERSION, true);
+		wp_localize_script('wpbs-admin-queue-recover', 'WPBS_QUEUE_RECOVER', array(
+			'ajaxUrl' => admin_url('admin-ajax.php'),
+			'nonce' => wp_create_nonce('wpbs_queue_recover_ajax'),
+			'staleSeconds' => 60,
+		));
+
 		if ($page === 'wpbs-queue') {
 			wp_register_script('wpbs-admin-queue', WPBS_PLUGIN_URL . 'assets/js/wpbs-admin-queue.js', array('jquery'), WPBS_VERSION, true);
 			wp_localize_script('wpbs-admin-queue', 'WPBS_QUEUE', array(
@@ -50,6 +58,7 @@ class WPBS_Admin
 				'batchSize' => 3,
 			));
 			wp_enqueue_script('wpbs-admin-queue');
+			wp_enqueue_script('wpbs-admin-queue-recover');
 			return;
 		}
 
@@ -78,6 +87,7 @@ class WPBS_Admin
 			'batchSize' => 10,
 		));
 		wp_enqueue_script('wpbs-admin-dedupe-popup');
+		wp_enqueue_script('wpbs-admin-queue-recover');
 	}
 
 	public function admin_menu()
@@ -162,6 +172,10 @@ class WPBS_Admin
 
 		echo '<div class="wrap">';
 		echo '<h1>Sync Queue</h1>';
+		echo '<p style="margin:10px 0;">'
+			. '<button type="button" class="button" id="wpbs-queue-recover-btn">Reset stuck processing jobs now</button>'
+			. ' <span id="wpbs-queue-recover-status" style="margin-left:8px; opacity:.85;"></span>'
+			. '</p>';
 		echo '<div id="wpbs-queue-runner" style="display:none; margin:10px 0; padding:10px 12px; background:#fff; border:1px solid #ccd0d4; border-left:4px solid #2271b1;">'
 			. '<strong>Running selected jobs…</strong> '
 			. '<span id="wpbs-queue-runner-status" style="margin-left:8px; opacity:.85;"></span>'
@@ -368,6 +382,20 @@ class WPBS_Admin
 		));
 	}
 
+	public function ajax_queue_recover_processing()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => 'Forbidden'), 403);
+		}
+		check_ajax_referer('wpbs_queue_recover_ajax', 'nonce');
+
+		$stale = isset($_POST['staleSeconds']) ? (int)$_POST['staleSeconds'] : 60;
+		$stale = max(0, min(86400, $stale));
+
+		$recovered = (int)$this->sync->recover_stale_processing_jobs($stale);
+		wp_send_json_success(array('recovered' => $recovered));
+	}
+
 	public function render_boats_table()
 	{
 		if (!current_user_can('manage_options')) {
@@ -461,6 +489,16 @@ class WPBS_Admin
 		echo '<p><strong>API Key:</strong> ' . esc_html($settings['api_key'] ? 'Saved' : 'Not set') . '</p>';
 		echo '<p><strong>PartyId:</strong> ' . esc_html($settings['party_id'] ? $settings['party_id'] : 'Not set') . '</p>';
 		echo '<p><strong>Auto sync:</strong> ' . esc_html(isset($settings['auto_sync_frequency']) ? (string)$settings['auto_sync_frequency'] : 'off') . '</p>';
+
+		$freq = isset($settings['auto_sync_frequency']) ? (string)$settings['auto_sync_frequency'] : 'off';
+		$next_ts = ($freq !== 'off') ? wp_next_scheduled(WPBS_CRON_AUTO_SYNC) : false;
+		$next_label = '—';
+		if ($freq !== 'off' && !$next_ts) {
+			$next_label = 'Not scheduled';
+		} elseif ($next_ts) {
+			$next_label = wp_date('Y-m-d H:i:s', (int)$next_ts);
+		}
+		echo '<p><strong>Next sync:</strong> ' . esc_html($next_label) . '</p>';
 		echo '</div>';
 
 		echo '<div class="card" style="min-width:220px;flex:1;">';
@@ -509,6 +547,10 @@ class WPBS_Admin
 		echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=wpbs-boats')) . '">Open Boats Table</a></p>';
 		echo '<p style="margin-top:10px;">';
 		echo '<button type="button" class="button" id="wpbs-run-queue-worker">Run Queue Worker Now</button> <span style="opacity:.75;">(runs in background with progress)</span>';
+		echo '</p>';
+		echo '<p style="margin-top:10px;">';
+		echo '<button type="button" class="button" id="wpbs-queue-recover-btn">Reset stuck processing jobs now</button>';
+		echo ' <span id="wpbs-queue-recover-status" style="opacity:.75;"></span>';
 		echo '</p>';
 		echo '<p style="margin-top:10px;">';
 		echo '<button type="button" class="button button-secondary" id="wpbs-dedupe-now">Deduplicate Boats Now</button> <span style="opacity:.75;">(removes duplicate boat posts)</span>';
@@ -627,6 +669,58 @@ class WPBS_Admin
 			'failed' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='failed'"),
 		);
 
+		// Queue hourly overview (last 24 hours): how many jobs were updated each hour into each status.
+		$hours = 24;
+		$end_ts = current_time('timestamp');
+		$start_ts = $end_ts - (($hours - 1) * HOUR_IN_SECONDS);
+		$labels_hours = array();
+		$keys_hours = array();
+		for ($i = 0; $i < $hours; $i++) {
+			$ts = $start_ts + ($i * HOUR_IN_SECONDS);
+			$keys_hours[] = wp_date('Y-m-d H:00:00', $ts);
+			$labels_hours[] = wp_date('m-d H:00', $ts);
+		}
+
+		$hourly_map = array(
+			'pending' => array(),
+			'processing' => array(),
+			'failed' => array(),
+		);
+		$since_mysql = wp_date('Y-m-d H:00:00', $start_ts);
+		$hour_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DATE_FORMAT(updated_at, '%%Y-%%m-%%d %%H:00:00') AS h, status, COUNT(*) AS c
+				 FROM {$queue_table}
+				 WHERE updated_at >= %s
+				   AND status IN ('pending','processing','failed')
+				 GROUP BY h, status
+				 ORDER BY h ASC",
+				$since_mysql
+			),
+			ARRAY_A
+		);
+		if (is_array($hour_rows)) {
+			foreach ($hour_rows as $hr) {
+				$h = isset($hr['h']) ? (string)$hr['h'] : '';
+				$st = isset($hr['status']) ? (string)$hr['status'] : '';
+				$c = isset($hr['c']) ? (int)$hr['c'] : 0;
+				if ($h !== '' && isset($hourly_map[$st])) {
+					$hourly_map[$st][$h] = $c;
+				}
+			}
+		}
+		$queue_hourly = array(
+			'labels' => $labels_hours,
+			'pending' => array(),
+			'processing' => array(),
+			'failed' => array(),
+		);
+		foreach ($keys_hours as $hk) {
+			$queue_hourly['pending'][] = isset($hourly_map['pending'][$hk]) ? (int)$hourly_map['pending'][$hk] : 0;
+			$queue_hourly['processing'][] = isset($hourly_map['processing'][$hk]) ? (int)$hourly_map['processing'][$hk] : 0;
+			$queue_hourly['failed'][] = isset($hourly_map['failed'][$hk]) ? (int)$hourly_map['failed'][$hk] : 0;
+		}
+
 		$metrics = get_option('wpbs_queue_metrics', array());
 		if (!is_array($metrics)) {
 			$metrics = array();
@@ -679,6 +773,7 @@ class WPBS_Admin
 			'postCounts' => $post_counts,
 			'pendingUpdateCount' => $pending_update,
 			'queueCounts' => $queue_counts,
+			'queueHourly' => $queue_hourly,
 			'queueMetrics' => $metrics,
 			'queueEtaSeconds' => $eta_seconds,
 			'statusCounts' => array('active' => $active, 'sold' => $sold),

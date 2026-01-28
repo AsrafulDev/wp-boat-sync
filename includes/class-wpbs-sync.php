@@ -59,6 +59,10 @@ class WPBS_Sync
 		$batch_size = max(1, (int)$batch_size);
 		$start = microtime(true);
 
+		// If a previous PHP request died mid-job (timeout/fatal), jobs can remain stuck in "processing" forever.
+		// Recover those stale locks so the queue can continue.
+		$this->recover_stale_processing_jobs(20 * MINUTE_IN_SECONDS);
+
 		$jobs = $this->lock_next_jobs($batch_size);
 		if (empty($jobs)) {
 			return 0;
@@ -78,6 +82,44 @@ class WPBS_Sync
 		}
 
 		return count($jobs);
+	}
+
+	/**
+	 * Recover jobs that have been stuck in processing longer than $stale_seconds.
+	 *
+	 * This happens when a request is interrupted after marking jobs as processing.
+	 */
+	public function recover_stale_processing_jobs($stale_seconds)
+	{
+		$stale_seconds = (int)$stale_seconds;
+		global $wpdb;
+		$table = WPBS_DB::table_queue();
+		// If stale_seconds <= 0, treat all processing jobs as recoverable.
+		if ($stale_seconds <= 0) {
+			$threshold = gmdate('Y-m-d H:i:s', time() + 1);
+		} else {
+			$threshold = gmdate('Y-m-d H:i:s', time() - max(1, $stale_seconds));
+		}
+		$now = WPBS_Utils::now_mysql();
+
+		// Move stale processing jobs back to pending (or to failed if they already exhausted retries).
+		$recovered = (int)$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table}
+				 SET status = CASE WHEN attempts >= 3 THEN 'failed' ELSE 'pending' END,
+				     attempts = CASE WHEN attempts >= 3 THEN attempts ELSE attempts + 1 END,
+				     not_before = CASE WHEN attempts >= 3 THEN NULL ELSE DATE_ADD(UTC_TIMESTAMP(), INTERVAL 60 SECOND) END,
+				     locked_at = NULL,
+				     last_error = CONCAT(IFNULL(last_error,''), CASE WHEN IFNULL(last_error,'') = '' THEN '' ELSE '\n' END, 'Recovered stale processing lock.'),
+				     updated_at = %s
+				 WHERE status='processing'
+				   AND (locked_at IS NULL OR locked_at < %s)",
+				$now,
+				$threshold
+			)
+		);
+
+		return $recovered;
 	}
 
 	/**
@@ -1073,6 +1115,7 @@ class WPBS_Sync
 		$table = WPBS_DB::table_queue();
 		$wpdb->update($table, array(
 			'status' => 'done',
+			'locked_at' => null,
 			'updated_at' => WPBS_Utils::now_mysql(),
 		), array('id' => (int)$job_id), array('%s', '%s'), array('%d'));
 	}
@@ -1096,6 +1139,7 @@ class WPBS_Sync
 			'status' => $status,
 			'attempts' => $attempts,
 			'not_before' => $not_before,
+			'locked_at' => null,
 			'last_error' => wp_strip_all_tags((string)$message),
 			'updated_at' => WPBS_Utils::now_mysql(),
 		), array('id' => (int)$job_id));
