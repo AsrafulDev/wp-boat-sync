@@ -1,221 +1,861 @@
-:root{
-  --wpbs-accent:#0b5fff;
-  --wpbs-font-size:16px;
-  --wpbs-grid-gap:16px;
-  --wpbs-grid-columns:3;
+/*--------------------------------------------------------------
+  WP Boat Sync Frontend Styles
+  BoatTrader.com exact match UI
+--------------------------------------------------------------*/
+:root {
+  --wpbs-primary: #0066cc;
+  --wpbs-primary-dark: #0052a3;
+  --wpbs-primary-light: #e8f4fc;
+  --wpbs-text: #333;
+  --wpbs-text-light: #666;
+  --wpbs-text-muted: #999;
+  --wpbs-border: #ddd;
+  --wpbs-border-light: #eee;
+  --wpbs-bg: #f5f7f9;
+  --wpbs-white: #fff;
+  --wpbs-success: #28a745;
+  --wpbs-orange: #f5a623;
+  --wpbs-radius: 4px;
+  --wpbs-radius-lg: 8px;
+  --wpbs-shadow: 0 1px 3px rgba(0,0,0,.1);
+  --wpbs-shadow-lg: 0 2px 8px rgba(0,0,0,.15);
+  --wpbs-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-.wpbs-wrap{
-  font-size:var(--wpbs-font-size);
-  line-height:1.5;
-  max-width:1200px;
-  margin:0 auto;
-  padding:16px;
+/* Base */
+.wpbs-wrap {
+  font-family: var(--wpbs-font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--wpbs-text);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: var(--wpbs-bg);
 }
 
-.wpbs-header{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap:12px;
-  margin:8px 0 18px;
+/*--------------------------------------------------------------
+  Archive / Grid Page
+--------------------------------------------------------------*/
+.wpbs-archive-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius);
+  border: 1px solid var(--wpbs-border-light);
 }
 
-.wpbs-header h1{
-  margin:0;
-  font-size:28px;
+.wpbs-archive-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--wpbs-text);
 }
 
-.wpbs-grid{
-  display:grid;
-  grid-template-columns:repeat(var(--wpbs-grid-columns), minmax(0,1fr));
-  gap:var(--wpbs-grid-gap);
+.wpbs-archive-count {
+  color: var(--wpbs-text-light);
+  font-size: 14px;
 }
 
-.wpbs-card{
-  border:1px solid rgba(0,0,0,.08);
-  border-radius:10px;
-  overflow:hidden;
-  background:#fff;
-  box-shadow:0 1px 0 rgba(0,0,0,.02);
+.wpbs-archive-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
 }
 
-.wpbs-card a{
-  color:inherit;
-  text-decoration:none;
-  display:block;
+.wpbs-archive-sort select {
+  padding: 6px 10px;
+  border: 1px solid var(--wpbs-border);
+  border-radius: var(--wpbs-radius);
+  font-size: 13px;
 }
 
-.wpbs-card__media img{
-  width:100%;
-  height:auto;
-  display:block;
+/* Grid Layout */
+.wpbs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Boat Card - BoatTrader Style */
+.wpbs-card {
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--wpbs-border-light);
+  transition: box-shadow .2s;
+}
+
+.wpbs-card:hover {
+  box-shadow: var(--wpbs-shadow-lg);
+}
+
+.wpbs-card > a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.wpbs-card__media {
+  position: relative;
+  background: #e9ecef;
   aspect-ratio: 4 / 3;
-  object-fit:cover;
+  overflow: hidden;
 }
 
-.wpbs-card__body{
-  padding:12px 12px 14px;
+.wpbs-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.wpbs-card__title{
-  margin:0 0 6px;
-  font-size:16px;
+.wpbs-card__badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
 }
 
-.wpbs-card__meta{
-  opacity:.8;
-  font-size:14px;
+.wpbs-card__photo-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,.65);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.wpbs-price{
-  margin-top:8px;
-  font-weight:700;
-  color:#111;
+.wpbs-card__photo-count svg {
+  width: 12px;
+  height: 12px;
 }
 
-.wpbs-badge{
-  display:inline-block;
-  padding:4px 8px;
-  border-radius:999px;
-  font-size:12px;
-  border:1px solid rgba(0,0,0,.08);
-  background:rgba(0,0,0,.03);
+.wpbs-card__body {
+  padding: 12px 14px 14px;
 }
 
-.wpbs-badge--sold{
-  background:rgba(220,38,38,.08);
-  border-color:rgba(220,38,38,.2);
-  color:#b91c1c;
+.wpbs-card__price {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--wpbs-text);
+  margin-bottom: 4px;
 }
 
-.wpbs-btn{
-  display:inline-block;
-  padding:10px 14px;
-  border-radius:10px;
-  background:var(--wpbs-accent);
-  color:#fff;
-  text-decoration:none;
-  font-weight:600;
+.wpbs-card__monthly {
+  font-size: 12px;
+  color: var(--wpbs-primary);
+  margin-bottom: 8px;
 }
 
-.wpbs-single{
-  display:grid;
-  grid-template-columns: 1.1fr .9fr;
-  gap:20px;
+.wpbs-card__monthly a {
+  color: var(--wpbs-primary);
+  text-decoration: none;
 }
 
-.wpbs-single__title{
-  margin:0 0 10px;
-  font-size:28px;
+.wpbs-card__title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--wpbs-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-/* Product-style gallery (WooCommerce-like) */
-.wpbs-product-gallery{
-  margin-bottom:12px;
+.wpbs-card__location {
+  font-size: 12px;
+  color: var(--wpbs-text-light);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.wpbs-product-gallery__main{
-  display:block;
-  border-radius:12px;
-  overflow:hidden;
-  background:#f6f7f9;
-  border:1px solid rgba(0,0,0,.08);
+.wpbs-card__location svg {
+  width: 12px;
+  height: 12px;
+  fill: var(--wpbs-text-muted);
 }
 
-.wpbs-product-gallery__main-img,
-.wpbs-product-gallery__main img{
-  width:100%;
-  height:auto;
-  display:block;
+.wpbs-card__actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-card__btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--wpbs-radius);
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: background .15s;
+}
+
+.wpbs-card__btn--primary {
+  background: var(--wpbs-primary);
+  color: #fff;
+}
+
+.wpbs-card__btn--primary:hover {
+  background: var(--wpbs-primary-dark);
+}
+
+.wpbs-card__btn--secondary {
+  background: var(--wpbs-bg);
+  color: var(--wpbs-text);
+  border: 1px solid var(--wpbs-border);
+}
+
+/* Badges */
+.wpbs-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.wpbs-badge--new {
+  background: var(--wpbs-primary);
+  color: #fff;
+}
+
+.wpbs-badge--sold {
+  background: #dc3545;
+  color: #fff;
+}
+
+.wpbs-badge--featured {
+  background: var(--wpbs-orange);
+  color: #fff;
+}
+
+/*--------------------------------------------------------------
+  Single Boat Detail Page - BoatTrader Style
+--------------------------------------------------------------*/
+.wpbs-single-wrap {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Gallery */
+.wpbs-gallery {
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-gallery__main {
+  position: relative;
+  background: #1a1a1a;
+  aspect-ratio: 16 / 10;
+}
+
+.wpbs-gallery__main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.wpbs-gallery__main-link {
+  display: block;
+  height: 100%;
+}
+
+.wpbs-gallery__view-btn {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0,0,0,.7);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: var(--wpbs-radius);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border: none;
+  transition: background .15s;
+}
+
+.wpbs-gallery__view-btn:hover {
+  background: rgba(0,0,0,.85);
+}
+
+.wpbs-gallery__view-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.wpbs-gallery__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,.9);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--wpbs-shadow);
+  z-index: 5;
+}
+
+.wpbs-gallery__nav:hover {
+  background: #fff;
+}
+
+.wpbs-gallery__nav--prev { left: 12px; }
+.wpbs-gallery__nav--next { right: 12px; }
+
+.wpbs-gallery__nav svg {
+  width: 20px;
+  height: 20px;
+  fill: #333;
+}
+
+.wpbs-gallery__thumbs {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  overflow-x: auto;
+  background: var(--wpbs-white);
+  border-top: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-gallery__thumb {
+  flex-shrink: 0;
+  width: 70px;
+  height: 52px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  opacity: .7;
+  transition: opacity .15s, border-color .15s;
+}
+
+.wpbs-gallery__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wpbs-gallery__thumb:hover {
+  opacity: 1;
+}
+
+.wpbs-gallery__thumb.is-active {
+  border-color: var(--wpbs-primary);
+  opacity: 1;
+}
+
+/* Quick Specs Row - Below Gallery */
+.wpbs-quick-specs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.wpbs-quick-spec {
+  padding: 16px 12px;
+  text-align: center;
+  border-right: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-quick-spec:last-child {
+  border-right: none;
+}
+
+.wpbs-quick-spec__icon {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 6px;
+  fill: var(--wpbs-text-muted);
+}
+
+.wpbs-quick-spec__label {
+  font-size: 11px;
+  color: var(--wpbs-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.wpbs-quick-spec__value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+}
+
+/* Boat Overview Section */
+.wpbs-overview {
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  margin-top: 16px;
+  padding: 20px;
+}
+
+.wpbs-overview__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--wpbs-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wpbs-overview__text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wpbs-text-light);
+}
+
+/* Boat Details Tabs */
+.wpbs-tabs {
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.wpbs-tabs__nav {
+  display: flex;
+  border-bottom: 1px solid var(--wpbs-border-light);
+  background: var(--wpbs-bg);
+}
+
+.wpbs-tabs__btn {
+  padding: 14px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wpbs-text-light);
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+}
+
+.wpbs-tabs__btn.is-active {
+  color: var(--wpbs-primary);
+  background: var(--wpbs-white);
+}
+
+.wpbs-tabs__btn.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--wpbs-primary);
+}
+
+.wpbs-tabs__content {
+  padding: 20px;
+}
+
+/* Specs Table */
+.wpbs-specs-table {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+}
+
+.wpbs-specs-table__section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-specs-table__section:last-child {
+  border-bottom: none;
+}
+
+.wpbs-specs-table__heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+  margin-bottom: 12px;
+  grid-column: 1 / -1;
+}
+
+.wpbs-specs-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.wpbs-specs-row__label {
+  color: var(--wpbs-text-light);
+}
+
+.wpbs-specs-row__value {
+  color: var(--wpbs-text);
+  font-weight: 500;
+  text-align: right;
+}
+
+/*--------------------------------------------------------------
+  Sidebar - BoatTrader Style
+--------------------------------------------------------------*/
+.wpbs-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 20px;
+}
+
+/* Price Card */
+.wpbs-price-card {
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  overflow: hidden;
+}
+
+.wpbs-price-card__header {
+  padding: 16px;
+  border-bottom: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-price-card__title {
+  font-size: 13px;
+  color: var(--wpbs-text-light);
+  margin-bottom: 4px;
+}
+
+.wpbs-price-card__price {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--wpbs-text);
+}
+
+.wpbs-price-card__monthly {
+  font-size: 13px;
+  color: var(--wpbs-primary);
+  margin-top: 4px;
+}
+
+.wpbs-price-card__monthly a {
+  color: var(--wpbs-primary);
+}
+
+.wpbs-price-card__body {
+  padding: 16px;
+}
+
+/* Dealer Card */
+.wpbs-dealer-card {
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  padding: 16px;
+}
+
+.wpbs-dealer-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.wpbs-dealer-card__logo {
+  width: 60px;
+  height: 40px;
+  background: var(--wpbs-bg);
+  border-radius: var(--wpbs-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--wpbs-text-muted);
+}
+
+.wpbs-dealer-card__info {
+  flex: 1;
+}
+
+.wpbs-dealer-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+  margin: 0 0 2px;
+}
+
+.wpbs-dealer-card__location {
+  font-size: 12px;
+  color: var(--wpbs-text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wpbs-dealer-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Contact Form in Sidebar */
+.wpbs-contact-form {
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  padding: 16px;
+}
+
+.wpbs-contact-form__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.wpbs-contact-form__row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.wpbs-contact-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--wpbs-border);
+  border-radius: var(--wpbs-radius);
+  font-size: 13px;
+}
+
+.wpbs-contact-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--wpbs-border);
+  border-radius: var(--wpbs-radius);
+  font-size: 13px;
+  resize: vertical;
+  min-height: 80px;
+  margin-bottom: 10px;
+}
+
+/* Buttons */
+.wpbs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--wpbs-radius);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: background .15s;
+  width: 100%;
+}
+
+.wpbs-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.wpbs-btn--primary {
+  background: var(--wpbs-primary);
+  color: #fff;
+}
+
+.wpbs-btn--primary:hover {
+  background: var(--wpbs-primary-dark);
+}
+
+.wpbs-btn--outline {
+  background: var(--wpbs-white);
+  color: var(--wpbs-primary);
+  border: 2px solid var(--wpbs-primary);
+}
+
+.wpbs-btn--outline:hover {
+  background: var(--wpbs-primary-light);
+}
+
+.wpbs-btn--green {
+  background: #34a853;
+  color: #fff;
+}
+
+.wpbs-btn--green:hover {
+  background: #2d9249;
+}
+
+/* More From Dealer Section */
+.wpbs-more-boats {
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.wpbs-more-boats__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.wpbs-more-boats__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.wpbs-more-boats__link {
+  font-size: 13px;
+  color: var(--wpbs-primary);
+  text-decoration: none;
+}
+
+.wpbs-more-boats__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.wpbs-more-boats__item {
+  text-decoration: none;
+  color: inherit;
+}
+
+.wpbs-more-boats__img {
   aspect-ratio: 4 / 3;
-  object-fit:cover;
+  border-radius: var(--wpbs-radius);
+  overflow: hidden;
+  margin-bottom: 8px;
 }
 
-.wpbs-product-gallery__thumbs{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-top:10px;
+.wpbs-more-boats__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.wpbs-thumb{
-  appearance:none;
-  -webkit-appearance:none;
-  border:1px solid rgba(0,0,0,.12);
-  background:#fff;
-  padding:0;
-  border-radius:10px;
-  overflow:hidden;
-  width:74px;
-  height:74px;
-  cursor:pointer;
-  box-shadow:0 1px 0 rgba(0,0,0,.02);
+.wpbs-more-boats__name {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.wpbs-thumb img{
-  width:100%;
-  height:100%;
-  display:block;
-  object-fit:cover;
+.wpbs-more-boats__price {
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.wpbs-thumb:hover{
-  border-color:rgba(0,0,0,.25);
+/* Legacy support */
+.wpbs-header { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:8px 0 18px; }
+.wpbs-header h1 { margin:0; font-size:28px; }
+.wpbs-single { display:grid; grid-template-columns:1.1fr .9fr; gap:20px; }
+.wpbs-single__title { margin:0 0 10px; font-size:28px; }
+.wpbs-product-gallery { margin-bottom:12px; }
+.wpbs-product-gallery__main { display:block; border-radius:8px; overflow:hidden; background:#f6f7f9; border:1px solid var(--wpbs-border-light); }
+.wpbs-product-gallery__main-img, .wpbs-product-gallery__main img { width:100%; height:auto; display:block; aspect-ratio:4/3; object-fit:cover; }
+.wpbs-product-gallery__thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.wpbs-thumb { appearance:none; border:2px solid transparent; background:#fff; padding:0; border-radius:6px; overflow:hidden; width:70px; height:52px; cursor:pointer; opacity:.7; }
+.wpbs-thumb img { width:100%; height:100%; display:block; object-fit:cover; }
+.wpbs-thumb:hover { opacity:1; }
+.wpbs-thumb.is-active { border-color:var(--wpbs-primary); opacity:1; }
+.wpbs-specs { border:1px solid var(--wpbs-border-light); border-radius:8px; padding:16px; background:#fff; }
+.wpbs-specs__row { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--wpbs-border-light); font-size:13px; }
+.wpbs-specs__row:last-child { border-bottom:0; }
+.wpbs-price { margin-top:8px; font-weight:700; color:#111; }
+
+/*--------------------------------------------------------------
+  Responsive
+--------------------------------------------------------------*/
+@media (max-width: 1024px) {
+  .wpbs-single-wrap {
+    grid-template-columns: 1fr;
+  }
+  .wpbs-sidebar {
+    position: static;
+  }
+  .wpbs-quick-specs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .wpbs-more-boats__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-.wpbs-thumb.is-active{
-  border-color:var(--wpbs-accent);
-  box-shadow:0 0 0 2px rgba(11,95,255,.18);
+@media (max-width: 768px) {
+  .wpbs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .wpbs-specs-table {
+    grid-template-columns: 1fr;
+  }
+  .wpbs-gallery__thumb {
+    width: 56px;
+    height: 42px;
+  }
+  .wpbs-single { grid-template-columns:1fr; }
 }
 
-.wpbs-thumb:focus-visible{
-  outline:2px solid var(--wpbs-accent);
-  outline-offset:2px;
+@media (max-width: 520px) {
+  .wpbs-grid {
+    grid-template-columns: 1fr;
+  }
+  .wpbs-quick-specs {
+    grid-template-columns: 1fr 1fr;
+  }
+  .wpbs-card__price {
+    font-size: 16px;
+  }
+  .wpbs-header { flex-direction:column; align-items:flex-start; }
 }
 
-.wpbs-gallery{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(0,1fr));
-  gap:10px;
-}
-
-.wpbs-gallery img{
-  width:100%;
-  height:auto;
-  display:block;
-  border-radius:10px;
-  aspect-ratio: 4 / 3;
-  object-fit:cover;
-}
-
-.wpbs-specs{
-  border:1px solid rgba(0,0,0,.08);
-  border-radius:10px;
-  padding:14px;
-  background:#fff;
-}
-
-.wpbs-specs__row{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  padding:8px 0;
-  border-top:1px dashed rgba(0,0,0,.08);
-}
-
-.wpbs-specs__row:first-child{ border-top:0; }
-
-.wrap .card {
-    max-width: 100%;
-}
-
-@media (max-width: 900px){
-  .wpbs-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-  .wpbs-single{ grid-template-columns:1fr; }
-}
-
-@media (max-width: 520px){
-  .wpbs-grid{ grid-template-columns:1fr; }
-  .wpbs-header{ flex-direction:column; align-items:flex-start; }
-}
+.wrap .card { max-width: 100%; }

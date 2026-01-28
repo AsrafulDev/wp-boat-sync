@@ -721,60 +721,165 @@ class WPBS_Sync
 		$sales_rep = (isset($data['SalesRep']) && is_array($data['SalesRep'])) ? $data['SalesRep'] : array();
 		$owner = (isset($data['Owner']) && is_array($data['Owner'])) ? $data['Owner'] : array();
 
+		// Build location string: City, State Country
+		$location_parts = array();
+		if (!empty($boat_location['BoatCityName'])) {
+			$location_parts[] = (string)$boat_location['BoatCityName'];
+		} elseif (!empty($data['BoatCityNameNoCaseAlnumOnly'])) {
+			$location_parts[] = (string)$data['BoatCityNameNoCaseAlnumOnly'];
+		}
+		if (!empty($boat_location['BoatStateCode'])) {
+			$location_parts[] = (string)$boat_location['BoatStateCode'];
+		}
+		$location_str = implode(', ', $location_parts);
+
+		// Build engine summary from Engines array
+		$engine_summary = $this->build_engine_summary($data);
+
+		// Extract first engine details for quick specs
+		$first_engine = array();
+		if (!empty($data['Engines']) && is_array($data['Engines']) && isset($data['Engines'][0])) {
+			$first_engine = $data['Engines'][0];
+		}
+
 		$map = array(
+			// Core identifiers
 			'wpbs_document_id' => isset($data['DocumentID']) ? (string)$data['DocumentID'] : '',
+			'wpbs_source' => isset($data['Source']) ? (string)$data['Source'] : '',
 			'wpbs_sales_status' => isset($data['SalesStatus']) ? (string)$data['SalesStatus'] : '',
+			'wpbs_co_op_indicator' => isset($data['CoOpIndicator']) ? (string)$data['CoOpIndicator'] : '',
+
+			// Pricing
 			'wpbs_price' => isset($data['Price']) ? (string)$data['Price'] : '',
 			'wpbs_price_amount' => $price_parsed['amount'],
 			'wpbs_price_currency' => $price_parsed['currency'],
 			'wpbs_original_price' => isset($data['OriginalPrice']) ? (string)$data['OriginalPrice'] : '',
 			'wpbs_original_price_amount' => $orig_price_parsed['amount'],
 			'wpbs_original_price_currency' => $orig_price_parsed['currency'],
+			'wpbs_price_hide_ind' => isset($data['PriceHideInd']) ? (int)(bool)$data['PriceHideInd'] : 0,
+			'wpbs_norm_price' => isset($data['NormPrice']) ? (float)$data['NormPrice'] : 0,
+			'wpbs_tax_status' => isset($data['TaxStatusCode']) ? (string)$data['TaxStatusCode'] : '',
+
+			// Make/Model/Year
 			'wpbs_make' => isset($data['MakeString']) ? (string)$data['MakeString'] : '',
 			'wpbs_make_exact' => isset($data['MakeStringExact']) ? (string)$data['MakeStringExact'] : '',
 			'wpbs_model' => isset($data['Model']) ? (string)$data['Model'] : '',
 			'wpbs_model_exact' => isset($data['ModelExact']) ? (string)$data['ModelExact'] : '',
 			'wpbs_model_year' => isset($data['ModelYear']) ? (int)$data['ModelYear'] : 0,
 			'wpbs_sale_class' => isset($data['SaleClassCode']) ? (string)$data['SaleClassCode'] : '',
+			'wpbs_condition' => isset($data['SaleClassCode']) ? (string)$data['SaleClassCode'] : '', // New/Used
 			'wpbs_boat_category' => isset($data['BoatCategoryCode']) ? (string)$data['BoatCategoryCode'] : '',
+			'wpbs_boat_name' => isset($data['BoatName']) ? (string)$data['BoatName'] : '',
 			'wpbs_listing_title' => isset($data['ListingTitle']) ? (string)$data['ListingTitle'] : '',
+
+			// Dealer/Company info
 			'wpbs_company_name' => isset($data['CompanyName']) ? (string)$data['CompanyName'] : '',
+			'wpbs_dealer_name' => isset($data['CompanyName']) ? (string)$data['CompanyName'] : (isset($office['Name']) ? (string)$office['Name'] : ''),
 			'wpbs_office_name' => isset($office['Name']) ? (string)$office['Name'] : '',
+			'wpbs_office_address' => isset($office['PostalAddress']) ? (string)$office['PostalAddress'] : '',
+			'wpbs_office_city' => isset($office['City']) ? (string)$office['City'] : '',
+			'wpbs_office_state' => isset($office['State']) ? (string)$office['State'] : '',
+			'wpbs_office_postcode' => isset($office['PostCode']) ? (string)$office['PostCode'] : '',
+			'wpbs_office_country' => isset($office['Country']) ? (string)$office['Country'] : '',
+			'wpbs_office_email' => isset($office['Email']) ? (string)$office['Email'] : '',
+			'wpbs_office_phone' => isset($office['Phone']) ? (string)$office['Phone'] : '',
 			'wpbs_sales_rep_name' => isset($sales_rep['Name']) ? (string)$sales_rep['Name'] : '',
+			'wpbs_sales_rep_party_id' => isset($sales_rep['PartyId']) ? (string)$sales_rep['PartyId'] : '',
 			'wpbs_owner_party_id' => isset($owner['PartyId']) ? (string)$owner['PartyId'] : '',
+
+			// Location
 			'wpbs_city' => isset($data['BoatCityNameNoCaseAlnumOnly']) ? (string)$data['BoatCityNameNoCaseAlnumOnly'] : '',
+			'wpbs_boat_city' => isset($boat_location['BoatCityName']) ? (string)$boat_location['BoatCityName'] : '',
 			'wpbs_state' => isset($boat_location['BoatStateCode']) ? (string)$boat_location['BoatStateCode'] : '',
+			'wpbs_boat_country' => isset($boat_location['BoatCountryID']) ? (string)$boat_location['BoatCountryID'] : '',
 			'wpbs_country_code' => isset($data['RegistrationCountryCode']) ? (string)$data['RegistrationCountryCode'] : '',
+			'wpbs_location' => $location_str,
+
+			// Dimensions
 			'wpbs_length_overall' => isset($data['LengthOverall']) ? (string)$data['LengthOverall'] : '',
 			'wpbs_nominal_length' => isset($data['NominalLength']) ? (string)$data['NominalLength'] : '',
+			'wpbs_norm_nominal_length' => isset($data['NormNominalLength']) ? (float)$data['NormNominalLength'] : 0,
 			'wpbs_beam' => isset($data['BeamMeasure']) ? (string)$data['BeamMeasure'] : '',
 			'wpbs_dry_weight' => isset($data['DryWeightMeasure']) ? (string)$data['DryWeightMeasure'] : '',
 			'wpbs_deadrise' => isset($data['DeadriseMeasure']) ? (string)$data['DeadriseMeasure'] : '',
-			'wpbs_drive_up' => isset($data['DriveUp']) ? (string)$data['DriveUp'] : '',
+			'wpbs_bridge_clearance' => isset($data['BridgeClearanceMeasure']) ? (string)$data['BridgeClearanceMeasure'] : '',
+			'wpbs_freeboard' => isset($data['FreeBoardMeasure']) ? (string)$data['FreeBoardMeasure'] : '',
+			'wpbs_cabin_headroom' => isset($data['CabinHeadroomMeasure']) ? (string)$data['CabinHeadroomMeasure'] : '',
+			'wpbs_displacement' => isset($data['DisplacementMeasure']) ? (string)$data['DisplacementMeasure'] : '',
+			'wpbs_displacement_type' => isset($data['DisplacementTypeCode']) ? (string)$data['DisplacementTypeCode'] : '',
+			'wpbs_ballast_weight' => isset($data['BallastWeightMeasure']) ? (string)$data['BallastWeightMeasure'] : '',
+
+			// Speed & Performance
+			'wpbs_cruising_speed' => isset($data['CruisingSpeedMeasure']) ? (string)$data['CruisingSpeedMeasure'] : '',
+			'wpbs_max_speed' => isset($data['MaximumSpeedMeasure']) ? (string)$data['MaximumSpeedMeasure'] : '',
+			'wpbs_range' => isset($data['RangeMeasure']) ? (string)$data['RangeMeasure'] : '',
+			'wpbs_propeller_cruising_speed' => isset($data['PropellerCruisingSpeed']) ? (string)$data['PropellerCruisingSpeed'] : '',
+
+			// Engine details
+			'wpbs_engine_summary' => $engine_summary,
 			'wpbs_total_engine_power' => isset($data['TotalEnginePowerQuantity']) ? (string)$data['TotalEnginePowerQuantity'] : '',
 			'wpbs_number_of_engines' => isset($data['NumberOfEngines']) ? (int)$data['NumberOfEngines'] : 0,
 			'wpbs_total_engine_hours' => isset($data['TotalEngineHoursNumeric']) ? (int)$data['TotalEngineHoursNumeric'] : 0,
+			'wpbs_drive_type' => isset($data['DriveTypeCode']) ? (string)$data['DriveTypeCode'] : '',
+			'wpbs_drive_up' => isset($data['DriveUp']) ? (string)$data['DriveUp'] : '',
+			'wpbs_engines_json' => (!empty($data['Engines']) && is_array($data['Engines'])) ? WPBS_Utils::json_encode($data['Engines']) : '',
+
+			// First engine quick access
+			'wpbs_engine_make' => isset($first_engine['Make']) ? (string)$first_engine['Make'] : '',
+			'wpbs_engine_model' => isset($first_engine['Model']) ? (string)$first_engine['Model'] : '',
+			'wpbs_engine_year' => isset($first_engine['Year']) ? (int)$first_engine['Year'] : 0,
+			'wpbs_engine_power' => isset($first_engine['EnginePower']) ? (string)$first_engine['EnginePower'] : '',
+			'wpbs_engine_type' => isset($first_engine['Type']) ? (string)$first_engine['Type'] : '',
+			'wpbs_fuel_type' => isset($first_engine['Fuel']) ? (string)$first_engine['Fuel'] : '',
+			'wpbs_propeller_type' => isset($first_engine['PropellerType']) ? (string)$first_engine['PropellerType'] : '',
+
+			// Capacity
 			'wpbs_fuel_tank_capacity' => isset($data['FuelTankCapacityMeasure']) ? (string)$data['FuelTankCapacityMeasure'] : '',
 			'wpbs_water_tank_capacity' => isset($data['WaterTankCapacityMeasure']) ? (string)$data['WaterTankCapacityMeasure'] : '',
 			'wpbs_heads_count' => isset($data['HeadsCountNumeric']) ? (int)$data['HeadsCountNumeric'] : 0,
+			'wpbs_cabins_count' => isset($data['CabinsCountNumeric']) ? (int)$data['CabinsCountNumeric'] : 0,
+
+			// Hull & Construction
 			'wpbs_hull_material' => isset($data['BoatHullMaterialCode']) ? (string)$data['BoatHullMaterialCode'] : '',
 			'wpbs_hull_id' => isset($data['BoatHullID']) ? (string)$data['BoatHullID'] : '',
+			'wpbs_keel_type' => isset($data['BoatKeelCode']) ? (string)$data['BoatKeelCode'] : '',
+			'wpbs_windlass_type' => isset($data['WindlassTypeCode']) ? (string)$data['WindlassTypeCode'] : '',
+			'wpbs_electrical_circuit' => isset($data['ElectricalCircuitMeasure']) ? (string)$data['ElectricalCircuitMeasure'] : '',
+			'wpbs_trim_tabs' => isset($data['TrimTabsIndicator']) ? (int)(bool)$data['TrimTabsIndicator'] : 0,
+			'wpbs_convertible_saloon' => isset($data['ConvertibleSaloonIndicator']) ? (int)(bool)$data['ConvertibleSaloonIndicator'] : 0,
+
+			// IDs & References
 			'wpbs_stock_number' => isset($data['StockNumber']) ? (string)$data['StockNumber'] : '',
 			'wpbs_yachtworld_id' => isset($data['YachtWorldID']) ? (string)$data['YachtWorldID'] : '',
 			'wpbs_btolid' => isset($data['BtolID']) ? (string)$data['BtolID'] : '',
 			'wpbs_bcnaid' => isset($data['BcnaID']) ? (string)$data['BcnaID'] : '',
+			'wpbs_has_hull_id' => isset($data['HasBoatHullID']) ? (int)(bool)$data['HasBoatHullID'] : 0,
+
+			// Dates & Timestamps
 			'wpbs_last_seen_timestamp' => isset($data['IMTTimeStamp']) ? (string)$data['IMTTimeStamp'] : '',
 			'wpbs_last_modification_date' => isset($data['LastModificationDate']) ? (string)$data['LastModificationDate'] : '',
 			'wpbs_item_received_date' => isset($data['ItemReceivedDate']) ? (string)$data['ItemReceivedDate'] : '',
+
+			// Builder/Designer
 			'wpbs_builder_name' => isset($data['BuilderName']) ? (string)$data['BuilderName'] : '',
 			'wpbs_designer_name' => isset($data['DesignerName']) ? (string)$data['DesignerName'] : '',
+
+			// Media indicators
 			'wpbs_embedded_video_present' => isset($data['EmbeddedVideoPresent']) ? (int)(bool)$data['EmbeddedVideoPresent'] : 0,
 			'wpbs_immersive_tour_present' => isset($data['ImmersiveTourPresent']) ? (int)(bool)$data['ImmersiveTourPresent'] : 0,
 			'wpbs_image_360_present' => isset($data['Image360PhotoPresent']) ? (int)(bool)$data['Image360PhotoPresent'] : 0,
+			'wpbs_is_available_for_pls' => isset($data['IsAvailableForPls']) ? (int)(bool)$data['IsAvailableForPls'] : 0,
+			'wpbs_option_active' => isset($data['OptionActiveIndicator']) ? (int)(bool)$data['OptionActiveIndicator'] : 0,
+
+			// Descriptions & Content
 			'wpbs_general_description_html' => (!empty($data['GeneralBoatDescription']) && is_array($data['GeneralBoatDescription'])) ? (string)reset($data['GeneralBoatDescription']) : '',
 			'wpbs_additional_detail_html' => (!empty($data['AdditionalDetailDescription']) && is_array($data['AdditionalDetailDescription'])) ? (string)reset($data['AdditionalDetailDescription']) : '',
 			'wpbs_boat_class_codes' => (!empty($data['BoatClassCode']) && is_array($data['BoatClassCode'])) ? implode(', ', array_map('strval', $data['BoatClassCode'])) : '',
 			'wpbs_embedded_video_urls' => (!empty($data['EmbeddedVideo']) && is_array($data['EmbeddedVideo'])) ? implode("\n", array_map('strval', $data['EmbeddedVideo'])) : '',
+
+			// Services & Marketing (JSON for complex arrays)
+			'wpbs_services_json' => (!empty($data['Service']) && is_array($data['Service'])) ? WPBS_Utils::json_encode($data['Service']) : '',
+			'wpbs_marketing_json' => (!empty($data['Marketing']) && is_array($data['Marketing'])) ? WPBS_Utils::json_encode($data['Marketing']) : '',
 		);
 
 		foreach ($map as $key => $value) {
@@ -858,7 +963,10 @@ class WPBS_Sync
 			return '';
 		}
 
+		$num_engines = isset($data['NumberOfEngines']) ? (int)$data['NumberOfEngines'] : count($data['Engines']);
 		$parts = array();
+		$unique_engines = array();
+
 		foreach ($data['Engines'] as $engine) {
 			if (!is_array($engine)) {
 				continue;
@@ -866,6 +974,8 @@ class WPBS_Sync
 			$make = '';
 			$model = '';
 			$hp = '';
+			$type = '';
+
 			if (!empty($engine['Make'])) {
 				$make = (string)$engine['Make'];
 			} elseif (!empty($engine['EngineMake'])) {
@@ -876,19 +986,62 @@ class WPBS_Sync
 			} elseif (!empty($engine['EngineModel'])) {
 				$model = (string)$engine['EngineModel'];
 			}
-			if (!empty($engine['Horsepower'])) {
+			// Parse EnginePower format: "400|horsepower"
+			if (!empty($engine['EnginePower'])) {
+				$power_str = (string)$engine['EnginePower'];
+				if (strpos($power_str, '|') !== false) {
+					$power_parts = explode('|', $power_str);
+					$hp = trim($power_parts[0]);
+				} else {
+					$hp = preg_replace('/[^0-9.]/', '', $power_str);
+				}
+			} elseif (!empty($engine['Horsepower'])) {
 				$hp = (string)$engine['Horsepower'];
 			} elseif (!empty($engine['HP'])) {
 				$hp = (string)$engine['HP'];
 			}
+			if (!empty($engine['Type'])) {
+				$type = (string)$engine['Type'];
+			}
 
-			$line = trim(implode(' ', array_filter(array($make, $model, $hp ? ($hp . ' hp') : ''))));
+			$engine_key = $make . '|' . $model . '|' . $hp;
+			if (!isset($unique_engines[$engine_key])) {
+				$unique_engines[$engine_key] = array(
+					'make' => $make,
+					'model' => $model,
+					'hp' => $hp,
+					'type' => $type,
+					'count' => 1,
+				);
+			} else {
+				$unique_engines[$engine_key]['count']++;
+			}
+		}
+
+		foreach ($unique_engines as $eng) {
+			$line_parts = array();
+			if ($eng['count'] > 1) {
+				$line_parts[] = $eng['count'] . 'x';
+			}
+			if ($eng['make']) {
+				$line_parts[] = $eng['make'];
+			}
+			if ($eng['model']) {
+				$line_parts[] = $eng['model'];
+			}
+			if ($eng['hp']) {
+				$line_parts[] = $eng['hp'] . ' hp';
+			}
+			if ($eng['type']) {
+				$line_parts[] = '(' . $eng['type'] . ')';
+			}
+			$line = trim(implode(' ', $line_parts));
 			if ($line !== '') {
 				$parts[] = $line;
 			}
 		}
 
-		return implode(' | ', array_values(array_unique($parts)));
+		return implode(' | ', $parts);
 	}
 
 	private function get_attachment_id_by_source_url($url)
