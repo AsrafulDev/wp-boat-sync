@@ -35,7 +35,9 @@ class WPBS_Utils
 		if (!is_array($saved)) {
 			$saved = array();
 		}
-		return array_merge($defaults, $saved);
+		$merged = array_merge($defaults, $saved);
+		$merged['rows_per_page'] = max(1, min(100, (int)$merged['rows_per_page']));
+		return $merged;
 	}
 
 	public static function update_settings($settings)

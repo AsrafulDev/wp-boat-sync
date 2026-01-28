@@ -47,11 +47,21 @@ class WPBS_Sync
 	{
 		$settings = WPBS_Utils::get_settings();
 		$batch_size = max(1, (int)$settings['processor_batch_size']);
+		$this->process_queue_batch($batch_size);
+	}
+
+	/**
+	 * Process a small queue batch (useful for AJAX-driven worker to avoid timeouts).
+	 */
+	public function process_queue_batch($batch_size)
+	{
+		$settings = WPBS_Utils::get_settings();
+		$batch_size = max(1, (int)$batch_size);
 		$start = microtime(true);
 
 		$jobs = $this->lock_next_jobs($batch_size);
 		if (empty($jobs)) {
-			return;
+			return 0;
 		}
 
 		foreach ($jobs as $job) {
@@ -66,6 +76,233 @@ class WPBS_Sync
 			$delay = max(0, min(300, $delay));
 			$this->ensure_processor_scheduled($delay);
 		}
+
+		return count($jobs);
+	}
+
+	/**
+	 * Count how many DocumentIDs currently have duplicate boat posts.
+	 */
+	public function count_duplicate_boat_groups()
+	{
+		global $wpdb;
+		$post_type = WPBS_POST_TYPE;
+		$pm = $wpdb->postmeta;
+		$posts = $wpdb->posts;
+
+		$sql = "SELECT COUNT(*) FROM (
+			SELECT t.doc
+			FROM (
+				SELECT DISTINCT pm.post_id, pm.meta_value AS doc
+				FROM {$pm} pm
+				INNER JOIN {$posts} p ON p.ID = pm.post_id
+				WHERE p.post_type = %s
+				AND pm.meta_key IN ('_wpbs_document_id','wpbs_document_id')
+				AND pm.meta_value IS NOT NULL AND pm.meta_value != ''
+			) t
+			GROUP BY t.doc
+			HAVING COUNT(*) > 1
+		) g";
+
+		return (int)$wpdb->get_var($wpdb->prepare($sql, $post_type));
+	}
+
+	/**
+	 * Deduplicate boat posts in batches.
+	 *
+	 * @return array{processed_groups:int,deleted_posts:int,reparented_attachments:int,next_offset:int,finished:bool}
+	 */
+	public function dedupe_boats_batch($offset, $limit)
+	{
+		$offset = max(0, (int)$offset);
+		$limit = max(1, min(200, (int)$limit));
+
+		global $wpdb;
+		$post_type = WPBS_POST_TYPE;
+		$pm = $wpdb->postmeta;
+		$posts = $wpdb->posts;
+
+		$sql = "SELECT t.doc, GROUP_CONCAT(t.post_id ORDER BY t.post_id ASC) AS post_ids
+			FROM (
+				SELECT DISTINCT pm.post_id, pm.meta_value AS doc
+				FROM {$pm} pm
+				INNER JOIN {$posts} p ON p.ID = pm.post_id
+				WHERE p.post_type = %s
+				AND pm.meta_key IN ('_wpbs_document_id','wpbs_document_id')
+				AND pm.meta_value IS NOT NULL AND pm.meta_value != ''
+			) t
+			GROUP BY t.doc
+			HAVING COUNT(*) > 1
+			ORDER BY t.doc ASC
+			LIMIT %d OFFSET %d";
+
+		$rows = $wpdb->get_results($wpdb->prepare($sql, $post_type, $limit, $offset), ARRAY_A);
+		if (!is_array($rows) || empty($rows)) {
+			return array(
+				'processed_groups' => 0,
+				'deleted_posts' => 0,
+				'reparented_attachments' => 0,
+				'next_offset' => $offset,
+				'finished' => true,
+			);
+		}
+
+		$processed_groups = 0;
+		$deleted_posts = 0;
+		$reparented_attachments = 0;
+
+		foreach ($rows as $row) {
+			$doc = isset($row['doc']) ? WPBS_Utils::sanitize_document_id($row['doc']) : '';
+			if ($doc === '') {
+				continue;
+			}
+			$ids_str = isset($row['post_ids']) ? (string)$row['post_ids'] : '';
+			$ids = $ids_str !== '' ? array_map('intval', explode(',', $ids_str)) : array();
+			$ids = array_values(array_unique(array_filter($ids)));
+			if (count($ids) < 2) {
+				continue;
+			}
+			$keep_id = (int)$ids[0];
+			$res = $this->dedupe_duplicate_boat_posts_with_counts($doc, $ids, $keep_id);
+			$processed_groups++;
+			$deleted_posts += (int)$res['deleted_posts'];
+			$reparented_attachments += (int)$res['reparented_attachments'];
+		}
+
+		return array(
+			'processed_groups' => $processed_groups,
+			'deleted_posts' => $deleted_posts,
+			'reparented_attachments' => $reparented_attachments,
+			'next_offset' => $offset + count($rows),
+			'finished' => false,
+		);
+	}
+
+	/**
+	 * Wrapper around dedupe that returns useful counters.
+	 *
+	 * @return array{deleted_posts:int,reparented_attachments:int}
+	 */
+	private function dedupe_duplicate_boat_posts_with_counts($document_id, $post_ids, $keep_post_id)
+	{
+		$deleted_posts = 0;
+		$reparented_attachments = 0;
+
+		$document_id = WPBS_Utils::sanitize_document_id($document_id);
+		$keep_post_id = (int)$keep_post_id;
+		$post_ids = is_array($post_ids) ? $post_ids : array();
+		$post_ids = array_values(array_unique(array_filter(array_map('intval', $post_ids))));
+
+		foreach ($post_ids as $pid) {
+			if ($pid <= 0 || $pid === $keep_post_id) {
+				continue;
+			}
+			if (get_post_type($pid) !== WPBS_POST_TYPE) {
+				continue;
+			}
+			$meta_a = (string)get_post_meta($pid, '_wpbs_document_id', true);
+			$meta_b = (string)get_post_meta($pid, 'wpbs_document_id', true);
+			if ($meta_a !== $document_id && $meta_b !== $document_id) {
+				continue;
+			}
+
+			$attachments = get_children(array(
+				'post_parent' => (int)$pid,
+				'post_type' => 'attachment',
+				'post_status' => 'inherit',
+				'fields' => 'ids',
+				'numberposts' => -1,
+			));
+			if (is_array($attachments) && !empty($attachments) && $keep_post_id > 0) {
+				foreach ($attachments as $att_id) {
+					$att_id = (int)$att_id;
+					$att_doc = (string)get_post_meta($att_id, '_wpbs_document_id', true);
+					if ($att_doc !== $document_id) {
+						continue;
+					}
+					wp_update_post(array('ID' => $att_id, 'post_parent' => $keep_post_id));
+					$reparented_attachments++;
+				}
+			}
+
+			wp_delete_post((int)$pid, true);
+			$deleted_posts++;
+		}
+
+		if ($keep_post_id > 0) {
+			update_post_meta($keep_post_id, '_wpbs_document_id', $document_id);
+			update_post_meta($keep_post_id, 'wpbs_document_id', $document_id);
+
+			// Keep custom table mapping consistent.
+			global $wpdb;
+			$boats_table = WPBS_DB::table_boats();
+			$wpdb->update($boats_table, array('post_id' => $keep_post_id, 'updated_at' => WPBS_Utils::now_mysql()), array('document_id' => $document_id));
+		}
+
+		return array('deleted_posts' => $deleted_posts, 'reparented_attachments' => $reparented_attachments);
+	}
+
+	/**
+	 * Run specific queue jobs immediately (manual admin action).
+	 *
+	 * @param array<int,int|string> $job_ids
+	 * @return array{requested:int,eligible:int,ran:int,done:int,failed:int,pending:int,processing:int}
+	 */
+	public function run_queue_jobs_by_ids($job_ids)
+	{
+		$job_ids = is_array($job_ids) ? $job_ids : array();
+		$job_ids = array_map('intval', $job_ids);
+		$job_ids = array_values(array_filter(array_unique($job_ids)));
+		$requested = count($job_ids);
+		if ($requested === 0) {
+			return array('requested' => 0, 'eligible' => 0, 'ran' => 0, 'done' => 0, 'failed' => 0, 'pending' => 0, 'processing' => 0);
+		}
+
+		global $wpdb;
+		$table = WPBS_DB::table_queue();
+		$now = WPBS_Utils::now_mysql();
+
+		$id_list = implode(',', array_map('intval', $job_ids));
+		$eligible_ids = $wpdb->get_col("SELECT id FROM {$table} WHERE id IN ({$id_list}) AND status IN ('pending','failed')");
+		$eligible_ids = array_map('intval', is_array($eligible_ids) ? $eligible_ids : array());
+		$eligible_ids = array_values(array_filter(array_unique($eligible_ids)));
+		$eligible = count($eligible_ids);
+		if ($eligible === 0) {
+			return array('requested' => $requested, 'eligible' => 0, 'ran' => 0, 'done' => 0, 'failed' => 0, 'pending' => 0, 'processing' => 0);
+		}
+
+		$eligible_list = implode(',', array_map('intval', $eligible_ids));
+		$wpdb->query("UPDATE {$table} SET status='processing', locked_at='{$now}', not_before=NULL, updated_at='{$now}' WHERE id IN ({$eligible_list}) AND status IN ('pending','failed')");
+
+		$jobs = $wpdb->get_results("SELECT * FROM {$table} WHERE id IN ({$eligible_list}) AND status='processing' ORDER BY id ASC", ARRAY_A);
+		if (!is_array($jobs)) {
+			$jobs = array();
+		}
+
+		foreach ($jobs as $job) {
+			$this->run_job($job);
+		}
+
+		$after = $wpdb->get_results("SELECT id, status FROM {$table} WHERE id IN ({$eligible_list})", ARRAY_A);
+		$counts = array('done' => 0, 'failed' => 0, 'pending' => 0, 'processing' => 0);
+		if (is_array($after)) {
+			foreach ($after as $row) {
+				$st = isset($row['status']) ? (string)$row['status'] : '';
+				if (isset($counts[$st])) {
+					$counts[$st]++;
+				}
+			}
+		}
+
+		return array(
+			'requested' => $requested,
+			'eligible' => $eligible,
+			'ran' => count($jobs),
+			'done' => (int)$counts['done'],
+			'failed' => (int)$counts['failed'],
+			'pending' => (int)$counts['pending'],
+			'processing' => (int)$counts['processing'],
+		);
 	}
 
 	private function record_queue_metrics($jobs_count, $duration_seconds)
@@ -268,7 +505,11 @@ class WPBS_Sync
 
 	private function upsert_boat_post($document_id, $data)
 	{
-		$post_id = $this->get_post_id_by_document_id($document_id);
+		$post_ids = $this->get_post_ids_by_document_id($document_id);
+		$post_id = !empty($post_ids) ? (int)$post_ids[0] : 0;
+		if (count($post_ids) > 1 && $post_id > 0) {
+			$this->dedupe_duplicate_boat_posts($document_id, $post_ids, $post_id);
+		}
 
 		$title_parts = array();
 		if (!empty($data['ModelYear'])) {
@@ -308,11 +549,124 @@ class WPBS_Sync
 			throw new Exception($post_id->get_error_message());
 		}
 
+		// Store document id in both keys for backward compatibility.
 		update_post_meta($post_id, '_wpbs_document_id', $document_id);
+		update_post_meta($post_id, 'wpbs_document_id', $document_id);
 
 		$this->update_fields($post_id, $data);
 
 		return (int)$post_id;
+	}
+
+	/**
+	 * @return int[]
+	 */
+	private function get_post_ids_by_document_id($document_id)
+	{
+		$document_id = WPBS_Utils::sanitize_document_id($document_id);
+		if ($document_id === '') {
+			return array();
+		}
+
+		$ids = array();
+
+		// Prefer the canonical mapping from our custom boats table when available.
+		global $wpdb;
+		$boats_table = WPBS_DB::table_boats();
+		$maybe_post_id = (int)$wpdb->get_var($wpdb->prepare(
+			"SELECT post_id FROM {$boats_table} WHERE document_id=%s AND post_id IS NOT NULL ORDER BY id DESC LIMIT 1",
+			$document_id
+		));
+		if ($maybe_post_id > 0) {
+			$p = get_post($maybe_post_id);
+			if ($p && $p->post_type === WPBS_POST_TYPE) {
+				$ids[] = $maybe_post_id;
+			}
+		}
+
+		// Search by both meta keys: older installs used wpbs_document_id without underscore.
+		$q = new WP_Query(array(
+			'post_type' => WPBS_POST_TYPE,
+			'post_status' => 'any',
+			'posts_per_page' => 20,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+			'meta_query' => array(
+				'relation' => 'OR',
+				array(
+					'key' => '_wpbs_document_id',
+					'value' => $document_id,
+					'compare' => '=',
+				),
+				array(
+					'key' => 'wpbs_document_id',
+					'value' => $document_id,
+					'compare' => '=',
+				),
+			),
+		));
+
+		if (!empty($q->posts) && is_array($q->posts)) {
+			foreach ($q->posts as $pid) {
+				$ids[] = (int)$pid;
+			}
+		}
+
+		$ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+		sort($ids);
+		return $ids;
+	}
+
+	private function dedupe_duplicate_boat_posts($document_id, $post_ids, $keep_post_id)
+	{
+		$document_id = WPBS_Utils::sanitize_document_id($document_id);
+		$keep_post_id = (int)$keep_post_id;
+		$post_ids = is_array($post_ids) ? $post_ids : array();
+		$post_ids = array_values(array_unique(array_filter(array_map('intval', $post_ids))));
+
+		foreach ($post_ids as $pid) {
+			if ($pid <= 0 || $pid === $keep_post_id) {
+				continue;
+			}
+			if (get_post_type($pid) !== WPBS_POST_TYPE) {
+				continue;
+			}
+			$meta_a = (string)get_post_meta($pid, '_wpbs_document_id', true);
+			$meta_b = (string)get_post_meta($pid, 'wpbs_document_id', true);
+			if ($meta_a !== $document_id && $meta_b !== $document_id) {
+				continue;
+			}
+
+			// Move only media that is truly tied to this duplicate post over to the kept post.
+			$attachments = get_children(array(
+				'post_parent' => (int)$pid,
+				'post_type' => 'attachment',
+				'post_status' => 'inherit',
+				'fields' => 'ids',
+				'numberposts' => -1,
+			));
+			if (is_array($attachments) && !empty($attachments)) {
+				foreach ($attachments as $att_id) {
+					$att_id = (int)$att_id;
+					$att_doc = (string)get_post_meta($att_id, '_wpbs_document_id', true);
+					if ($att_doc !== $document_id) {
+						continue;
+					}
+					if ($keep_post_id > 0) {
+						wp_update_post(array('ID' => $att_id, 'post_parent' => $keep_post_id));
+					}
+				}
+			}
+
+			// Permanently delete the duplicate boat post.
+			wp_delete_post((int)$pid, true);
+		}
+
+		// Ensure keep post has both meta keys for future lookups.
+		if ($keep_post_id > 0) {
+			update_post_meta($keep_post_id, '_wpbs_document_id', $document_id);
+			update_post_meta($keep_post_id, 'wpbs_document_id', $document_id);
+		}
 	}
 
 	private function update_fields($post_id, $data)
@@ -426,6 +780,15 @@ class WPBS_Sync
 			}
 
 			if ($existing_attachment_id) {
+				// If this attachment belongs to this boat, keep its parent pointing at this boat post.
+				$att_doc = (string)get_post_meta((int)$existing_attachment_id, '_wpbs_document_id', true);
+				if ($att_doc === $document_id) {
+					$parent = (int)get_post_field('post_parent', (int)$existing_attachment_id);
+					if ($parent !== (int)$post_id) {
+						wp_update_post(array('ID' => (int)$existing_attachment_id, 'post_parent' => (int)$post_id));
+					}
+				}
+
 				$attachment_ids[] = (int)$existing_attachment_id;
 				$this->link_image_attachment($document_id, $url, (int)$existing_attachment_id);
 				if ($is_featured && !get_post_thumbnail_id($post_id)) {
@@ -750,24 +1113,8 @@ class WPBS_Sync
 
 	private function get_post_id_by_document_id($document_id)
 	{
-		$query = new WP_Query(array(
-			'post_type' => WPBS_POST_TYPE,
-			'post_status' => 'any',
-			'posts_per_page' => 1,
-			'fields' => 'ids',
-			'meta_query' => array(
-				array(
-					'key' => '_wpbs_document_id',
-					'value' => $document_id,
-					'compare' => '=',
-				),
-			),
-		));
-
-		if (!empty($query->posts)) {
-			return (int)$query->posts[0];
-		}
-		return 0;
+		$ids = $this->get_post_ids_by_document_id($document_id);
+		return !empty($ids) ? (int)$ids[0] : 0;
 	}
 
 	private function upsert_boat_row($document_id, $fields)

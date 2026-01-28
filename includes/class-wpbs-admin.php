@@ -22,6 +22,12 @@ class WPBS_Admin
 		add_action('admin_post_wpbs_manual_sync', array($this, 'handle_manual_sync'));
 		add_action('admin_post_wpbs_sync_marked', array($this, 'handle_sync_marked'));
 		add_action('admin_post_wpbs_run_queue_now', array($this, 'handle_run_queue_now'));
+		add_action('wp_ajax_wpbs_queue_start', array($this, 'ajax_queue_start'));
+		add_action('wp_ajax_wpbs_queue_tick', array($this, 'ajax_queue_tick'));
+		add_action('wp_ajax_wpbs_queue_worker_status', array($this, 'ajax_queue_worker_status'));
+		add_action('wp_ajax_wpbs_queue_worker_tick', array($this, 'ajax_queue_worker_tick'));
+		add_action('wp_ajax_wpbs_dedupe_start', array($this, 'ajax_dedupe_start'));
+		add_action('wp_ajax_wpbs_dedupe_tick', array($this, 'ajax_dedupe_tick'));
 	}
 
 	public function enqueue_admin_assets($hook)
@@ -31,7 +37,19 @@ class WPBS_Admin
 		}
 
 		$page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
-		if ($page !== 'wpbs') {
+		if (!in_array($page, array('wpbs', 'wpbs-queue'), true)) {
+			return;
+		}
+
+		if ($page === 'wpbs-queue') {
+			wp_register_script('wpbs-admin-queue', WPBS_PLUGIN_URL . 'assets/js/wpbs-admin-queue.js', array('jquery'), WPBS_VERSION, true);
+			wp_localize_script('wpbs-admin-queue', 'WPBS_QUEUE', array(
+				'ajaxUrl' => admin_url('admin-ajax.php'),
+				'nonce' => wp_create_nonce('wpbs_queue_ajax'),
+				'tickMs' => 2000,
+				'batchSize' => 3,
+			));
+			wp_enqueue_script('wpbs-admin-queue');
 			return;
 		}
 
@@ -42,6 +60,24 @@ class WPBS_Admin
 		$dash = $this->get_dashboard_data();
 		wp_localize_script('wpbs-admin-dashboard', 'WPBS_DASH', $dash);
 		wp_enqueue_script('wpbs-admin-dashboard');
+
+		wp_register_script('wpbs-admin-worker-popup', WPBS_PLUGIN_URL . 'assets/js/wpbs-admin-worker-popup.js', array('jquery'), WPBS_VERSION, true);
+		wp_localize_script('wpbs-admin-worker-popup', 'WPBS_WORKER', array(
+			'ajaxUrl' => admin_url('admin-ajax.php'),
+			'nonce' => wp_create_nonce('wpbs_queue_worker_ajax'),
+			'tickMs' => 1000,
+			'batchSize' => 1,
+		));
+		wp_enqueue_script('wpbs-admin-worker-popup');
+
+		wp_register_script('wpbs-admin-dedupe-popup', WPBS_PLUGIN_URL . 'assets/js/wpbs-admin-dedupe-popup.js', array('jquery'), WPBS_VERSION, true);
+		wp_localize_script('wpbs-admin-dedupe-popup', 'WPBS_DEDUPE', array(
+			'ajaxUrl' => admin_url('admin-ajax.php'),
+			'nonce' => wp_create_nonce('wpbs_dedupe_ajax'),
+			'tickMs' => 1000,
+			'batchSize' => 10,
+		));
+		wp_enqueue_script('wpbs-admin-dedupe-popup');
 	}
 
 	public function admin_menu()
@@ -56,9 +92,280 @@ class WPBS_Admin
 		);
 
 		add_submenu_page('wpbs', __('Boats', 'wpbs'), __('Boats', 'wpbs'), 'manage_options', 'wpbs-boats', array($this, 'render_boats_table'));
+		add_submenu_page('wpbs', __('Queue', 'wpbs'), __('Queue', 'wpbs'), 'manage_options', 'wpbs-queue', array($this, 'render_queue_table'));
 		add_submenu_page('wpbs', __('Settings', 'wpbs'), __('Settings', 'wpbs'), 'manage_options', 'wpbs-settings', array($this, 'render_settings'));
 		add_submenu_page('wpbs', __('Manual Sync', 'wpbs'), __('Manual Sync', 'wpbs'), 'manage_options', 'wpbs-manual', array($this, 'render_manual'));
 		add_submenu_page('wpbs', __('Shortcode Builder', 'wpbs'), __('Shortcode Builder', 'wpbs'), 'manage_options', 'wpbs-shortcodes', array($this, 'render_shortcode_builder'));
+	}
+
+	public function render_queue_table()
+	{
+		if (!current_user_can('manage_options')) {
+			return;
+		}
+
+		require_once WPBS_PLUGIN_DIR . 'includes/class-wpbs-queue-list-table.php';
+
+		// Handle row actions.
+		if (!empty($_GET['wpbs_action']) && in_array((string)$_GET['wpbs_action'], array('run_one', 'delete_one'), true)) {
+			check_admin_referer('wpbs_queue_action');
+			$job_id = isset($_GET['job_id']) ? (int)$_GET['job_id'] : 0;
+			if ($job_id > 0) {
+				if ((string)$_GET['wpbs_action'] === 'run_one') {
+					$res = $this->sync->run_queue_jobs_by_ids(array($job_id));
+					wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&ran=' . (int)$res['ran'] . '&done=' . (int)$res['done'] . '&failed=' . (int)$res['failed']));
+					exit;
+				}
+				if ((string)$_GET['wpbs_action'] === 'delete_one') {
+					global $wpdb;
+					$table = WPBS_DB::table_queue();
+					$wpdb->delete($table, array('id' => $job_id), array('%d'));
+					wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&deleted=1'));
+					exit;
+				}
+			}
+		}
+
+		$table = new WPBS_Queue_List_Table();
+
+		// Handle bulk actions.
+		$action = $table->current_action();
+		if ($action) {
+			check_admin_referer('bulk-queue');
+			$job_ids = isset($_REQUEST['queue_ids']) ? (array)$_REQUEST['queue_ids'] : array();
+			$job_ids = array_map('intval', $job_ids);
+			$job_ids = array_values(array_filter($job_ids));
+
+			if (!empty($job_ids)) {
+				switch ($action) {
+					case 'run_selected':
+						$res = $this->sync->run_queue_jobs_by_ids($job_ids);
+						wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&ran=' . (int)$res['ran'] . '&done=' . (int)$res['done'] . '&failed=' . (int)$res['failed']));
+						exit;
+					case 'delete_selected':
+						global $wpdb;
+						$qtable = WPBS_DB::table_queue();
+						$id_list = implode(',', array_map('intval', $job_ids));
+						if ($id_list !== '') {
+							$wpdb->query("DELETE FROM {$qtable} WHERE id IN ({$id_list})");
+						}
+						wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&deleted=' . count($job_ids)));
+						exit;
+				}
+			}
+
+			wp_safe_redirect(admin_url('admin.php?page=wpbs-queue'));
+			exit;
+		}
+
+		$table->prepare_items();
+
+		echo '<div class="wrap">';
+		echo '<h1>Sync Queue</h1>';
+		echo '<div id="wpbs-queue-runner" style="display:none; margin:10px 0; padding:10px 12px; background:#fff; border:1px solid #ccd0d4; border-left:4px solid #2271b1;">'
+			. '<strong>Running selected jobs…</strong> '
+			. '<span id="wpbs-queue-runner-status" style="margin-left:8px; opacity:.85;"></span>'
+			. '<div style="margin-top:6px;">'
+			. '<button type="button" class="button" id="wpbs-queue-runner-cancel">Stop</button>'
+			. '<button type="button" class="button button-primary" id="wpbs-queue-runner-refresh" style="display:none;">Refresh</button>'
+			. '</div>'
+			. '</div>';
+
+		$ran = isset($_GET['ran']) ? (int)$_GET['ran'] : 0;
+		$done = isset($_GET['done']) ? (int)$_GET['done'] : 0;
+		$failed = isset($_GET['failed']) ? (int)$_GET['failed'] : 0;
+		$deleted = isset($_GET['deleted']) ? (int)$_GET['deleted'] : 0;
+		if ($ran > 0) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf('Ran %d job(s). Done: %d. Failed: %d.', $ran, $done, $failed)) . '</p></div>';
+		} elseif ($deleted > 0) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf('Deleted %d job(s).', $deleted)) . '</p></div>';
+		}
+
+		// Single POST form so bulk actions + search/filter all work together.
+		echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=wpbs-queue')) . '">';
+		echo '<input type="hidden" name="page" value="wpbs-queue" />';
+		wp_nonce_field('bulk-queue');
+		$table->search_box(__('Search jobs'), 'wpbs-queue');
+		$table->display();
+		echo '</form>';
+
+		echo '<p style="opacity:.8;max-width:900px;">Tip: Select multiple jobs and use <strong>Bulk actions → Run selected now</strong> to immediately process those jobs (ignores the Not Before delay). This is useful when jobs are stuck or when you want to force a specific boat sync.</p>';
+		echo '</div>';
+	}
+
+	public function ajax_queue_start()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => 'Forbidden'), 403);
+		}
+		check_ajax_referer('wpbs_queue_ajax', 'nonce');
+
+		$job_ids = isset($_POST['jobIds']) ? (array)$_POST['jobIds'] : array();
+		$job_ids = array_map('intval', $job_ids);
+		$job_ids = array_values(array_filter(array_unique($job_ids)));
+		if (empty($job_ids)) {
+			wp_send_json_error(array('message' => 'No jobs selected.'), 400);
+		}
+
+		$token = wp_generate_password(12, false, false);
+		$key = 'wpbs_queue_run_' . $token;
+
+		$state = array(
+			'token' => $token,
+			'remaining' => $job_ids,
+			'ran' => 0,
+			'done' => 0,
+			'failed' => 0,
+			'started_at' => time(),
+		);
+
+		set_transient($key, $state, 10 * MINUTE_IN_SECONDS);
+		wp_send_json_success(array(
+			'token' => $token,
+			'remaining' => count($job_ids),
+		));
+	}
+
+	public function ajax_queue_tick()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => 'Forbidden'), 403);
+		}
+		check_ajax_referer('wpbs_queue_ajax', 'nonce');
+
+		$token = isset($_POST['token']) ? sanitize_text_field(wp_unslash($_POST['token'])) : '';
+		$batch_size = isset($_POST['batchSize']) ? (int)$_POST['batchSize'] : 3;
+		$batch_size = max(1, min(10, $batch_size));
+		if ($token === '') {
+			wp_send_json_error(array('message' => 'Missing token.'), 400);
+		}
+
+		$key = 'wpbs_queue_run_' . $token;
+		$state = get_transient($key);
+		if (!is_array($state) || empty($state['remaining']) || !is_array($state['remaining'])) {
+			wp_send_json_success(array(
+				'finished' => true,
+				'remaining' => 0,
+				'ran' => 0,
+				'done' => 0,
+				'failed' => 0,
+			));
+		}
+
+		$remaining = array_values(array_map('intval', $state['remaining']));
+		$batch = array_slice($remaining, 0, $batch_size);
+		$remaining = array_slice($remaining, $batch_size);
+
+		$res = $this->sync->run_queue_jobs_by_ids($batch);
+		$state['ran'] += isset($res['ran']) ? (int)$res['ran'] : 0;
+		$state['done'] += isset($res['done']) ? (int)$res['done'] : 0;
+		$state['failed'] += isset($res['failed']) ? (int)$res['failed'] : 0;
+		$state['remaining'] = $remaining;
+
+		set_transient($key, $state, 10 * MINUTE_IN_SECONDS);
+
+		$finished = empty($remaining);
+		wp_send_json_success(array(
+			'finished' => $finished,
+			'remaining' => count($remaining),
+			'ran' => (int)$state['ran'],
+			'done' => (int)$state['done'],
+			'failed' => (int)$state['failed'],
+		));
+	}
+
+	public function ajax_dedupe_start()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => 'Forbidden'), 403);
+		}
+		check_ajax_referer('wpbs_dedupe_ajax', 'nonce');
+
+		$total = (int)$this->sync->count_duplicate_boat_groups();
+		$token = wp_generate_password(12, false, false);
+		$key = 'wpbs_dedupe_' . $token;
+
+		$state = array(
+			'token' => $token,
+			'total' => $total,
+			'offset' => 0,
+			'processed' => 0,
+			'deleted_posts' => 0,
+			'reparented_attachments' => 0,
+			'started_at' => time(),
+		);
+
+		set_transient($key, $state, 20 * MINUTE_IN_SECONDS);
+
+		wp_send_json_success(array(
+			'token' => $token,
+			'totalGroups' => $total,
+			'processedGroups' => 0,
+			'deletedPosts' => 0,
+			'reparentedAttachments' => 0,
+			'finished' => ($total === 0),
+		));
+	}
+
+	public function ajax_dedupe_tick()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => 'Forbidden'), 403);
+		}
+		check_ajax_referer('wpbs_dedupe_ajax', 'nonce');
+
+		$token = isset($_POST['token']) ? sanitize_text_field(wp_unslash($_POST['token'])) : '';
+		$batch_size = isset($_POST['batchSize']) ? (int)$_POST['batchSize'] : 10;
+		$batch_size = max(1, min(50, $batch_size));
+		if ($token === '') {
+			wp_send_json_error(array('message' => 'Missing token.'), 400);
+		}
+
+		$key = 'wpbs_dedupe_' . $token;
+		$state = get_transient($key);
+		if (!is_array($state)) {
+			wp_send_json_error(array('message' => 'Expired. Please start again.'), 400);
+		}
+
+		$total = isset($state['total']) ? (int)$state['total'] : 0;
+		$offset = isset($state['offset']) ? (int)$state['offset'] : 0;
+
+		if ($total === 0) {
+			wp_send_json_success(array(
+				'totalGroups' => 0,
+				'processedGroups' => 0,
+				'deletedPosts' => 0,
+				'reparentedAttachments' => 0,
+				'finished' => true,
+			));
+		}
+
+		$res = $this->sync->dedupe_boats_batch($offset, $batch_size);
+		$state['offset'] = isset($res['next_offset']) ? (int)$res['next_offset'] : $offset;
+		$state['processed'] += isset($res['processed_groups']) ? (int)$res['processed_groups'] : 0;
+		$state['deleted_posts'] += isset($res['deleted_posts']) ? (int)$res['deleted_posts'] : 0;
+		$state['reparented_attachments'] += isset($res['reparented_attachments']) ? (int)$res['reparented_attachments'] : 0;
+
+		$finished = false;
+		if (!empty($res['finished'])) {
+			$finished = true;
+		}
+		if ((int)$state['processed'] >= $total) {
+			$finished = true;
+		}
+		if ((int)$state['offset'] >= $total) {
+			$finished = true;
+		}
+
+		set_transient($key, $state, 20 * MINUTE_IN_SECONDS);
+
+		wp_send_json_success(array(
+			'totalGroups' => $total,
+			'processedGroups' => (int)$state['processed'],
+			'deletedPosts' => (int)$state['deleted_posts'],
+			'reparentedAttachments' => (int)$state['reparented_attachments'],
+			'finished' => $finished,
+		));
 	}
 
 	public function render_boats_table()
@@ -200,14 +507,71 @@ class WPBS_Admin
 		echo '<p><button class="button button-primary">Run Full Sync Now</button></p>';
 		echo '</form>';
 		echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=wpbs-boats')) . '">Open Boats Table</a></p>';
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:10px;">';
+		echo '<p style="margin-top:10px;">';
+		echo '<button type="button" class="button" id="wpbs-run-queue-worker">Run Queue Worker Now</button> <span style="opacity:.75;">(runs in background with progress)</span>';
+		echo '</p>';
+		echo '<p style="margin-top:10px;">';
+		echo '<button type="button" class="button button-secondary" id="wpbs-dedupe-now">Deduplicate Boats Now</button> <span style="opacity:.75;">(removes duplicate boat posts)</span>';
+		echo '</p>';
+		// Fallback for no-JS.
+		echo '<noscript><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
 		echo '<input type="hidden" name="action" value="wpbs_run_queue_now" />';
 		wp_nonce_field('wpbs_run_queue_now');
-		echo '<p><button class="button">Run Queue Worker Now</button> <span style="opacity:.75;">(processes a few jobs immediately)</span></p>';
-		echo '</form>';
+		echo '<p><button class="button">Run Queue Worker Now</button></p>';
+		echo '</form></noscript>';
 		echo '<p style="opacity:.85;max-width:520px;">If sync feels slow on localhost, it is usually because WP-Cron only runs when the site gets visits. The button above helps, or you can set up a real server cron to call wp-cron.php.</p>';
 		echo '</div>';
 		echo '</div>';
+
+		// Simple modal (no dependencies) for the queue worker.
+		echo '<div id="wpbs-worker-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:99999;">'
+			. '<div id="wpbs-worker-modal" role="dialog" aria-modal="true" style="background:#fff; width:520px; max-width:calc(100% - 24px); margin:8vh auto; border-radius:6px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.25);">'
+			. '<div style="padding:12px 14px; border-bottom:1px solid #e5e5e5; display:flex; align-items:center; justify-content:space-between;">'
+			. '<strong>Queue Worker</strong>'
+			. '<button type="button" class="button" id="wpbs-worker-close">Close</button>'
+			. '</div>'
+			. '<div style="padding:14px;">'
+			. '<div id="wpbs-worker-status" style="margin-bottom:10px;">Starting…</div>'
+			. '<div id="wpbs-worker-progress" style="height:10px; background:#f0f0f1; border-radius:999px; overflow:hidden;">'
+			. '<div id="wpbs-worker-progress-bar" style="height:10px; width:0%; background:#2271b1;"></div>'
+			. '</div>'
+			. '<div style="display:flex; gap:14px; margin-top:12px;">'
+			. '<div><strong>Pending:</strong> <span id="wpbs-worker-pending">0</span></div>'
+			. '<div><strong>Processing:</strong> <span id="wpbs-worker-processing">0</span></div>'
+			. '<div><strong>Failed:</strong> <span id="wpbs-worker-failed">0</span></div>'
+			. '</div>'
+			. '<div style="margin-top:14px;">'
+			. '<button type="button" class="button" id="wpbs-worker-stop">Stop</button>'
+			. '<span style="opacity:.75; margin-left:8px;">Updates every second. Stop/Close does not cancel jobs; queue continues normally.</span>'
+			. '</div>'
+			. '</div>'
+			. '</div>'
+			. '</div>';
+
+		// Simple modal (no dependencies) for deduplicate all.
+		echo '<div id="wpbs-dedupe-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100000;">'
+			. '<div id="wpbs-dedupe-modal" role="dialog" aria-modal="true" style="background:#fff; width:520px; max-width:calc(100% - 24px); margin:8vh auto; border-radius:6px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.25);">'
+			. '<div style="padding:12px 14px; border-bottom:1px solid #e5e5e5; display:flex; align-items:center; justify-content:space-between;">'
+			. '<strong>Deduplicate Boats</strong>'
+			. '<button type="button" class="button" id="wpbs-dedupe-close">Close</button>'
+			. '</div>'
+			. '<div style="padding:14px;">'
+			. '<div id="wpbs-dedupe-status" style="margin-bottom:10px;">Starting…</div>'
+			. '<div id="wpbs-dedupe-progress" style="height:10px; background:#f0f0f1; border-radius:999px; overflow:hidden;">'
+			. '<div id="wpbs-dedupe-progress-bar" style="height:10px; width:0%; background:#b32d2e;"></div>'
+			. '</div>'
+			. '<div style="display:flex; gap:14px; margin-top:12px; flex-wrap:wrap;">'
+			. '<div><strong>Groups:</strong> <span id="wpbs-dedupe-processed">0</span> / <span id="wpbs-dedupe-total">0</span></div>'
+			. '<div><strong>Posts deleted:</strong> <span id="wpbs-dedupe-deleted">0</span></div>'
+			. '<div><strong>Images moved:</strong> <span id="wpbs-dedupe-reparented">0</span></div>'
+			. '</div>'
+			. '<div style="margin-top:14px;">'
+			. '<button type="button" class="button" id="wpbs-dedupe-stop">Stop</button>'
+			. '<span style="opacity:.75; margin-left:8px;">Updates every second.</span>'
+			. '</div>'
+			. '</div>'
+			. '</div>'
+			. '</div>';
 
 		echo '<h2 style="margin-top:18px;">Last run (debug)</h2>';
 		echo '<pre style="background:#fff;padding:12px;max-width:100%;overflow:auto;">' . esc_html(print_r($run, true)) . '</pre>';
@@ -361,7 +725,7 @@ class WPBS_Admin
 		echo '<option value="hourly" ' . selected($freq, 'hourly', false) . '>Hourly</option>';
 		echo '<option value="daily" ' . selected($freq, 'daily', false) . '>Daily</option>';
 		echo '</select></td></tr>';
-		echo '<tr><th scope="row"><label for="rows_per_page">Rows per page</label></th><td><input name="rows_per_page" id="rows_per_page" type="number" min="1" max="500" value="' . esc_attr($settings['rows_per_page']) . '" /></td></tr>';
+		echo '<tr><th scope="row"><label for="rows_per_page">Rows per page</label></th><td><input name="rows_per_page" id="rows_per_page" type="number" min="1" max="100" value="' . esc_attr($settings['rows_per_page']) . '" /> <span style="opacity:.75;">(Boats.com API max 100)</span></td></tr>';
 		echo '<tr><th scope="row"><label for="delete_after_days">Delete after (days)</label></th><td><input name="delete_after_days" id="delete_after_days" type="number" min="1" max="365" value="' . esc_attr($settings['delete_after_days']) . '" /></td></tr>';
 		echo '<tr><th scope="row">Download images</th><td><label><input type="checkbox" name="download_images" value="1" ' . checked(!empty($settings['download_images']), true, false) . ' /> Enable</label></td></tr>';
 		echo '<tr><th scope="row"><label for="max_images_per_boat">Max images per boat</label></th><td><input name="max_images_per_boat" id="max_images_per_boat" type="number" min="1" max="200" value="' . esc_attr($settings['max_images_per_boat']) . '" /></td></tr>';
@@ -477,11 +841,14 @@ class WPBS_Admin
 		}
 		check_admin_referer('wpbs_save_settings');
 
+		$rows = isset($_POST['rows_per_page']) ? (int)$_POST['rows_per_page'] : 100;
+		$rows = max(1, min(100, $rows));
+
 		$settings = array(
 			'api_key' => isset($_POST['api_key']) ? sanitize_text_field(wp_unslash($_POST['api_key'])) : '',
 			'party_id' => isset($_POST['party_id']) ? sanitize_text_field(wp_unslash($_POST['party_id'])) : '',
 			'auto_sync_frequency' => isset($_POST['auto_sync_frequency']) ? sanitize_text_field(wp_unslash($_POST['auto_sync_frequency'])) : 'off',
-			'rows_per_page' => isset($_POST['rows_per_page']) ? (int)$_POST['rows_per_page'] : 100,
+			'rows_per_page' => $rows,
 			'delete_after_days' => isset($_POST['delete_after_days']) ? (int)$_POST['delete_after_days'] : 15,
 			'download_images' => !empty($_POST['download_images']) ? 1 : 0,
 			'max_images_per_boat' => isset($_POST['max_images_per_boat']) ? (int)$_POST['max_images_per_boat'] : 25,
@@ -501,6 +868,47 @@ class WPBS_Admin
 
 		wp_safe_redirect(admin_url('admin.php?page=wpbs-settings&updated=1'));
 		exit;
+	}
+
+	private function get_queue_counts_simple()
+	{
+		global $wpdb;
+		$queue_table = WPBS_DB::table_queue();
+		return array(
+			'pending' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='pending'"),
+			'processing' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='processing'"),
+			'failed' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='failed'"),
+		);
+	}
+
+	public function ajax_queue_worker_status()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => 'Forbidden'), 403);
+		}
+		check_ajax_referer('wpbs_queue_worker_ajax', 'nonce');
+
+		wp_send_json_success(array(
+			'queueCounts' => $this->get_queue_counts_simple(),
+		));
+	}
+
+	public function ajax_queue_worker_tick()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => 'Forbidden'), 403);
+		}
+		check_ajax_referer('wpbs_queue_worker_ajax', 'nonce');
+
+		$batch_size = isset($_POST['batchSize']) ? (int)$_POST['batchSize'] : 1;
+		$batch_size = max(1, min(5, $batch_size));
+
+		// Run a small batch to avoid timeouts.
+		$this->sync->process_queue_batch($batch_size);
+
+		wp_send_json_success(array(
+			'queueCounts' => $this->get_queue_counts_simple(),
+		));
 	}
 
 	public function handle_run_queue_now()
