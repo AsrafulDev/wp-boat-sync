@@ -1155,3 +1155,220 @@
     opacity: 1;
   }
 }
+
+/*--------------------------------------------------------------
+  Quick Specs Row
+--------------------------------------------------------------*/
+.wpbs-quick-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius-lg);
+  border: 1px solid var(--wpbs-border-light);
+  margin-bottom: 16px;
+}
+
+.wpbs-quick-spec {
+  flex: 1 1 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.wpbs-quick-spec__icon {
+  width: 28px;
+  height: 28px;
+  fill: var(--wpbs-primary);
+}
+
+.wpbs-quick-spec__label {
+  font-size: 11px;
+  color: var(--wpbs-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.wpbs-quick-spec__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+}
+
+/*--------------------------------------------------------------
+  Dealer Card
+--------------------------------------------------------------*/
+.wpbs-dealer-card {
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius-lg);
+  border: 1px solid var(--wpbs-border-light);
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.wpbs-dealer-card__header {
+  padding: 12px 16px;
+  background: var(--wpbs-bg);
+  border-bottom: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-dealer-card__body {
+  padding: 16px;
+}
+
+.wpbs-dealer-card__row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.wpbs-dealer-card__row:last-child {
+  margin-bottom: 0;
+}
+
+.wpbs-dealer-card__row strong {
+  color: var(--wpbs-text-light);
+  min-width: 70px;
+}
+
+.wpbs-dealer-card__row a {
+  color: var(--wpbs-primary);
+  text-decoration: none;
+}
+
+.wpbs-dealer-card__row a:hover {
+  text-decoration: underline;
+}
+
+.wpbs-dealer-card__actions {
+  padding: 12px 16px;
+  border-top: 1px solid var(--wpbs-border-light);
+}
+
+/*--------------------------------------------------------------
+  More Boats Section
+--------------------------------------------------------------*/
+.wpbs-more-boats {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-more-boats__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.wpbs-more-boats__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+  margin: 0;
+}
+
+.wpbs-more-boats__link {
+  color: var(--wpbs-primary);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.wpbs-more-boats__link:hover {
+  text-decoration: underline;
+}
+
+.wpbs-more-boats__item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--wpbs-border-light);
+  transition: box-shadow .2s;
+}
+
+.wpbs-more-boats__item:hover {
+  box-shadow: var(--wpbs-shadow-lg);
+}
+
+.wpbs-more-boats__img {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--wpbs-bg);
+}
+
+.wpbs-more-boats__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wpbs-more-boats__name {
+  padding: 10px 12px 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--wpbs-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wpbs-more-boats__price {
+  padding: 0 12px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wpbs-primary);
+}
+
+/*--------------------------------------------------------------
+  Inline Price & Location
+--------------------------------------------------------------*/
+.wpbs-price {
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--wpbs-text);
+}
+
+.wpbs-price-monthly {
+  font-size: 12px;
+  color: var(--wpbs-primary);
+}
+
+.wpbs-location {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  color: var(--wpbs-text-light);
+}
+
+.wpbs-location svg {
+  color: var(--wpbs-text-muted);
+}
+
+/*--------------------------------------------------------------
+  Responsive for New Components
+--------------------------------------------------------------*/
+@media (max-width: 768px) {
+  .wpbs-quick-specs {
+    padding: 12px;
+    gap: 12px;
+  }
+  .wpbs-quick-spec {
+    flex: 1 1 80px;
+  }
+  .wpbs-more-boats__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .wpbs-more-boats__grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
