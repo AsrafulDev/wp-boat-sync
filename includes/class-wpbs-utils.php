@@ -25,6 +25,7 @@ class WPBS_Utils
 			'processor_batch_size' => 20,
 			'processor_initial_delay_seconds' => 2,
 			'processor_reschedule_seconds' => 5,
+			'use_default_templates' => 1,
 			'style_grid_columns' => 3,
 			'style_grid_gap' => 16,
 			'style_font_size' => 16,

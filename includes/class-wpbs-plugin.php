@@ -36,6 +36,7 @@ class WPBS_Plugin
 	{
 		$this->sync = new WPBS_Sync(new WPBS_API());
 		$this->shortcodes = new WPBS_Shortcodes();
+		$this->shortcodes->init();
 
 		add_action('init', array($this, 'register_cpt'));
 		add_filter('template_include', array($this, 'template_include'));
@@ -118,6 +119,13 @@ class WPBS_Plugin
 
 	public function template_include($template)
 	{
+		$settings = WPBS_Utils::get_settings();
+		
+		// If default templates are disabled, let theme handle it
+		if (empty($settings['use_default_templates'])) {
+			return $template;
+		}
+		
 		if (is_post_type_archive(WPBS_POST_TYPE)) {
 			$archive = WPBS_PLUGIN_DIR . 'templates/archive-boats.php';
 			if (file_exists($archive)) {

@@ -838,6 +838,7 @@ class WPBS_Admin
 		echo '<tr><th scope="row">Treat missing as sold</th><td><label><input type="checkbox" name="treat_missing_as_sold" value="1" ' . checked(!empty($settings['treat_missing_as_sold']), true, false) . ' /> Mark missing listings as sold and schedule delete</label></td></tr>';
 		echo '<tr><th scope="row"><label for="processor_batch_size">Queue batch size</label></th><td><input name="processor_batch_size" id="processor_batch_size" type="number" min="1" max="100" value="' . esc_attr($settings['processor_batch_size']) . '" /> <p class="description">How many jobs to process per cron run (higher = faster, but heavier).</p></td></tr>';
 		echo '<tr><th scope="row"><label for="processor_reschedule_seconds">Queue reschedule (seconds)</label></th><td><input name="processor_reschedule_seconds" id="processor_reschedule_seconds" type="number" min="0" max="300" value="' . esc_attr($settings['processor_reschedule_seconds']) . '" /> <p class="description">Delay before the next worker run while jobs are pending.</p></td></tr>';
+		echo '<tr><th scope="row">Use plugin templates</th><td><label><input type="checkbox" name="use_default_templates" value="1" ' . checked(!empty($settings['use_default_templates']), true, false) . ' /> Use built-in single and archive templates</label><p class="description">When disabled, your theme\'s templates will be used instead.</p></td></tr>';
 		echo '<tr><th scope="row"><label for="style_grid_columns">Grid columns</label></th><td><input name="style_grid_columns" id="style_grid_columns" type="number" min="1" max="6" value="' . esc_attr($settings['style_grid_columns']) . '" /></td></tr>';
 		echo '<tr><th scope="row"><label for="style_grid_gap">Grid spacing (px)</label></th><td><input name="style_grid_gap" id="style_grid_gap" type="number" min="0" max="80" value="' . esc_attr($settings['style_grid_gap']) . '" /></td></tr>';
 		echo '<tr><th scope="row"><label for="style_font_size">Font size (px)</label></th><td><input name="style_font_size" id="style_font_size" type="number" min="12" max="22" value="' . esc_attr($settings['style_font_size']) . '" /></td></tr>';
@@ -961,6 +962,7 @@ class WPBS_Admin
 			'treat_missing_as_sold' => !empty($_POST['treat_missing_as_sold']) ? 1 : 0,
 			'processor_batch_size' => isset($_POST['processor_batch_size']) ? (int)$_POST['processor_batch_size'] : 10,
 			'processor_reschedule_seconds' => isset($_POST['processor_reschedule_seconds']) ? (int)$_POST['processor_reschedule_seconds'] : 10,
+			'use_default_templates' => !empty($_POST['use_default_templates']) ? 1 : 0,
 			'style_grid_columns' => isset($_POST['style_grid_columns']) ? (int)$_POST['style_grid_columns'] : 3,
 			'style_grid_gap' => isset($_POST['style_grid_gap']) ? (int)$_POST['style_grid_gap'] : 16,
 			'style_font_size' => isset($_POST['style_font_size']) ? (int)$_POST['style_font_size'] : 16,
