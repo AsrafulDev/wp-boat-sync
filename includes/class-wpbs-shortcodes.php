@@ -969,23 +969,159 @@ class WPBS_Shortcodes
 		$atts = shortcode_atts(array(
 			'posts_per_page' => 12,
 			'columns' => isset($settings['style_grid_columns']) ? (int)$settings['style_grid_columns'] : 3,
+			'filter' => 'false',
+			'filter_position' => 'top', // top, left, right
+			'orderby' => 'date',
 		), $atts);
 
 		$ppp = max(1, (int)$atts['posts_per_page']);
 		$cols = max(1, min(6, (int)$atts['columns']));
+		$show_filter = in_array(strtolower($atts['filter']), array('true', 'yes', '1'), true);
+		$filter_position = in_array($atts['filter_position'], array('top', 'left', 'right')) ? $atts['filter_position'] : 'top';
+		$orderby = sanitize_text_field($atts['orderby']);
 
-		$q = new WP_Query(array(
+		// Get filter values from URL if filter is enabled
+		$f_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '';
+		$f_builder = isset($_GET['builder']) ? sanitize_text_field($_GET['builder']) : '';
+		$f_location = isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '';
+		$f_length_min = isset($_GET['length_min']) ? (float)$_GET['length_min'] : '';
+		$f_length_max = isset($_GET['length_max']) ? (float)$_GET['length_max'] : '';
+		$f_year_min = isset($_GET['year_min']) ? (int)$_GET['year_min'] : '';
+		$f_year_max = isset($_GET['year_max']) ? (int)$_GET['year_max'] : '';
+		$f_price_min = isset($_GET['price_min']) ? (float)$_GET['price_min'] : '';
+		$f_price_max = isset($_GET['price_max']) ? (float)$_GET['price_max'] : '';
+		$f_condition_new = isset($_GET['condition_new']) && $_GET['condition_new'] === '1';
+		$f_condition_used = isset($_GET['condition_used']) && $_GET['condition_used'] === '1';
+		$f_featured = isset($_GET['featured']) && $_GET['featured'] === '1';
+		$f_orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : $orderby;
+
+		// Default both conditions if neither specified
+		if (!$f_condition_new && !$f_condition_used) {
+			$f_condition_new = true;
+			$f_condition_used = true;
+		}
+
+		// Build query args
+		$args = array(
 			'post_type' => WPBS_POST_TYPE,
 			'post_status' => 'publish',
 			'posts_per_page' => $ppp,
-		));
+		);
 
-		if (!$q->have_posts()) {
-			return '<div class="wpbs-wrap"><p style="text-align:center;padding:40px;color:#666;">No boats found.</p></div>';
+		// Apply URL filters to initial query
+		if ($show_filter) {
+			$meta_query = array('relation' => 'AND');
+
+			if ($f_category) {
+				$meta_query[] = array('key' => 'wpbs_boat_category', 'value' => $f_category, 'compare' => '=');
+			}
+			if ($f_builder) {
+				$meta_query[] = array('key' => 'wpbs_make', 'value' => $f_builder, 'compare' => '=');
+			}
+			if ($f_location) {
+				$meta_query[] = array('key' => 'wpbs_location', 'value' => $f_location, 'compare' => 'LIKE');
+			}
+			if ($f_length_min !== '') {
+				$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_min, 'compare' => '>=', 'type' => 'NUMERIC');
+			}
+			if ($f_length_max !== '') {
+				$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_max, 'compare' => '<=', 'type' => 'NUMERIC');
+			}
+			if ($f_year_min !== '') {
+				$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_min, 'compare' => '>=', 'type' => 'NUMERIC');
+			}
+			if ($f_year_max !== '') {
+				$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_max, 'compare' => '<=', 'type' => 'NUMERIC');
+			}
+			if ($f_price_min !== '') {
+				$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_min, 'compare' => '>=', 'type' => 'NUMERIC');
+			}
+			if ($f_price_max !== '') {
+				$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_max, 'compare' => '<=', 'type' => 'NUMERIC');
+			}
+			if ($f_condition_new && !$f_condition_used) {
+				$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'new', 'compare' => '=');
+			} elseif ($f_condition_used && !$f_condition_new) {
+				$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'used', 'compare' => '=');
+			}
+			if ($f_featured) {
+				$meta_query[] = array('key' => 'wpbs_featured', 'value' => '1', 'compare' => '=');
+			}
+
+			if (count($meta_query) > 1) {
+				$args['meta_query'] = $meta_query;
+			}
+
+			// Orderby from URL
+			switch ($f_orderby) {
+				case 'price_low':
+					$args['meta_key'] = 'wpbs_price';
+					$args['orderby'] = 'meta_value_num';
+					$args['order'] = 'ASC';
+					break;
+				case 'price_high':
+					$args['meta_key'] = 'wpbs_price';
+					$args['orderby'] = 'meta_value_num';
+					$args['order'] = 'DESC';
+					break;
+				case 'year':
+					$args['meta_key'] = 'wpbs_model_year';
+					$args['orderby'] = 'meta_value_num';
+					$args['order'] = 'DESC';
+					break;
+			}
 		}
 
-		$out = '<div class="wpbs-wrap">';
-		$out .= '<div class="wpbs-grid" style="grid-template-columns:repeat(' . esc_attr($cols) . ',1fr);">';
+		$q = new WP_Query($args);
+		$total = $q->found_posts;
+		$max_pages = $q->max_num_pages;
+
+		// Layout class based on filter position
+		$layout_class = $show_filter ? 'wpbs-filter-layout--' . $filter_position : '';
+
+		if (!$q->have_posts()) {
+			$out = '<div class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($cols) . '">';
+			if ($show_filter) {
+				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_featured, $f_orderby);
+			}
+			$out .= '<div class="wpbs-filter-content">';
+			$out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
+			$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($cols) . ',1fr);">';
+			$out .= '<div class="wpbs-no-results" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background:#fff; border-radius:8px;"><p style="color:#666;">No boats found.</p></div>';
+			$out .= '</div></div></div>';
+			return $out;
+		}
+
+		$out = '<div class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($cols) . '">';
+
+		// Render filter bar if enabled
+		if ($show_filter) {
+			$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_featured, $f_orderby);
+		}
+
+		// Wrap content for layout
+		$out .= '<div class="wpbs-filter-content">';
+
+		// Header with count and sort
+		$out .= '<div class="wpbs-archive-header">';
+		$out .= '<div class="wpbs-archive-count" data-wpbs-total-count>' . number_format($total) . ' boats</div>';
+		if ($show_filter) {
+			$out .= '<div class="wpbs-archive-sort"><span>Sort:</span>';
+			$out .= '<select data-wpbs-filter="orderby">';
+			$out .= '<option value="date"' . selected($f_orderby, 'date', false) . '>Recommended</option>';
+			$out .= '<option value="price_low"' . selected($f_orderby, 'price_low', false) . '>Price: Low to High</option>';
+			$out .= '<option value="price_high"' . selected($f_orderby, 'price_high', false) . '>Price: High to Low</option>';
+			$out .= '<option value="year"' . selected($f_orderby, 'year', false) . '>Year: Newest</option>';
+			$out .= '</select></div>';
+		}
+		$out .= '</div>';
+
+		// Loading overlay
+		if ($show_filter) {
+			$out .= '<div class="wpbs-filter-loading" data-wpbs-filter-loading style="display:none;"><div class="wpbs-filter-loading__spinner"></div><span>Loading boats...</span></div>';
+		}
+
+		$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($cols) . ',1fr);">';
 
 		while ($q->have_posts()) {
 			$q->the_post();
@@ -1038,11 +1174,8 @@ class WPBS_Shortcodes
 			$out .= '</div>';
 			$out .= '<a href="' . esc_url(get_permalink()) . '" class="wpbs-card__body-link"><div class="wpbs-card__body">';
 
-			if ($price['display']) {
+			if (!empty($price['display'])) {
 				$out .= '<div class="wpbs-card__price">' . esc_html($price['display']) . '</div>';
-				if ($price['monthly']) {
-					$out .= '<div class="wpbs-card__monthly">' . esc_html($price['monthly']) . '</div>';
-				}
 			} else {
 				$out .= '<div class="wpbs-card__price">Contact for Price</div>';
 			}
@@ -1059,9 +1192,166 @@ class WPBS_Shortcodes
 		}
 
 		wp_reset_postdata();
-		$out .= '</div></div>';
+		$out .= '</div>'; // End grid
+
+		// Pagination for filtered grid
+		if ($show_filter && $max_pages > 1) {
+			$out .= '<nav class="wpbs-pagination" data-wpbs-pagination data-max-pages="' . esc_attr($max_pages) . '" data-current-page="1" style="margin-top: 24px; text-align: center;">';
+			$out .= '<button type="button" class="wpbs-pagination__btn wpbs-pagination__btn--prev" data-wpbs-page="prev" disabled>← Previous</button>';
+			$out .= '<span class="wpbs-pagination__info">Page 1 of ' . esc_html($max_pages) . ' (' . number_format($total) . ' boats)</span>';
+			$out .= '<button type="button" class="wpbs-pagination__btn wpbs-pagination__btn--next" data-wpbs-page="next">Next →</button>';
+			$out .= '</nav>';
+		}
+
+		$out .= '</div>'; // End filter-content
+		$out .= '</div>'; // End wrap
 
 		return $out;
+	}
+
+	/**
+	 * Render filter bar HTML
+	 */
+	private function render_filter_bar($category, $builder, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $featured, $orderby)
+	{
+		$filter_options = WPBS_Plugin::get_filter_options();
+
+		// Get range limits from database
+		$len_min = max(0, (int)($filter_options['lengths']['min'] ?? 0));
+		$len_max = max($len_min + 10, (int)($filter_options['lengths']['max'] ?? 200));
+		$yr_min = max(1900, (int)($filter_options['years']['min'] ?? 1990));
+		$yr_max = max($yr_min + 1, (int)($filter_options['years']['max'] ?? date('Y')));
+		$pr_min = max(0, (int)($filter_options['prices']['min'] ?? 0));
+		$pr_max = max($pr_min + 1000, (int)($filter_options['prices']['max'] ?? 5000000));
+
+		// Current values
+		$cur_length_min = $length_min !== '' ? (int)$length_min : $len_min;
+		$cur_length_max = $length_max !== '' ? (int)$length_max : $len_max;
+		$cur_year_min = $year_min !== '' ? (int)$year_min : $yr_min;
+		$cur_year_max = $year_max !== '' ? (int)$year_max : $yr_max;
+		$cur_price_min = $price_min !== '' ? (int)$price_min : $pr_min;
+		$cur_price_max = $price_max !== '' ? (int)$price_max : $pr_max;
+
+		$out = '<div class="wpbs-filter-bar">';
+		$out .= '<div class="wpbs-filter-bar__row">';
+
+		// Category
+		$out .= '<div class="wpbs-filter-bar__field"><label>Category</label>';
+		$out .= '<select name="category" data-wpbs-filter="category"><option value="">Any Categories</option>';
+		foreach ($filter_options['categories'] as $cat) {
+			$out .= '<option value="' . esc_attr($cat) . '"' . selected($category, $cat, false) . '>' . esc_html($cat) . '</option>';
+		}
+		$out .= '</select></div>';
+
+		// Builder
+		$out .= '<div class="wpbs-filter-bar__field"><label>Builder</label>';
+		$out .= '<select name="builder" data-wpbs-filter="builder"><option value="">Any Builder</option>';
+		foreach ($filter_options['builders'] as $b) {
+			$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
+		}
+		$out .= '</select></div>';
+
+		// Location
+		$out .= '<div class="wpbs-filter-bar__field"><label>Location</label>';
+		$out .= '<select name="location" data-wpbs-filter="location"><option value="">Any Location</option>';
+		foreach ($filter_options['locations'] as $loc) {
+			$out .= '<option value="' . esc_attr($loc) . '"' . selected($location, $loc, false) . '>' . esc_html($loc) . '</option>';
+		}
+		$out .= '</select></div>';
+
+		// Search button
+		$out .= '<div class="wpbs-filter-bar__field wpbs-filter-bar__field--action">';
+		$out .= '<button type="button" class="wpbs-filter-bar__search" data-wpbs-filter-submit>Search</button>';
+		$out .= '</div>';
+
+		$out .= '</div>'; // End first row
+
+		// Range sliders row
+		$out .= '<div class="wpbs-filter-bar__row wpbs-filter-bar__row--sliders">';
+
+		// Length Range Slider
+		$out .= '<div class="wpbs-filter-bar__field wpbs-filter-bar__field--slider">';
+		$out .= '<label>Length (ft)</label>';
+		$out .= '<div class="wpbs-range" data-wpbs-range="length">';
+		$out .= '<div class="wpbs-range__values">';
+		$out .= '<span class="wpbs-range__value--min">' . esc_html($cur_length_min) . ' ft</span>';
+		$out .= '<span class="wpbs-range__value--max">' . esc_html($cur_length_max) . ' ft</span>';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-range__slider">';
+		$out .= '<div class="wpbs-range__track-bg"></div>';
+		$out .= '<div class="wpbs-range__track"></div>';
+		$out .= '<input type="range" class="wpbs-range__input wpbs-range__input--min" min="' . esc_attr($len_min) . '" max="' . esc_attr($len_max) . '" value="' . esc_attr($cur_length_min) . '" step="1">';
+		$out .= '<input type="range" class="wpbs-range__input wpbs-range__input--max" min="' . esc_attr($len_min) . '" max="' . esc_attr($len_max) . '" value="' . esc_attr($cur_length_max) . '" step="1">';
+		$out .= '</div>';
+		$out .= '<input type="hidden" name="length_min" data-wpbs-filter="length_min" data-wpbs-range-min value="' . esc_attr($length_min) . '">';
+		$out .= '<input type="hidden" name="length_max" data-wpbs-filter="length_max" data-wpbs-range-max value="' . esc_attr($length_max) . '">';
+		$out .= '</div></div>';
+
+		// Year Range Slider
+		$out .= '<div class="wpbs-filter-bar__field wpbs-filter-bar__field--slider">';
+		$out .= '<label>Year</label>';
+		$out .= '<div class="wpbs-range" data-wpbs-range="year">';
+		$out .= '<div class="wpbs-range__values">';
+		$out .= '<span class="wpbs-range__value--min">' . esc_html($cur_year_min) . '</span>';
+		$out .= '<span class="wpbs-range__value--max">' . esc_html($cur_year_max) . '</span>';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-range__slider">';
+		$out .= '<div class="wpbs-range__track-bg"></div>';
+		$out .= '<div class="wpbs-range__track"></div>';
+		$out .= '<input type="range" class="wpbs-range__input wpbs-range__input--min" min="' . esc_attr($yr_min) . '" max="' . esc_attr($yr_max) . '" value="' . esc_attr($cur_year_min) . '" step="1">';
+		$out .= '<input type="range" class="wpbs-range__input wpbs-range__input--max" min="' . esc_attr($yr_min) . '" max="' . esc_attr($yr_max) . '" value="' . esc_attr($cur_year_max) . '" step="1">';
+		$out .= '</div>';
+		$out .= '<input type="hidden" name="year_min" data-wpbs-filter="year_min" data-wpbs-range-min value="' . esc_attr($year_min) . '">';
+		$out .= '<input type="hidden" name="year_max" data-wpbs-filter="year_max" data-wpbs-range-max value="' . esc_attr($year_max) . '">';
+		$out .= '</div></div>';
+
+		// Price Range Slider
+		$out .= '<div class="wpbs-filter-bar__field wpbs-filter-bar__field--slider">';
+		$out .= '<label>Price</label>';
+		$out .= '<div class="wpbs-range" data-wpbs-range="price">';
+		$out .= '<div class="wpbs-range__values">';
+		$out .= '<span class="wpbs-range__value--min">' . $this->format_price_short($cur_price_min) . '</span>';
+		$out .= '<span class="wpbs-range__value--max">' . $this->format_price_short($cur_price_max) . '</span>';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-range__slider">';
+		$out .= '<div class="wpbs-range__track-bg"></div>';
+		$out .= '<div class="wpbs-range__track"></div>';
+		$out .= '<input type="range" class="wpbs-range__input wpbs-range__input--min" min="' . esc_attr($pr_min) . '" max="' . esc_attr($pr_max) . '" value="' . esc_attr($cur_price_min) . '" step="5000">';
+		$out .= '<input type="range" class="wpbs-range__input wpbs-range__input--max" min="' . esc_attr($pr_min) . '" max="' . esc_attr($pr_max) . '" value="' . esc_attr($cur_price_max) . '" step="5000">';
+		$out .= '</div>';
+		$out .= '<input type="hidden" name="price_min" data-wpbs-filter="price_min" data-wpbs-range-min value="' . esc_attr($price_min) . '">';
+		$out .= '<input type="hidden" name="price_max" data-wpbs-filter="price_max" data-wpbs-range-max value="' . esc_attr($price_max) . '">';
+		$out .= '</div></div>';
+
+		$out .= '</div>'; // End sliders row
+
+		// Third row with checkboxes
+		$out .= '<div class="wpbs-filter-bar__row wpbs-filter-bar__row--secondary">';
+		$out .= '<div class="wpbs-filter-bar__checkboxes">';
+		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_new" data-wpbs-filter="condition_new" value="1"' . checked($condition_new, true, false) . '><span>New</span></label>';
+		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_used" data-wpbs-filter="condition_used" value="1"' . checked($condition_used, true, false) . '><span>Used</span></label>';
+		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="featured" data-wpbs-filter="featured" value="1"' . checked($featured, true, false) . '><span>Featured Listings</span></label>';
+		$out .= '</div>';
+		$out .= '<button type="button" class="wpbs-filter-bar__clear" data-wpbs-filter-clear>Clear Filters</button>';
+		$out .= '</div>';
+
+		$out .= '</div>'; // End filter-bar
+
+		return $out;
+	}
+
+	/**
+	 * Format price for short display (e.g. $1.5M, $500K)
+	 */
+	private function format_price_short($price)
+	{
+		$price = (float)$price;
+		if ($price >= 1000000) {
+			return '$' . number_format($price / 1000000, 1) . 'M';
+		} elseif ($price >= 1000) {
+			return '$' . number_format($price / 1000, 0) . 'K';
+		}
+		return '$' . number_format($price);
 	}
 
 	/**

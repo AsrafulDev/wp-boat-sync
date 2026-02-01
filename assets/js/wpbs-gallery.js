@@ -178,6 +178,454 @@
   }
 
   /*--------------------------------------------------------------
+    AJAX Filter System
+  --------------------------------------------------------------*/
+  function initFilterSystem(container) {
+    var filterBar = container.querySelector('.wpbs-filter-bar');
+    var grid = container.querySelector('[data-wpbs-grid]');
+    var loadingOverlay = container.querySelector('[data-wpbs-filter-loading]');
+    var pagination = container.querySelector('[data-wpbs-pagination]');
+    var resultsHeader = container.querySelector('[data-wpbs-results-header]');
+
+    if (!filterBar || !grid) return;
+
+    var currentPage = 1;
+    var isLoading = false;
+
+    // Get filter values from URL on load
+    function parseUrlParams() {
+      var params = new URLSearchParams(window.location.search);
+      var filters = {};
+
+      // Select fields
+      ['category', 'builder', 'location', 'orderby'].forEach(function (key) {
+        if (params.has(key)) {
+          var select = filterBar.querySelector('[data-wpbs-filter="' + key + '"]');
+          if (select) {
+            select.value = params.get(key);
+            filters[key] = params.get(key);
+          }
+        }
+      });
+
+      // Number inputs
+      ['length_min', 'length_max', 'year_min', 'year_max', 'price_min', 'price_max'].forEach(function (key) {
+        if (params.has(key)) {
+          var input = filterBar.querySelector('[data-wpbs-filter="' + key + '"]');
+          if (input) {
+            input.value = params.get(key);
+            filters[key] = params.get(key);
+          }
+        }
+      });
+
+      // Checkboxes
+      ['condition_new', 'condition_used', 'featured'].forEach(function (key) {
+        if (params.get(key) === '1') {
+          var checkbox = filterBar.querySelector('[data-wpbs-filter="' + key + '"]');
+          if (checkbox) {
+            checkbox.checked = true;
+            filters[key] = '1';
+          }
+        }
+      });
+
+      // Page
+      if (params.has('paged')) {
+        currentPage = parseInt(params.get('paged')) || 1;
+      }
+
+      return filters;
+    }
+
+    // Collect filter values from form
+    function collectFilters() {
+      var filters = {};
+
+      // Select and text inputs from filter bar
+      filterBar.querySelectorAll('[data-wpbs-filter]').forEach(function (el) {
+        var key = el.getAttribute('data-wpbs-filter');
+        if (el.type === 'checkbox') {
+          if (el.checked) {
+            filters[key] = '1';
+          }
+        } else if (el.value && el.value !== '') {
+          filters[key] = el.value;
+        }
+      });
+
+      // Also check sort dropdown outside filter bar
+      var sortSelect = container.querySelector('.wpbs-archive-sort [data-wpbs-filter="orderby"]');
+      if (sortSelect && sortSelect.value) {
+        filters.orderby = sortSelect.value;
+      }
+
+      // Check for range slider values
+      container.querySelectorAll('[data-wpbs-range]').forEach(function (slider) {
+        var minInput = slider.querySelector('[data-wpbs-range-min]');
+        var maxInput = slider.querySelector('[data-wpbs-range-max]');
+        if (minInput && minInput.value) {
+          filters[minInput.getAttribute('data-wpbs-filter')] = minInput.value;
+        }
+        if (maxInput && maxInput.value) {
+          filters[maxInput.getAttribute('data-wpbs-filter')] = maxInput.value;
+        }
+      });
+
+      return filters;
+    }
+
+    // Update URL with current filters
+    function updateUrl(filters, page) {
+      var url = new URL(window.location.href);
+      var params = url.searchParams;
+
+      // Clear existing filter params
+      ['category', 'builder', 'location', 'orderby',
+       'length_min', 'length_max', 'year_min', 'year_max',
+       'price_min', 'price_max', 'condition_new', 'condition_used',
+       'featured', 'paged'].forEach(function (key) {
+        params.delete(key);
+      });
+
+      // Add active filters
+      for (var key in filters) {
+        if (filters[key]) {
+          params.set(key, filters[key]);
+        }
+      }
+
+      // Add page if not first
+      if (page > 1) {
+        params.set('paged', page);
+      }
+
+      // Update URL without reload
+      var newUrl = url.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.pushState({ filters: filters, page: page }, '', newUrl);
+    }
+
+    // Show/hide loading state
+    function setLoading(loading) {
+      isLoading = loading;
+      if (loadingOverlay) {
+        loadingOverlay.style.display = loading ? 'flex' : 'none';
+      }
+      if (grid) {
+        grid.style.opacity = loading ? '0.5' : '1';
+        grid.style.pointerEvents = loading ? 'none' : 'auto';
+      }
+    }
+
+    // Perform AJAX request
+    function fetchBoats(filters, page) {
+      if (isLoading) return;
+      
+      setLoading(true);
+
+      var formData = new FormData();
+      formData.append('action', 'wpbs_filter_boats');
+      formData.append('nonce', wpbsFilter.nonce);
+      formData.append('paged', page);
+
+      for (var key in filters) {
+        formData.append(key, filters[key]);
+      }
+
+      fetch(wpbsFilter.ajaxUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      })
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        setLoading(false);
+
+        if (data.success) {
+          // Update grid
+          grid.innerHTML = data.data.html;
+
+          // Re-init card sliders in new content
+          grid.querySelectorAll('.wpbs-card-slider').forEach(initCardSlider);
+
+          // Update total count displays
+          container.querySelectorAll('[data-wpbs-total-count]').forEach(function(el) {
+            el.textContent = data.data.total + ' boats';
+          });
+
+          // Update pagination
+          if (pagination) {
+            updatePagination(page, data.data.maxPages || 1, data.data.total);
+          }
+
+          // Scroll to top of container
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          console.error('Filter error:', data);
+          grid.innerHTML = '<div class="wpbs-no-results"><p>Error loading results. Please try again.</p></div>';
+        }
+      })
+      .catch(function (error) {
+        setLoading(false);
+        console.error('Filter fetch error:', error);
+        grid.innerHTML = '<div class="wpbs-no-results"><p>Error loading results. Please try again.</p></div>';
+      });
+    }
+
+    // Update pagination buttons
+    function updatePagination(page, maxPages, total) {
+      var prevBtn = pagination.querySelector('[data-wpbs-page="prev"]');
+      var nextBtn = pagination.querySelector('[data-wpbs-page="next"]');
+      var info = pagination.querySelector('.wpbs-pagination__info');
+
+      if (prevBtn) {
+        prevBtn.disabled = page <= 1;
+      }
+      if (nextBtn) {
+        nextBtn.disabled = page >= maxPages;
+      }
+      if (info) {
+        info.textContent = 'Page ' + page + ' of ' + maxPages + ' (' + total + ' boats)';
+      }
+
+      currentPage = page;
+    }
+
+    // Debounce timer for auto-load
+    var debounceTimer = null;
+    function debouncedFetch() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function () {
+        currentPage = 1;
+        var filters = collectFilters();
+        updateUrl(filters, 1);
+        fetchBoats(filters, 1);
+      }, 1000);
+    }
+
+    // Event: Search button click
+    var searchBtn = filterBar.querySelector('[data-wpbs-filter-submit]');
+    if (searchBtn) {
+      searchBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        clearTimeout(debounceTimer);
+        currentPage = 1;
+        var filters = collectFilters();
+        updateUrl(filters, 1);
+        fetchBoats(filters, 1);
+      });
+    }
+
+    // Event: Clear filters
+    var clearBtn = filterBar.querySelector('[data-wpbs-filter-clear]');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        clearTimeout(debounceTimer);
+        
+        // Reset all inputs
+        filterBar.querySelectorAll('[data-wpbs-filter]').forEach(function (el) {
+          if (el.type === 'checkbox') {
+            el.checked = false;
+          } else if (el.tagName === 'SELECT') {
+            el.selectedIndex = 0;
+          } else {
+            el.value = '';
+          }
+        });
+
+        // Reset range sliders
+        container.querySelectorAll('[data-wpbs-range]').forEach(function (wrapper) {
+          var rangeMin = wrapper.querySelector('.wpbs-range__input--min');
+          var rangeMax = wrapper.querySelector('.wpbs-range__input--max');
+          if (rangeMin) rangeMin.value = rangeMin.min;
+          if (rangeMax) rangeMax.value = rangeMax.max;
+          // Trigger update
+          rangeMin && rangeMin.dispatchEvent(new Event('input'));
+        });
+
+        currentPage = 1;
+        updateUrl({}, 1);
+        fetchBoats({}, 1);
+      });
+    }
+
+    // Event: Auto-load on select/checkbox change (with 1s debounce)
+    filterBar.querySelectorAll('select[data-wpbs-filter]').forEach(function (select) {
+      select.addEventListener('change', debouncedFetch);
+    });
+    filterBar.querySelectorAll('input[type="checkbox"][data-wpbs-filter]').forEach(function (checkbox) {
+      checkbox.addEventListener('change', debouncedFetch);
+    });
+
+    // Event: Pagination
+    if (pagination) {
+      pagination.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-wpbs-page]');
+        if (!btn || btn.disabled) return;
+        
+        e.preventDefault();
+        clearTimeout(debounceTimer);
+        
+        var direction = btn.getAttribute('data-wpbs-page');
+        var newPage = currentPage;
+
+        if (direction === 'prev' && currentPage > 1) {
+          newPage = currentPage - 1;
+        } else if (direction === 'next') {
+          newPage = currentPage + 1;
+        }
+
+        if (newPage !== currentPage) {
+          var filters = collectFilters();
+          updateUrl(filters, newPage);
+          fetchBoats(filters, newPage);
+        }
+      });
+    }
+
+    // Event: Enter key on inputs (immediate)
+    filterBar.querySelectorAll('input[data-wpbs-filter]').forEach(function (input) {
+      input.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          clearTimeout(debounceTimer);
+          currentPage = 1;
+          var filters = collectFilters();
+          updateUrl(filters, 1);
+          fetchBoats(filters, 1);
+        }
+      });
+    });
+
+    // Event: Sort dropdown change (outside filter bar) - immediate
+    var sortSelect = container.querySelector('.wpbs-archive-sort [data-wpbs-filter="orderby"]');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', function () {
+        clearTimeout(debounceTimer);
+        currentPage = 1;
+        var filters = collectFilters();
+        // Also get orderby from sort dropdown
+        filters.orderby = sortSelect.value;
+        updateUrl(filters, 1);
+        fetchBoats(filters, 1);
+      });
+    }
+
+    // Event: Browser back/forward
+    window.addEventListener('popstate', function (e) {
+      if (e.state && e.state.filters !== undefined) {
+        // Restore form state
+        parseUrlParams();
+        currentPage = e.state.page || 1;
+        fetchBoats(e.state.filters, currentPage);
+      }
+    });
+
+    // Initialize from URL params on load
+    var initialFilters = parseUrlParams();
+    if (Object.keys(initialFilters).length > 0 || currentPage > 1) {
+      // Already have filters in URL, they were applied server-side
+      // Just ensure pagination state is correct
+    }
+
+    // Hide loading overlay initially
+    if (loadingOverlay) {
+      loadingOverlay.style.display = 'none';
+    }
+
+    // Initialize range sliders
+    initRangeSliders(container, debouncedFetch);
+  }
+
+  /*--------------------------------------------------------------
+    Dual Range Slider
+  --------------------------------------------------------------*/
+  function initRangeSliders(container, onChangeCallback) {
+    container.querySelectorAll('[data-wpbs-range]').forEach(function (wrapper) {
+      var track = wrapper.querySelector('.wpbs-range__track');
+      var rangeMin = wrapper.querySelector('.wpbs-range__input--min');
+      var rangeMax = wrapper.querySelector('.wpbs-range__input--max');
+      var minDisplay = wrapper.querySelector('.wpbs-range__value--min');
+      var maxDisplay = wrapper.querySelector('.wpbs-range__value--max');
+      var minHidden = wrapper.querySelector('[data-wpbs-range-min]');
+      var maxHidden = wrapper.querySelector('[data-wpbs-range-max]');
+
+      if (!rangeMin || !rangeMax) return;
+
+      var min = parseFloat(rangeMin.min) || 0;
+      var max = parseFloat(rangeMax.max) || 100;
+      var step = parseFloat(rangeMin.step) || 1;
+      var formatType = wrapper.getAttribute('data-wpbs-range') || 'number';
+
+      function formatValue(val, type) {
+        val = parseFloat(val);
+        if (type === 'price') {
+          if (val >= 1000000) {
+            return '$' + (val / 1000000).toFixed(1) + 'M';
+          } else if (val >= 1000) {
+            return '$' + (val / 1000).toFixed(0) + 'K';
+          }
+          return '$' + val.toLocaleString();
+        } else if (type === 'length') {
+          return val + ' ft';
+        }
+        return val.toString();
+      }
+
+      function updateTrack() {
+        var minVal = parseFloat(rangeMin.value);
+        var maxVal = parseFloat(rangeMax.value);
+        var percentMin = ((minVal - min) / (max - min)) * 100;
+        var percentMax = ((maxVal - min) / (max - min)) * 100;
+
+        if (track) {
+          track.style.left = percentMin + '%';
+          track.style.width = (percentMax - percentMin) + '%';
+        }
+      }
+
+      function updateValues(triggerCallback) {
+        var minVal = parseFloat(rangeMin.value);
+        var maxVal = parseFloat(rangeMax.value);
+
+        // Prevent overlap
+        if (minVal > maxVal - step) {
+          rangeMin.value = maxVal - step;
+          minVal = parseFloat(rangeMin.value);
+        }
+        if (maxVal < minVal + step) {
+          rangeMax.value = minVal + step;
+          maxVal = parseFloat(rangeMax.value);
+        }
+
+        // Update displays
+        if (minDisplay) minDisplay.textContent = formatValue(minVal, formatType);
+        if (maxDisplay) maxDisplay.textContent = formatValue(maxVal, formatType);
+
+        // Update hidden inputs
+        if (minHidden) minHidden.value = minVal;
+        if (maxHidden) maxHidden.value = maxVal;
+
+        updateTrack();
+
+        // Trigger auto-load callback on change (debounced)
+        if (triggerCallback && onChangeCallback) {
+          onChangeCallback();
+        }
+      }
+
+      rangeMin.addEventListener('input', function() { updateValues(true); });
+      rangeMax.addEventListener('input', function() { updateValues(true); });
+
+      // Initialize without triggering callback
+      updateValues(false);
+    });
+  }
+
+  /*--------------------------------------------------------------
     Init on DOM Ready
   --------------------------------------------------------------*/
   document.addEventListener('DOMContentLoaded', function () {
@@ -189,5 +637,8 @@
 
     // Show more toggle
     initShowMoreToggle();
+
+    // AJAX Filter system
+    document.querySelectorAll('[data-wpbs-filter-container]').forEach(initFilterSystem);
   });
 })();

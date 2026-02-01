@@ -918,6 +918,9 @@ class WPBS_Admin
 		echo '<table class="form-table" role="presentation">';
 		echo '<tr><th><label for="wpbs_sc_ppp">Posts per page</label></th><td><input id="wpbs_sc_ppp" type="number" value="12" min="1" max="100" class="small-text" /></td></tr>';
 		echo '<tr><th><label for="wpbs_sc_cols">Columns</label></th><td><input id="wpbs_sc_cols" type="number" value="3" min="1" max="6" class="small-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_filter">Enable Filter Bar</label></th><td><select id="wpbs_sc_filter"><option value="false">No</option><option value="true">Yes</option></select><p class="description">Show filter bar with category, price, year, length range sliders and AJAX filtering.</p></td></tr>';
+		echo '<tr id="wpbs_sc_filter_pos_row" style="display:none;"><th><label for="wpbs_sc_filter_pos">Filter Position</label></th><td><select id="wpbs_sc_filter_pos"><option value="top">Top (default)</option><option value="left">Left Sidebar</option><option value="right">Right Sidebar</option></select><p class="description">Position of the filter bar relative to the grid.</p></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_orderby">Default Order</label></th><td><select id="wpbs_sc_orderby"><option value="date">Date (newest first)</option><option value="price_low">Price: Low to High</option><option value="price_high">Price: High to Low</option><option value="year">Year: Newest</option></select></td></tr>';
 		echo '</table>';
 		echo '</div>';
 
@@ -940,13 +943,12 @@ class WPBS_Admin
 		echo '</table>';
 		echo '</div>';
 
-		// Price options
+		// Price options (now uses basic panel)
 		echo '<div id="wpbs_sc_opt_price" class="wpbs-sc-panel" style="display:none;">';
 		echo '<h3 style="margin-top:0;">Price Options</h3>';
 		echo '<table class="form-table" role="presentation">';
 		echo '<tr><th><label for="wpbs_sc_doc_price">Document ID</label></th><td><input id="wpbs_sc_doc_price" type="text" placeholder="e.g. 9963690" class="regular-text" /></td></tr>';
 		echo '<tr><th><label for="wpbs_sc_postid_price">Or Post ID</label></th><td><input id="wpbs_sc_postid_price" type="number" placeholder="e.g. 123" class="small-text" /></td></tr>';
-		echo '<tr><th><label for="wpbs_sc_monthly">Show monthly</label></th><td><select id="wpbs_sc_monthly"><option value="yes">Yes</option><option value="no">No</option></select><p class="description">Display estimated monthly payment.</p></td></tr>';
 		echo '</table>';
 		echo '</div>';
 
@@ -982,7 +984,7 @@ class WPBS_Admin
 		echo '<table class="widefat striped" style="max-width:900px;">';
 		echo '<thead><tr><th>Shortcode</th><th>Description</th><th>Key Attributes</th></tr></thead>';
 		echo '<tbody>';
-		echo '<tr><td><code>[wpbs_boat_grid]</code></td><td>Display boats in a responsive grid layout</td><td>posts_per_page, columns</td></tr>';
+		echo '<tr><td><code>[wpbs_boat_grid]</code></td><td>Display boats in a responsive grid layout</td><td>posts_per_page, columns, filter, filter_position, orderby</td></tr>';
 		echo '<tr><td><code>[wpbs_boat_single]</code></td><td>Full single boat display with all sections</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_accordion]</code></td><td>Accordion-style boat details (collapsible sections)</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_tabs]</code></td><td>Tabbed boat details interface</td><td>id, post_id</td></tr>';
@@ -990,7 +992,7 @@ class WPBS_Admin
 		echo '<tr><td><code>[wpbs_gallery]</code></td><td>Full image gallery with lightbox</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_quick_specs]</code></td><td>Key specifications in grid format</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_overview]</code></td><td>Boat overview section</td><td>id, post_id</td></tr>';
-		echo '<tr><td><code>[wpbs_price]</code></td><td>Display price with optional monthly estimate</td><td>id, post_id, monthly</td></tr>';
+		echo '<tr><td><code>[wpbs_price]</code></td><td>Display boat price</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_price_card]</code></td><td>Price card with contact seller button</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_location]</code></td><td>Boat location information</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_dealer_card]</code></td><td>Dealer contact card</td><td>id, post_id</td></tr>';
@@ -1005,7 +1007,7 @@ class WPBS_Admin
 		echo '<script>
 (function(){
 	var descriptions = {
-		grid: "Display multiple boats in a responsive grid layout. Perfect for inventory pages and boat listings.",
+		grid: "Display multiple boats in a responsive grid layout. Enable filter bar for AJAX-powered filtering with range sliders for Price, Year, and Length.",
 		single: "Full single boat display including gallery, specs, details, and dealer info. Use on dedicated boat pages.",
 		accordion: "Modern accordion-style boat details with collapsible sections for Description, Measurements, Propulsion, Features, Location, and Disclaimer.",
 		tabs: "Classic tabbed interface for boat specifications. Shows Description, Measurements, Propulsion, and Features tabs.",
@@ -1017,7 +1019,7 @@ class WPBS_Admin
 		gallery: "Full image gallery with thumbnail strip and lightbox. Click images to view full-size.",
 		quick_specs: "Display key specifications (Year, Length, Engine, Fuel, etc.) in a compact grid.",
 		overview: "Boat overview section with main details.",
-		price: "Display the boat price. Optionally shows estimated monthly payment.",
+		price: "Display the boat price.",
 		price_card: "Price card with title, location, and Contact Seller button.",
 		location: "Display boat location (city, state, country).",
 		dealer_card: "Dealer contact card with name, phone, and email.",
@@ -1091,8 +1093,20 @@ class WPBS_Admin
 		if(panel === "grid"){
 			var ppp = document.getElementById("wpbs_sc_ppp").value;
 			var cols = document.getElementById("wpbs_sc_cols").value;
+			var filter = document.getElementById("wpbs_sc_filter").value;
+			var filterPos = document.getElementById("wpbs_sc_filter_pos").value;
+			var orderby = document.getElementById("wpbs_sc_orderby").value;
+			
 			if(ppp && ppp !== "12") attrs.push("posts_per_page=\"" + ppp + "\"");
 			if(cols && cols !== "3") attrs.push("columns=\"" + cols + "\"");
+			if(filter === "true") {
+				attrs.push("filter=\"true\"");
+				if(filterPos && filterPos !== "top") attrs.push("filter_position=\"" + filterPos + "\"");
+			}
+			if(orderby && orderby !== "date") attrs.push("orderby=\"" + orderby + "\"");
+			
+			// Show/hide filter position row
+			document.getElementById("wpbs_sc_filter_pos_row").style.display = filter === "true" ? "" : "none";
 		}
 		else if(panel === "single"){
 			var doc = document.getElementById("wpbs_sc_doc").value.trim();
@@ -1111,10 +1125,8 @@ class WPBS_Admin
 		else if(panel === "price"){
 			var doc = document.getElementById("wpbs_sc_doc_price").value.trim();
 			var postid = document.getElementById("wpbs_sc_postid_price").value.trim();
-			var monthly = document.getElementById("wpbs_sc_monthly").value;
 			if(postid) attrs.push("post_id=\"" + postid + "\"");
 			else if(doc) attrs.push("id=\"" + doc + "\"");
-			if(monthly === "no") attrs.push("monthly=\"no\"");
 		}
 		else if(panel === "more"){
 			var doc = document.getElementById("wpbs_sc_doc_more").value.trim();
