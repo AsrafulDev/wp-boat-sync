@@ -1131,10 +1131,27 @@ class WPBS_Shortcodes
 			$total_images = count($gallery_ids);
 			$meta = $this->get_boat_meta($post_id);
 			$price = $this->format_price($meta['price']);
-			$is_sold = $meta['status'] && strtolower($meta['status']) !== 'active';
+			
+			// Check if boat is sold (via meta or taxonomy)
+			$is_sold = get_post_meta($post_id, '_wpbs_is_sold', true) === '1';
+			if (!$is_sold) {
+				$boat_statuses = wp_get_object_terms($post_id, 'boat_status', array('fields' => 'slugs'));
+				$is_sold = is_array($boat_statuses) && in_array('sold', $boat_statuses, true);
+			}
 
-			$out .= '<article class="wpbs-card">';
+			$card_class = 'wpbs-card';
+			if ($is_sold) {
+				$card_class .= ' wpbs-card--sold';
+			}
+
+			$out .= '<article class="' . esc_attr($card_class) . '">';
 			$out .= '<div class="wpbs-card__media wpbs-card-slider" data-wpbs-card-slider>';
+			
+			// Sold badge at top of media
+			if ($is_sold) {
+				$out .= '<div class="wpbs-card__badge--sold">Sold</div>';
+			}
+			
 			$out .= '<a href="' . esc_url(get_permalink()) . '" class="wpbs-card-slider__link">';
 
 			if (!empty($slider_images)) {
@@ -1161,9 +1178,8 @@ class WPBS_Shortcodes
 				$out .= '</div>';
 			}
 
-			if ($is_sold) {
-				$out .= '<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--sold">Sold</span></div>';
-			} elseif ($meta['condition'] && strtolower($meta['condition']) === 'new') {
+			// New badge only (sold badge is already at top)
+			if (!$is_sold && $meta['condition'] && strtolower($meta['condition']) === 'new') {
 				$out .= '<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--new">New</span></div>';
 			}
 

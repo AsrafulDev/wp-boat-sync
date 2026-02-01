@@ -54,6 +54,10 @@ class WPBS_Plugin
 
 		add_action(WPBS_CRON_PROCESS_QUEUE, array($this->sync, 'process_queue'));
 		add_action(WPBS_CRON_DELETE_BOAT, array($this->sync, 'delete_boat_after_grace'), 10, 1);
+		add_action(WPBS_CRON_CLEANUP_QUEUE, array($this->sync, 'cleanup_old_queue_jobs'));
+
+		// Ensure cleanup cron is scheduled (for existing installations)
+		self::schedule_cleanup_cron();
 
 		if (is_admin()) {
 			$this->admin = new WPBS_Admin($this->sync);
@@ -67,6 +71,7 @@ class WPBS_Plugin
 	{
 		WPBS_DB::install();
 		self::schedule_cron_events();
+		self::schedule_cleanup_cron();
 	}
 
 	public static function deactivate()
@@ -74,6 +79,7 @@ class WPBS_Plugin
 		wp_clear_scheduled_hook(WPBS_CRON_AUTO_SYNC);
 		wp_clear_scheduled_hook(WPBS_CRON_PROCESS_QUEUE);
 		wp_clear_scheduled_hook(WPBS_CRON_DELETE_BOAT);
+		wp_clear_scheduled_hook(WPBS_CRON_CLEANUP_QUEUE);
 	}
 
 	public static function schedule_cron_events()
@@ -81,6 +87,13 @@ class WPBS_Plugin
 		$settings = WPBS_Utils::get_settings();
 		$freq = isset($settings['auto_sync_frequency']) ? (string)$settings['auto_sync_frequency'] : 'off';
 		self::reschedule_auto_sync($freq);
+	}
+
+	public static function schedule_cleanup_cron()
+	{
+		if (!wp_next_scheduled(WPBS_CRON_CLEANUP_QUEUE)) {
+			wp_schedule_event(time() + 3600, 'daily', WPBS_CRON_CLEANUP_QUEUE);
+		}
 	}
 
 	public static function reschedule_auto_sync($frequency)
@@ -119,6 +132,35 @@ class WPBS_Plugin
 			'menu_icon' => 'dashicons-admin-site-alt3',
 			'rewrite' => array('slug' => 'boats'),
 		));
+
+		// Register boat_status taxonomy for Sold/Available labels
+		register_taxonomy('boat_status', WPBS_POST_TYPE, array(
+			'labels' => array(
+				'name' => __('Boat Status', 'wpbs'),
+				'singular_name' => __('Status', 'wpbs'),
+				'search_items' => __('Search Statuses', 'wpbs'),
+				'all_items' => __('All Statuses', 'wpbs'),
+				'edit_item' => __('Edit Status', 'wpbs'),
+				'update_item' => __('Update Status', 'wpbs'),
+				'add_new_item' => __('Add New Status', 'wpbs'),
+				'new_item_name' => __('New Status Name', 'wpbs'),
+				'menu_name' => __('Status', 'wpbs'),
+			),
+			'public' => true,
+			'hierarchical' => false,
+			'show_ui' => true,
+			'show_admin_column' => true,
+			'show_in_rest' => true,
+			'rewrite' => array('slug' => 'boat-status'),
+		));
+
+		// Ensure default terms exist
+		if (!term_exists('sold', 'boat_status')) {
+			wp_insert_term('Sold', 'boat_status', array('slug' => 'sold'));
+		}
+		if (!term_exists('available', 'boat_status')) {
+			wp_insert_term('Available', 'boat_status', array('slug' => 'available'));
+		}
 	}
 
 	public function template_include($template)

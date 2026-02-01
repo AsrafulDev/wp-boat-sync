@@ -495,7 +495,36 @@ class WPBS_Sync
 		$sales_status = isset($data['SalesStatus']) ? (string)$data['SalesStatus'] : (isset($data['salesStatus']) ? (string)$data['salesStatus'] : '');
 		$last_mod_date = isset($data['LastModificationDate']) ? (string)$data['LastModificationDate'] : null;
 
-		$post_id = $this->upsert_boat_post($document_id, $data);
+		// Check if we need to update - compare modification date and data hash
+		$needs_update = $force;
+		$existing_post_id = $this->get_post_id_by_document_id($document_id);
+		
+		if (!$needs_update && $existing_post_id) {
+			$stored_mod_date = get_post_meta($existing_post_id, '_wpbs_last_modification_date', true);
+			$stored_data_hash = get_post_meta($existing_post_id, '_wpbs_data_hash', true);
+			$current_data_hash = md5(WPBS_Utils::json_encode($data));
+			
+			// Update if modification date changed OR data hash changed
+			if ($last_mod_date !== $stored_mod_date || $current_data_hash !== $stored_data_hash) {
+				$needs_update = true;
+			}
+		} else {
+			// New boat - always needs insert
+			$needs_update = true;
+		}
+
+		$post_id = $existing_post_id;
+		
+		if ($needs_update) {
+			$post_id = $this->upsert_boat_post($document_id, $data);
+			
+			// Store modification date and data hash for future comparisons
+			update_post_meta($post_id, '_wpbs_last_modification_date', $last_mod_date);
+			update_post_meta($post_id, '_wpbs_data_hash', md5(WPBS_Utils::json_encode($data)));
+			
+			// Sync images only if data changed
+			$this->sync_images($document_id, $post_id, $data);
+		}
 
 		$this->upsert_boat_row($document_id, array(
 			'post_id' => $post_id,
@@ -503,7 +532,7 @@ class WPBS_Sync
 			'last_modification_date' => $last_mod_date,
 			'last_seen_run_id' => $run_id,
 			'last_sync_at' => WPBS_Utils::now_mysql(),
-			'last_sync_status' => 'ok',
+			'last_sync_status' => $needs_update ? 'updated' : 'skipped',
 			'last_error' => null,
 			'raw_json' => WPBS_Utils::json_encode($data),
 		));
@@ -511,8 +540,8 @@ class WPBS_Sync
 		// Also store a post-meta timestamp for admin display / fallback.
 		update_post_meta($post_id, '_wpbs_last_sync_at', WPBS_Utils::now_mysql());
 
+		// Always apply sold logic (status might have changed)
 		$this->apply_soldout_logic($document_id, $post_id, $sales_status);
-		$this->sync_images($document_id, $post_id, $data);
 	}
 
 	private function job_reconcile($payload)
@@ -1150,32 +1179,77 @@ class WPBS_Sync
 
 	private function apply_soldout_logic($document_id, $post_id, $sales_status)
 	{
-		$settings = WPBS_Utils::get_settings();
-		$days = max(1, (int)$settings['delete_after_days']);
+		if (!$post_id) {
+			return;
+		}
 
 		// Treat empty/missing status as active (boat is available)
 		$status_lower = strtolower(trim((string)$sales_status));
 		$is_active = ($status_lower === '' || $status_lower === 'active' || $status_lower === 'available');
-		$soldout_at = $post_id ? get_post_meta($post_id, '_wpbs_soldout_at', true) : '';
-
+		
+		// Ensure 'boat_status' taxonomy exists
+		$this->ensure_boat_status_taxonomy();
+		
 		if ($is_active) {
-			if ($post_id) {
-				delete_post_meta($post_id, '_wpbs_soldout_at');
-				$this->unschedule_delete($document_id);
-				// Ensure the post is published if it was previously drafted
-				if (get_post_status($post_id) === 'draft') {
-					wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));
-				}
+			// Remove sold status
+			delete_post_meta($post_id, '_wpbs_soldout_at');
+			delete_post_meta($post_id, '_wpbs_is_sold');
+			wp_remove_object_terms($post_id, 'sold', 'boat_status');
+			
+			// Ensure post is published
+			if (get_post_status($post_id) !== 'publish') {
+				wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));
 			}
 			return;
 		}
 
-		if ($post_id && empty($soldout_at)) {
+		// Boat is sold/inactive - mark with tag but keep published
+		$soldout_at = get_post_meta($post_id, '_wpbs_soldout_at', true);
+		if (empty($soldout_at)) {
 			update_post_meta($post_id, '_wpbs_soldout_at', WPBS_Utils::now_mysql());
-			if (get_post_status($post_id) === 'publish') {
-				wp_update_post(array('ID' => $post_id, 'post_status' => 'draft'));
-			}
-			$this->schedule_delete($document_id, $days);
+		}
+		update_post_meta($post_id, '_wpbs_is_sold', '1');
+		update_post_meta($post_id, 'wpbs_sales_status', $sales_status);
+		
+		// Add 'Sold' term to boat_status taxonomy
+		wp_set_object_terms($post_id, 'sold', 'boat_status', false);
+		
+		// Ensure post stays published (not draft)
+		if (get_post_status($post_id) !== 'publish') {
+			wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));
+		}
+	}
+
+	/**
+	 * Ensure the boat_status taxonomy exists for sold/available labels.
+	 */
+	private function ensure_boat_status_taxonomy()
+	{
+		if (!taxonomy_exists('boat_status')) {
+			register_taxonomy('boat_status', WPBS_POST_TYPE, array(
+				'labels' => array(
+					'name' => 'Boat Status',
+					'singular_name' => 'Status',
+					'search_items' => 'Search Statuses',
+					'all_items' => 'All Statuses',
+					'edit_item' => 'Edit Status',
+					'update_item' => 'Update Status',
+					'add_new_item' => 'Add New Status',
+					'new_item_name' => 'New Status Name',
+					'menu_name' => 'Status',
+				),
+				'public' => true,
+				'hierarchical' => false,
+				'show_ui' => true,
+				'show_admin_column' => true,
+				'show_in_rest' => true,
+				'rewrite' => array('slug' => 'boat-status'),
+			));
+		}
+		
+		// Ensure 'Sold' term exists
+		if (!term_exists('sold', 'boat_status')) {
+			wp_insert_term('Sold', 'boat_status', array('slug' => 'sold'));
 		}
 	}
 
@@ -1392,5 +1466,33 @@ class WPBS_Sync
 			'document_id' => $document_id,
 			'image_url' => $image_url,
 		));
+	}
+
+	/**
+	 * Delete completed (done/failed) queue jobs older than a specified number of days.
+	 * Called daily via cron to prevent queue table from growing indefinitely.
+	 *
+	 * @param int $days Number of days to keep completed jobs. Default 2.
+	 * @return int Number of deleted rows.
+	 */
+	public function cleanup_old_queue_jobs($days = 2)
+	{
+		global $wpdb;
+		$table = WPBS_DB::table_queue();
+		$days = max(1, (int)$days);
+		
+		$threshold = gmdate('Y-m-d H:i:s', time() - ($days * DAY_IN_SECONDS));
+		
+		// Delete completed (done) and failed jobs older than threshold
+		$deleted = $wpdb->query($wpdb->prepare(
+			"DELETE FROM {$table} WHERE status IN ('done', 'failed') AND updated_at < %s",
+			$threshold
+		));
+		
+		if ($deleted > 0) {
+			error_log(sprintf('[WPBS] Queue cleanup: deleted %d old jobs (older than %d days)', $deleted, $days));
+		}
+		
+		return (int)$deleted;
 	}
 }

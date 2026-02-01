@@ -121,6 +121,53 @@
   z-index: 2;
 }
 
+.wpbs-card__badge--sold {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  background: #dc3545;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.wpbs-card--sold {
+  opacity: 0.85;
+}
+
+.wpbs-card--sold .wpbs-card__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.15);
+  pointer-events: none;
+}
+
+/* Single Boat Sold Banner */
+.wpbs-sold-banner {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: #fff;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  border-radius: var(--wpbs-radius);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.wpbs-sold-banner svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .wpbs-card__photo-count {
   position: absolute;
   top: 8px;
