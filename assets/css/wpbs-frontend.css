@@ -261,6 +261,12 @@
   grid-template-columns: 1fr 340px;
   gap: 20px;
   align-items: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.wpbs-single-wrap > * {
+  min-width: 0;
 }
 
 /* Gallery */
@@ -294,7 +300,7 @@
   bottom: 12px;
   left: 12px;
   background: rgba(0,0,0,.7);
-  color: #fff;
+  color: #fff !important;
   font-size: 13px;
   font-weight: 500;
   padding: 8px 14px;
@@ -303,12 +309,12 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent !important;
   transition: background .15s;
 }
 
 .wpbs-gallery__view-btn:hover {
-  background: rgba(0,0,0,.85);
+  background: rgba(0,0,0,.85) !important;
 }
 
 .wpbs-gallery__view-btn svg {
@@ -322,8 +328,8 @@
   transform: translateY(-50%);
   width: 40px;
   height: 40px;
-  background: rgba(255,255,255,.9);
-  border: none;
+  background: rgba(255,255,255,.9) !important;
+  border: 1px solid var(--wpbs-border-light) !important;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -334,7 +340,13 @@
 }
 
 .wpbs-gallery__nav:hover {
-  background: #fff;
+  background: #fff !important;
+  border-color: var(--wpbs-border) !important;
+}
+.wpbs-gallery__nav:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--wpbs-primary) !important;
+  background-color: var(--wpbs-bg) !important;
 }
 
 .wpbs-gallery__nav--prev { left: 12px; }
@@ -343,7 +355,7 @@
 .wpbs-gallery__nav svg {
   width: 20px;
   height: 20px;
-  fill: #333;
+  fill: var(--wpbs-primary);
 }
 
 .wpbs-gallery__thumbs {
@@ -361,9 +373,9 @@
   height: 52px;
   border-radius: 4px;
   overflow: hidden;
-  border: 2px solid transparent;
+  border: 2px solid transparent !important;
   cursor: pointer;
-  padding: 0;
+  padding: 0 !important;
   background: none;
   opacity: .7;
   transition: opacity .15s, border-color .15s;
@@ -381,7 +393,7 @@
 }
 
 .wpbs-gallery__thumb.is-active {
-  border-color: var(--wpbs-primary);
+  border-color: var(--wpbs-primary) !important;
   opacity: 1;
 }
 
@@ -397,20 +409,32 @@
 }
 
 .wpbs-quick-spec {
-  padding: 16px 12px;
-  text-align: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
   border-right: 1px solid var(--wpbs-border-light);
+  border-bottom: 1px solid var(--wpbs-border-light);
 }
 
-.wpbs-quick-spec:last-child {
+.wpbs-quick-spec:nth-child(4n) {
   border-right: none;
 }
 
+.wpbs-quick-spec:nth-last-child(-n+4) {
+  border-bottom: none;
+}
+
 .wpbs-quick-spec__icon {
-  width: 28px;
-  height: 28px;
-  margin: 0 auto 6px;
-  fill: var(--wpbs-text-muted);
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.wpbs-quick-spec__text {
+  flex: 1;
+  min-width: 0;
 }
 
 .wpbs-quick-spec__label {
@@ -418,12 +442,15 @@
   color: var(--wpbs-text-muted);
   text-transform: uppercase;
   margin-bottom: 2px;
+  font-weight: 500;
 }
 
 .wpbs-quick-spec__value {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--wpbs-text);
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 /* Boat Overview Section */
@@ -462,24 +489,24 @@
 
 .wpbs-tabs__nav {
   display: flex;
-  border-bottom: 1px solid var(--wpbs-border-light);
-  background: var(--wpbs-bg);
+  border-bottom: 1px solid var(--wpbs-border-light) !important;
+  background: var(--wpbs-bg) !important;
 }
 
 .wpbs-tabs__btn {
   padding: 14px 20px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--wpbs-text-light);
-  background: none;
-  border: none;
+  color: var(--wpbs-text-light) !important;
+  background: none !important;
+  border: none !important;
   cursor: pointer;
   position: relative;
 }
 
 .wpbs-tabs__btn.is-active {
-  color: var(--wpbs-primary);
-  background: var(--wpbs-white);
+  color: var(--wpbs-primary) !important;
+  background: var(--wpbs-white) !important;
 }
 
 .wpbs-tabs__btn.is-active::after {
@@ -489,7 +516,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--wpbs-primary);
+  background: var(--wpbs-primary) !important;
 }
 
 .wpbs-tabs__content {
@@ -500,16 +527,16 @@
 .wpbs-specs-table {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0;
+  gap: 0 !important;
 }
 
 .wpbs-specs-table__section {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--wpbs-border-light);
+  padding: 16px 0 !important;
+  border-bottom: 1px solid var(--wpbs-border-light) !important;
 }
 
 .wpbs-specs-table__section:last-child {
-  border-bottom: none;
+  border-bottom: none !important;
 }
 
 .wpbs-specs-table__heading {
@@ -523,18 +550,234 @@
 .wpbs-specs-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 6px 20px !important;
   font-size: 13px;
 }
 
 .wpbs-specs-row__label {
-  color: var(--wpbs-text-light);
+  color: var(--wpbs-text-light) !important;
 }
 
 .wpbs-specs-row__value {
+  color: var(--wpbs-text) !important;
+  font-weight: 500;
+  text-align: right;
+}
+
+/*--------------------------------------------------------------
+  Accordion Details Section - BoatTrader Style
+--------------------------------------------------------------*/
+.wpbs-accordion-details {
+  background: var(--wpbs-white);
+  border: 1px solid var(--wpbs-border-light);
+  border-radius: var(--wpbs-radius-lg);
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.wpbs-accordion-details__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--wpbs-border-light);
+  background: var(--wpbs-bg);
+}
+
+.wpbs-accordion-item {
+  border-bottom: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.wpbs-accordion-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  cursor: pointer;
+  background: var(--wpbs-white);
+  transition: background .15s;
+  list-style: none;
+}
+
+.wpbs-accordion-item__header::-webkit-details-marker {
+  display: none;
+}
+
+.wpbs-accordion-item__header::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--wpbs-text-muted);
+  border-bottom: 2px solid var(--wpbs-text-muted);
+  transform: rotate(45deg);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+
+.wpbs-accordion-item[open] > .wpbs-accordion-item__header::after {
+  transform: rotate(-135deg);
+}
+
+.wpbs-accordion-item__header:hover {
+  background: var(--wpbs-bg);
+}
+
+.wpbs-accordion-item__header h3,
+.wpbs-accordion-item__header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+}
+
+.wpbs-accordion-item__content {
+  padding: 16px 20px 20px;
+  background: var(--wpbs-white);
+}
+
+/* Details Grid */
+.wpbs-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.wpbs-details-cell {
+  background: var(--wpbs-bg);
+  border-radius: var(--wpbs-radius);
+  padding: 16px;
+}
+
+.wpbs-details-cell h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wpbs-text);
+  border-bottom: 1px solid var(--wpbs-border-light);
+  padding-bottom: 8px;
+}
+
+.wpbs-details-cell__content p {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 0;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-details-cell__content p:last-child {
+  border-bottom: none;
+}
+
+.wpbs-details-label {
+  color: var(--wpbs-text-light);
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.wpbs-details-value {
   color: var(--wpbs-text);
   font-weight: 500;
   text-align: right;
+}
+
+/* Description with Show More */
+.wpbs-description-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--wpbs-text-light);
+  max-height: 200px;
+  overflow: hidden;
+  position: relative;
+  transition: max-height .3s ease;
+}
+
+.wpbs-description-text.is-expanded {
+  max-height: none;
+}
+
+.wpbs-description-text::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(transparent, var(--wpbs-white));
+  pointer-events: none;
+}
+
+.wpbs-description-text.is-expanded::after {
+  display: none;
+}
+
+.wpbs-show-more-btn {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: none;
+  border: 1px solid var(--wpbs-primary) !important;
+  border-radius: var(--wpbs-radius) !important;
+  color: var(--wpbs-primary) !important;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.wpbs-show-more-btn:hover {
+  background: var(--wpbs-primary) !important;
+  color: var(--wpbs-white) !important;
+}
+
+.wpbs-show-more-btn:focus {
+  outline: none;
+  color: var(--wpbs-primary) !important;
+  background-color: var(--wpbs-primary-light) !important;
+  box-shadow: 0 0 0 3px var(--wpbs-primary) !important;
+}
+
+/* Additional Details HTML */
+.wpbs-additional-details {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wpbs-text-light);
+}
+
+.wpbs-additional-details ul {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+
+.wpbs-additional-details li {
+  margin-bottom: 4px;
+}
+
+/* Location Info */
+.wpbs-location-info {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wpbs-text);
+}
+
+.wpbs-location-info p {
+  margin: 0 0 8px;
+}
+
+/* Disclaimer */
+.wpbs-disclaimer {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--wpbs-text-muted);
+  font-style: italic;
+  margin: 0;
 }
 
 /*--------------------------------------------------------------
@@ -592,14 +835,21 @@
   background: var(--wpbs-white);
   border: 1px solid var(--wpbs-border-light);
   border-radius: var(--wpbs-radius-lg);
-  padding: 16px;
+  margin-top: 16px;
+  overflow: hidden;
 }
 
 .wpbs-dealer-card__header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: var(--wpbs-bg);
+  border-bottom: 1px solid var(--wpbs-border-light);
+}
+
+.wpbs-dealer-card__body {
+  padding: 16px;
 }
 
 .wpbs-dealer-card__logo {
@@ -633,10 +883,37 @@
   gap: 4px;
 }
 
+.wpbs-dealer-card__row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.wpbs-dealer-card__row:last-child {
+  margin-bottom: 0;
+}
+
+.wpbs-dealer-card__row strong {
+  color: var(--wpbs-text-light);
+  min-width: 70px;
+}
+
+.wpbs-dealer-card__row a {
+  color: var(--wpbs-primary);
+  text-decoration: none;
+}
+
+.wpbs-dealer-card__row a:hover {
+  text-decoration: underline;
+}
+
 .wpbs-dealer-card__actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--wpbs-border-light);
 }
 
 /* Contact Form in Sidebar */
@@ -747,13 +1024,19 @@
 .wpbs-more-boats__title {
   font-size: 16px;
   font-weight: 600;
+  color: var(--wpbs-text);
   margin: 0;
 }
 
 .wpbs-more-boats__link {
   font-size: 13px;
+  font-weight: 500;
   color: var(--wpbs-primary);
   text-decoration: none;
+}
+
+.wpbs-more-boats__link:hover {
+  text-decoration: underline;
 }
 
 .wpbs-more-boats__grid {
@@ -763,15 +1046,25 @@
 }
 
 .wpbs-more-boats__item {
+  display: block;
   text-decoration: none;
   color: inherit;
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--wpbs-border-light);
+  transition: box-shadow .2s;
+}
+
+.wpbs-more-boats__item:hover {
+  box-shadow: var(--wpbs-shadow-lg);
 }
 
 .wpbs-more-boats__img {
   aspect-ratio: 4 / 3;
   border-radius: var(--wpbs-radius);
   overflow: hidden;
-  margin-bottom: 8px;
+  background: var(--wpbs-bg);
 }
 
 .wpbs-more-boats__img img {
@@ -781,18 +1074,20 @@
 }
 
 .wpbs-more-boats__name {
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 2px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  padding: 10px 12px 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--wpbs-text);
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wpbs-more-boats__price {
-  font-size: 13px;
-  font-weight: 700;
+  padding: 0 12px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wpbs-primary);
 }
 
 /* Legacy support */
@@ -826,6 +1121,18 @@
   .wpbs-quick-specs {
     grid-template-columns: repeat(2, 1fr);
   }
+  .wpbs-quick-spec:nth-child(4n) {
+    border-right: 1px solid var(--wpbs-border-light);
+  }
+  .wpbs-quick-spec:nth-child(2n) {
+    border-right: none;
+  }
+  .wpbs-quick-spec:nth-last-child(-n+4) {
+    border-bottom: 1px solid var(--wpbs-border-light);
+  }
+  .wpbs-quick-spec:nth-last-child(-n+2) {
+    border-bottom: none;
+  }
   .wpbs-more-boats__grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -850,7 +1157,14 @@
     grid-template-columns: 1fr;
   }
   .wpbs-quick-specs {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+  }
+  .wpbs-quick-spec {
+    border-right: none;
+    border-bottom: 1px solid var(--wpbs-border-light);
+  }
+  .wpbs-quick-spec:last-child {
+    border-bottom: none;
   }
   .wpbs-card__price {
     font-size: 16px;
@@ -1157,185 +1471,8 @@
 }
 
 /*--------------------------------------------------------------
-  Quick Specs Row
---------------------------------------------------------------*/
-.wpbs-quick-specs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 16px;
-  background: var(--wpbs-white);
-  border-radius: var(--wpbs-radius-lg);
-  border: 1px solid var(--wpbs-border-light);
-  margin-bottom: 16px;
-}
-
-.wpbs-quick-spec {
-  flex: 1 1 120px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 4px;
-}
-
-.wpbs-quick-spec__icon {
-  width: 28px;
-  height: 28px;
-  fill: var(--wpbs-primary);
-}
-
-.wpbs-quick-spec__label {
-  font-size: 11px;
-  color: var(--wpbs-text-muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-}
-
-.wpbs-quick-spec__value {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--wpbs-text);
-}
-
-/*--------------------------------------------------------------
-  Dealer Card
---------------------------------------------------------------*/
-.wpbs-dealer-card {
-  background: var(--wpbs-white);
-  border-radius: var(--wpbs-radius-lg);
-  border: 1px solid var(--wpbs-border-light);
-  margin-top: 16px;
-  overflow: hidden;
-}
-
-.wpbs-dealer-card__header {
-  padding: 12px 16px;
-  background: var(--wpbs-bg);
-  border-bottom: 1px solid var(--wpbs-border-light);
-}
-
-.wpbs-dealer-card__body {
-  padding: 16px;
-}
-
-.wpbs-dealer-card__row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.wpbs-dealer-card__row:last-child {
-  margin-bottom: 0;
-}
-
-.wpbs-dealer-card__row strong {
-  color: var(--wpbs-text-light);
-  min-width: 70px;
-}
-
-.wpbs-dealer-card__row a {
-  color: var(--wpbs-primary);
-  text-decoration: none;
-}
-
-.wpbs-dealer-card__row a:hover {
-  text-decoration: underline;
-}
-
-.wpbs-dealer-card__actions {
-  padding: 12px 16px;
-  border-top: 1px solid var(--wpbs-border-light);
-}
-
-/*--------------------------------------------------------------
-  More Boats Section
---------------------------------------------------------------*/
-.wpbs-more-boats {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--wpbs-border-light);
-}
-
-.wpbs-more-boats__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.wpbs-more-boats__title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--wpbs-text);
-  margin: 0;
-}
-
-.wpbs-more-boats__link {
-  color: var(--wpbs-primary);
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.wpbs-more-boats__link:hover {
-  text-decoration: underline;
-}
-
-.wpbs-more-boats__item {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  background: var(--wpbs-white);
-  border-radius: var(--wpbs-radius-lg);
-  overflow: hidden;
-  border: 1px solid var(--wpbs-border-light);
-  transition: box-shadow .2s;
-}
-
-.wpbs-more-boats__item:hover {
-  box-shadow: var(--wpbs-shadow-lg);
-}
-
-.wpbs-more-boats__img {
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  background: var(--wpbs-bg);
-}
-
-.wpbs-more-boats__img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.wpbs-more-boats__name {
-  padding: 10px 12px 4px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--wpbs-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.wpbs-more-boats__price {
-  padding: 0 12px 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--wpbs-primary);
-}
-
-/*--------------------------------------------------------------
   Inline Price & Location
 --------------------------------------------------------------*/
-.wpbs-price {
-  font-weight: 600;
-  font-size: 18px;
-  color: var(--wpbs-text);
-}
-
 .wpbs-price-monthly {
   font-size: 12px;
   color: var(--wpbs-primary);
@@ -1350,25 +1487,4 @@
 
 .wpbs-location svg {
   color: var(--wpbs-text-muted);
-}
-
-/*--------------------------------------------------------------
-  Responsive for New Components
---------------------------------------------------------------*/
-@media (max-width: 768px) {
-  .wpbs-quick-specs {
-    padding: 12px;
-    gap: 12px;
-  }
-  .wpbs-quick-spec {
-    flex: 1 1 80px;
-  }
-  .wpbs-more-boats__header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .wpbs-more-boats__grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
 }

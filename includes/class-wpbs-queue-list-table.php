@@ -136,7 +136,9 @@ class WPBS_Queue_List_Table extends WP_List_Table
 		}
 
 		$meta = !empty($parts) ? '<div style="margin-bottom:4px;">' . implode(' &nbsp; ', $parts) . '</div>' : '';
-		return $meta . '<code style="white-space:pre-wrap;">' . esc_html($preview) . '</code>';
+		$escaped_full = esc_attr($raw);
+		$eye_icon = '<button type="button" class="button button-small wpbs-view-payload" data-payload="' . $escaped_full . '" title="' . esc_attr__('View details', 'wpbs') . '"><span class="dashicons dashicons-visibility" style="vertical-align:middle;"></span></button> ';
+		return $eye_icon;
 	}
 
 	protected function column_last_error($item)

@@ -20,7 +20,7 @@ $total = $GLOBALS['wp_query']->found_posts ?? 0;
 	<!-- Header Bar -->
 	<div class="wpbs-archive-header">
 		<div>
-			<h1><?php echo esc_html(str_replace('Archives: ', '', get_the_archive_title())); ?></h1>
+			<h1><?php echo(str_replace('Archives: ', '', get_the_archive_title(''))); ?></h1>
 		</div>
 		<div class="wpbs-archive-count"><?php echo number_format($total); ?> boats</div>
 		<div class="wpbs-archive-sort">
@@ -62,13 +62,9 @@ $total = $GLOBALS['wp_query']->found_posts ?? 0;
 
 			// Price formatting
 			$price_display = '';
-			$monthly = '';
 			if ($price) {
 				$price_num = (float)preg_replace('/[^0-9.]/', '', $price);
 				$price_display = '$' . number_format($price_num);
-				if ($price_num > 5000) {
-					$monthly = '$' . number_format(round($price_num * 0.009), 0) . '/mo*';
-				}
 			}
 			?>
 			<article class="wpbs-card">
@@ -116,9 +112,6 @@ $total = $GLOBALS['wp_query']->found_posts ?? 0;
 					<div class="wpbs-card__body">
 						<?php if ($price_display) : ?>
 						<div class="wpbs-card__price"><?php echo esc_html($price_display); ?></div>
-						<?php if ($monthly) : ?>
-						<div class="wpbs-card__monthly"><?php echo esc_html($monthly); ?></div>
-						<?php endif; ?>
 						<?php else : ?>
 						<div class="wpbs-card__price">Contact for Price</div>
 						<?php endif; ?>

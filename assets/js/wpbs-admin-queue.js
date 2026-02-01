@@ -183,5 +183,63 @@
 				window.location.reload();
 			});
 		}
+
+		// Payload viewer modal toggle.
+		var payloadOverlay = document.getElementById('wpbs-payload-overlay');
+		var payloadContent = document.getElementById('wpbs-payload-content');
+		var payloadCloseBtn = document.getElementById('wpbs-payload-close');
+
+		function openPayloadModal(payload) {
+			if (!payloadOverlay || !payloadContent) return;
+			// Handle payload as object (jQuery auto-parses valid JSON from data attributes)
+			// or as string (possibly HTML-encoded)
+			var parsed;
+			if (typeof payload === 'object' && payload !== null) {
+				parsed = payload;
+			} else {
+				try {
+					// Decode HTML entities if present
+					var decoded = $('<textarea/>').html(payload).text();
+					parsed = JSON.parse(decoded);
+				} catch (e) {
+					payloadContent.innerHTML = '<code style="white-space:pre-wrap;">' + $('<div/>').text(payload).html() + '</code>';
+					payloadOverlay.style.display = 'block';
+					return;
+				}
+			}
+			payloadContent.innerHTML = '<code style="white-space:pre-wrap;">' + $('<div/>').text(JSON.stringify(parsed, null, 2)).html() + '</code>';
+			payloadOverlay.style.display = 'block';
+		}
+
+		function closePayloadModal() {
+			if (!payloadOverlay) return;
+			payloadOverlay.style.display = 'none';
+		}
+
+		$(document).on('click', '.wpbs-view-payload', function (e) {
+			e.preventDefault();
+			var payload = $(this).data('payload');
+			if (payload) {
+				openPayloadModal(payload);
+			}
+		});
+
+		if (payloadCloseBtn) {
+			payloadCloseBtn.addEventListener('click', closePayloadModal);
+		}
+
+		if (payloadOverlay) {
+			payloadOverlay.addEventListener('click', function (e) {
+				if (e.target === payloadOverlay) {
+					closePayloadModal();
+				}
+			});
+		}
+
+		$(document).on('keydown', function (e) {
+			if (e.key === 'Escape' && payloadOverlay && payloadOverlay.style.display === 'block') {
+				closePayloadModal();
+			}
+		});
 	});
 })(jQuery);

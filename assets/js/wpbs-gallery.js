@@ -148,6 +148,36 @@
   }
 
   /*--------------------------------------------------------------
+    Show More / Show Less Toggle
+  --------------------------------------------------------------*/
+  function initShowMoreToggle() {
+    document.querySelectorAll('[data-wpbs-toggle-expand]').forEach(function (btn) {
+      var container = btn.previousElementSibling;
+      if (!container || !container.hasAttribute('data-wpbs-expandable')) {
+        // Try parent
+        var parent = btn.parentElement;
+        container = parent ? parent.querySelector('[data-wpbs-expandable]') : null;
+      }
+      
+      if (!container) return;
+
+      // Check if content is actually overflowing
+      var checkOverflow = function() {
+        var isOverflowing = container.scrollHeight > container.clientHeight + 10;
+        btn.style.display = isOverflowing || container.classList.contains('is-expanded') ? 'inline-block' : 'none';
+      };
+
+      // Initial check
+      setTimeout(checkOverflow, 100);
+
+      btn.addEventListener('click', function () {
+        var isExpanded = container.classList.toggle('is-expanded');
+        btn.textContent = isExpanded ? 'Show Less' : 'Show More';
+      });
+    });
+  }
+
+  /*--------------------------------------------------------------
     Init on DOM Ready
   --------------------------------------------------------------*/
   document.addEventListener('DOMContentLoaded', function () {
@@ -156,5 +186,8 @@
 
     // Single boat gallery
     document.querySelectorAll('[data-wpbs-gallery], .wpbs-gallery').forEach(initGallery);
+
+    // Show more toggle
+    initShowMoreToggle();
   });
 })();

@@ -46,6 +46,7 @@ while (have_posts()) : the_post();
 	$water_capacity = get_post_meta($post_id, 'wpbs_water_tank_capacity', true);
 	$office_phone = get_post_meta($post_id, 'wpbs_office_phone', true);
 	$office_email = get_post_meta($post_id, 'wpbs_office_email', true);
+	$deadrise = get_post_meta($post_id, 'wpbs_deadrise', true);
 	$is_sold    = $status && strtolower((string)$status) !== 'active';
 
 	// Build gallery from attachment IDs
@@ -97,12 +98,10 @@ while (have_posts()) : the_post();
 	if ($price) {
 		$price_num = (float)preg_replace('/[^0-9.]/', '', $price);
 		$price_display = '$' . number_format($price_num);
-	}
-
-	// Monthly estimate (rough 15yr 7% calculation)
-	$monthly = '';
-	if ($price_num > 5000) {
-		$monthly = '$' . number_format(round($price_num * 0.009), 0) . '/mo*';
+	} elseif ($is_sold) {
+		$price_display = 'Sold';
+	} else {
+		$price_display = 'Contact for Price';
 	}
 ?>
 
@@ -183,27 +182,71 @@ while (have_posts()) : the_post();
 				<?php endif; ?>
 			</div>
 
-			<!-- Quick Specs Icons Row -->
+			<!-- Quick Specs Icons Row (8 items) -->
 			<div class="wpbs-quick-specs">
+				<!-- 1. Engine -->
 				<div class="wpbs-quick-spec">
-					<svg class="wpbs-quick-spec__icon" viewBox="0 0 24 24"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
-					<div class="wpbs-quick-spec__label">Engines</div>
-					<div class="wpbs-quick-spec__value"><?php echo esc_html($num_engines ? $num_engines . 'x ' . ($engine_make ?: '') : ($engine ?: '—')); ?></div>
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 512 512"><circle cx="256" cy="256" r="246" fill="none" stroke="#e0e0e0" stroke-width="10"/><path fill="#104f79" d="m347.35,178.61c-.15,0-.3,0-.45-.02h-165.87c-2.76,0-5-2.24-5-5v-47.05c0-15.55,12.66-28.21,28.22-28.21h119.89c15.56,0,28.21,12.66,28.21,28.21v47.07c0,1.43-.61,2.79-1.68,3.74-.92.82-2.1,1.26-3.32,1.26Zm-161.32-10.02h156.32v-42.05c0-10.04-8.17-18.21-18.21-18.21h-119.89c-10.05,0-18.22,8.17-18.22,18.21v42.05Z"/><path fill="#104f79" d="m318.65,244.53h-108.92c-13.29,0-24.87-9-28.17-21.88l-5.37-20.94c-.1-.41-.16-.82-.16-1.24v-.38c0-2.76,2.24-5,5-5h165.81c.08,0,.15,0,.23,0,1.37-.05,2.72.44,3.71,1.38.99.94,1.57,2.25,1.57,3.61v.39c0,.42-.05.83-.16,1.24l-5.36,20.94c-3.3,12.88-14.89,21.88-28.18,21.88Z"/><path fill="#104f79" d="m233.76,413.24c-14.88,0-26.98-12.1-26.98-26.98v-145.31c0-2.76,2.24-5,5-5h86.82c1.57,0,3.05.74,4,2,.94,1.26,1.24,2.88.81,4.39l-43.73,151.41c-3.31,11.48-13.97,19.49-25.92,19.49Z"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Engine</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html($engine ?: ($engine_make && $engine_model ? $engine_make . ' ' . $engine_model : '—')); ?></div>
+					</div>
 				</div>
+				<!-- 2. Total Power -->
 				<div class="wpbs-quick-spec">
-					<svg class="wpbs-quick-spec__icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-					<div class="wpbs-quick-spec__label">Total Power</div>
-					<div class="wpbs-quick-spec__value"><?php echo esc_html($total_power ?: '—'); ?></div>
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 512 512"><circle cx="256" cy="256" r="246" fill="none" stroke="#e0e0e0" stroke-width="10"/><path fill="#104f79" d="m258,306.66c-27.11,0-49.17-22.06-49.17-49.17s22.06-49.17,49.17-49.17,49.17,22.06,49.17,49.17-22.06,49.17-49.17,49.17Zm0-88.33c-21.6,0-39.17,17.57-39.17,39.17s17.57,39.17,39.17,39.17,39.17-17.57,39.17-39.17-17.57-39.17-39.17-39.17Z"/><path fill="#104f79" d="m220.41,239.31c-1.49,0-2.95-.66-3.94-1.92-34.8-44.45-28.12-75.46-21.05-89.99,10.22-20.98,33.39-34.02,60.47-34.02,20.55,0,38,5.08,50.48,14.69,11.42,8.8,17.97,21.17,17.97,33.94,0,20.28-11.74,26.97-21.16,32.35-9.41,5.37-16.84,9.61-16.12,25.88.12,2.76-2.01,5.09-4.77,5.22-2.73.09-5.09-2.01-5.22-4.77-.99-22.38,11.29-29.38,21.16-35.01,9.01-5.14,16.12-9.19,16.12-23.66,0-25.36-29.41-38.63-58.46-38.63-23.22,0-42.95,10.88-51.48,28.4-6.05,12.43-11.52,39.28,19.93,79.45,1.7,2.17,1.32,5.32-.85,7.02-.91.72-2,1.06-3.08,1.06Z"/><path fill="#104f79" d="m258,277.2c-10.87,0-19.71-8.84-19.71-19.71s8.84-19.71,19.71-19.71,19.71,8.84,19.71,19.71-8.84,19.71-19.71,19.71Zm0-29.41c-5.35,0-9.71,4.35-9.71,9.71s4.35,9.71,9.71,9.71,9.71-4.35,9.71-9.71-4.35-9.71-9.71-9.71Z"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Total Power</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html($total_power ?: '—'); ?></div>
+					</div>
 				</div>
+				<!-- 3. Engine Hours -->
 				<div class="wpbs-quick-spec">
-					<svg class="wpbs-quick-spec__icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-					<div class="wpbs-quick-spec__label">Engine Hours</div>
-					<div class="wpbs-quick-spec__value"><?php echo esc_html($engine_hrs ?: '—'); ?></div>
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19.5" fill="none" stroke="#e0e0e0"/><path fill="#104f79" d="M31.72 15.33c-.3-.71-.68-1.4-1.11-2.04-.43-.64-.92-1.23-1.47-1.78-.54-.54-1.14-1.03-1.78-1.47-.64-.43-1.35-.8-2.04-1.11C23.86 8.32 22.28 8 20.67 8s-3.19.32-4.67.94c-.71.3-1.4.68-2.04 1.11-.64.43-1.23.92-1.78 1.47-.55.54-1.04 1.14-1.47 1.78-.43.64-.8 1.35-1.11 2.04C8.99 16.81 8.67 18.38 8.67 20s.32 3.19.94 4.67c.3.71.68 1.4 1.11 2.04.43.64.92 1.23 1.47 1.78.54.54 1.14 1.03 1.78 1.47.64.43 1.35.8 2.04 1.11 1.48.62 3.05.94 4.67.94s3.19-.32 4.67-.94c.71-.3 1.4-.68 2.04-1.11.64-.43 1.23-.92 1.78-1.47.54-.54 1.03-1.14 1.47-1.78.43-.64.8-1.35 1.11-2.04.62-1.48.94-3.05.94-4.67s-.32-3.19-.94-4.67Zm-.71 8.96c-.57 1.34-1.38 2.54-2.41 3.58s-2.24 1.86-3.58 2.41c-1.38.58-2.86.88-4.37.88s-2.99-.3-4.37-.88c-1.34-.57-2.54-1.38-3.58-2.41s-1.86-2.24-2.41-3.58c-.58-1.38-.88-2.86-.88-4.37s.3-2.99.88-4.37c.57-1.34 1.38-2.54 2.41-3.58s2.24-1.86 3.58-2.41c1.38-.58 2.86-.88 4.37-.88s2.99.3 4.37.88c1.34.57 2.54 1.38 3.58 2.41s1.86 2.24 2.41 3.58c.58 1.38.88 2.86.88 4.37s-.3 2.99-.88 4.37Z"/><path fill="#104f79" d="M23.29 14.08c-.94 1.16-2.98 3.75-3.75 5.38-.3.64-.03 1.41.64 1.71.64.3 1.4.02 1.71-.64.75-1.61 1.47-4.85 1.78-6.31.04-.2-.21-.32-.34-.16l-.04.02Z"/><rect fill="#104f79" x="20.17" y="11.12" width=".99" height="1.19"/><rect fill="#104f79" x="14.04" y="13.37" width=".99" height="1.19" transform="rotate(-45 14.54 13.97)"/><rect fill="#104f79" x="11.79" y="19.51" width="1.19" height=".99"/><rect fill="#104f79" x="14.04" y="25.09" width=".99" height="1.19" transform="rotate(-45 14.54 25.69)"/><rect fill="#104f79" x="25.74" y="25.09" width=".99" height="1.19" transform="rotate(45 26.24 25.69)"/><rect fill="#104f79" x="28.35" y="19.51" width="1.19" height=".99"/><rect fill="#104f79" x="25.74" y="13.37" width=".99" height="1.19" transform="rotate(45 26.24 13.97)"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Engine Hours</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html($engine_hrs ?: '—'); ?></div>
+					</div>
 				</div>
+				<!-- 4. Class -->
 				<div class="wpbs-quick-spec">
-					<svg class="wpbs-quick-spec__icon" viewBox="0 0 24 24"><path d="M19.77 7.23l.01-.01-3.72-3.72L15 4.56l2.11 2.11c-.94.36-1.61 1.26-1.61 2.33 0 1.38 1.12 2.5 2.5 2.5.36 0 .69-.08 1-.21v7.21c0 .55-.45 1-1 1s-1-.45-1-1V14c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v16h10v-7.5h1.5v5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V9c0-.69-.28-1.32-.73-1.77zM12 10H6V5h6v5z"/></svg>
-					<div class="wpbs-quick-spec__label">Fuel</div>
-					<div class="wpbs-quick-spec__value"><?php echo esc_html(ucfirst($fuel_type ?: '—')); ?></div>
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 512 512"><circle cx="256" cy="256" r="246" fill="none" stroke="#e0e0e0" stroke-width="10"/><path fill="#104f79" d="m163.73,294.58c-4.25,1.36-8.44,1.48-12.52.34-5.4-1.51-8.73-4.75-8.74-4.76-.94-.95-2.22-1.49-3.56-1.49h-.23c-1.07,0-2.1.34-2.96.97-7.45,5.47-14.8,7.25-21.84,5.28-5.4-1.51-8.74-4.75-8.75-4.76-.94-.95-2.22-1.49-3.56-1.49h-.22c-1.06,0-2.1.34-2.96.97-7.45,5.47-14.8,7.25-21.84,5.28-5.33-1.49-8.65-4.67-8.77-4.78-1.94-1.95-5.09-1.96-7.05-.03-1.96,1.94-1.98,5.1-.05,7.07,6.1,6.18,22.02,14.14,40.47,2.66,7.5,5.37,21.48,9.86,37.34,0,4.26,3.06,10.63,5.83,18.25,5.83,3.64,0,7.57-.63,11.68-2.17l-4.69-8.92Z"/><path fill="#104f79" d="m372.08,262.35c-.07-.34-.18-.68-.32-1.01-.6-1.39-1.8-2.43-3.26-2.83l-31.79-8.73-6.94-39.29c-.35-1.98-.9-3.89-1.65-5.68-4.17-10.23-14.17-17.18-25.6-17.18h-17.56v-4.44c0-7.43-6.04-13.47-13.47-13.47h-22.83c-7.43,0-13.47,6.04-13.47,13.47v4.44h-17.56c-13.45,0-24.91,9.61-27.25,22.86l-6.69,37.88-.25,1.41-22.31,6.13h-.01l-9.47,2.6c-1.46.4-2.66,1.44-3.26,2.83s-.54,2.98.16,4.32l46.84,89.21c.86,1.64,2.56,2.67,4.42,2.67h120.53c1.86,0,3.56-1.03,4.43-2.67l46.83-89.21c.54-1.02.71-2.19.48-3.31Z"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Class</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html($boat_class ?: ($boat_category ?: '—')); ?></div>
+					</div>
+				</div>
+				<!-- 5. Length -->
+				<div class="wpbs-quick-spec">
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 512 512"><circle cx="256" cy="256" r="246" fill="none" stroke="#e0e0e0" stroke-width="10"/><path fill="#104f79" d="m359.98,396.11h-207.96c-16.54,0-30-13.46-30-30v-110.84c0-16.54,13.46-30,30-30h207.96c16.54,0,30,13.46,30,30v110.84c0,16.54-13.46,30-30,30Zm-207.96-160.84c-11.03,0-20,8.97-20,20v110.84c0,11.03,8.97,20,20,20h207.96c11.03,0,20-8.97,20-20v-110.84c0-11.03-8.97-20-20-20h-207.96Z"/><path fill="#104f79" d="m384.98,164h-257.96c-2.76,0-5-2.24-5-5s2.24-5,5-5h257.96c2.76,0,5,2.24,5,5s-2.24,5-5,5Z"/><path fill="#104f79" d="m165.13,202.12c-1.28,0-2.56-.49-3.54-1.46l-38.11-38.11c-.94-.94-1.46-2.21-1.46-3.54s.53-2.6,1.46-3.54l38.11-38.11c1.95-1.95,5.12-1.95,7.07,0,1.95,1.95,1.95,5.12,0,7.07l-34.58,34.58,34.58,34.58c1.95,1.95,1.95,5.12,0,7.07-.98.98-2.26,1.46-3.54,1.46Z"/><path fill="#104f79" d="m346.87,202.12c-1.28,0-2.56-.49-3.54-1.46-1.95-1.95-1.95-5.12,0-7.07l34.58-34.58-34.58-34.58c-1.95-1.95-1.95-5.12,0-7.07,1.95-1.95,5.12-1.95,7.07,0l38.11,38.11c.94.94,1.46,2.21,1.46,3.54s-.53,2.6-1.46,3.54l-38.11,38.11c-.98.98-2.26,1.46-3.54,1.46Z"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Length</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html($length ?: '—'); ?></div>
+					</div>
+				</div>
+				<!-- 6. Year -->
+				<div class="wpbs-quick-spec">
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 512 512"><circle cx="256" cy="256" r="246" fill="none" stroke="#e0e0e0" stroke-width="10"/><path fill="#104f79" d="m365.67,387.07h-221.18c-12.68,0-23-10.32-23-23v-203.13c0-12.68,10.32-23,23-23h221.18c12.68,0,23,10.32,23,23v203.13c0,12.68-10.32,23-23,23Zm-221.18-239.13c-7.17,0-13,5.83-13,13v203.13c0,7.17,5.83,13,13,13h221.18c7.17,0,13-5.83,13-13v-203.13c0-7.17-5.83-13-13-13h-221.18Z"/><path fill="#104f79" d="m383.67,210.53h-257.18c-2.76,0-5-2.24-5-5s2.24-5,5-5h257.18c2.76,0,5,2.24,5,5s-2.24,5-5,5Z"/><path fill="#104f79" d="m152.96,259.33c-1.06-1.99-.13-4.64,1.99-5.71,1.99-.93,4.64-.13,5.71,1.99l14.73,29.46,14.73-29.46c1.06-2.12,3.58-2.92,5.71-1.99,2.12,1.06,3.05,3.72,1.99,5.71l-18.18,36.36v38.75c0,2.52-1.73,4.25-4.25,4.25s-4.25-1.73-4.25-4.25v-38.75l-18.18-36.36Z"/><path fill="#104f79" d="m314.47,174.57c-2.76,0-5-2.24-5-5v-53.01c0-2.76,2.24-5,5-5s5,2.24,5,5v53.01c0,2.76-2.24,5-5,5Zm-118.78,0c-2.76,0-5-2.24-5-5v-53.01c0-2.76,2.24-5,5-5s5,2.24,5,5v53.01c0,2.76-2.24,5-5,5Z"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Year</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html($year ?: '—'); ?></div>
+					</div>
+				</div>
+				<!-- 7. Model -->
+				<div class="wpbs-quick-spec">
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 512 512"><circle cx="256" cy="256" r="246" fill="none" stroke="#e0e0e0" stroke-width="10"/><path fill="#104f79" d="m430.37,331.25c-23.1,0-34.69,6.55-46.03,12.85-10.58,5.96-20.66,11.51-41.16,11.51-8.65,0-16.21-1.01-22.93-3.11-7.06-2.18-12.51-5.21-18.39-8.48-4.2-2.35-8.48-4.79-13.44-6.8-9.74-4.03-19.99-5.96-32.42-5.96s-22.76,1.93-32.42,5.96c-5.12,2.1-9.41,4.54-13.61,6.89-10.67,5.96-20.66,11.51-41.16,11.51s-30.57-5.54-41.24-11.51c-4.2-2.35-8.57-4.79-13.61-6.89-7.73-3.28-15.62-5.04-24.86-5.71-2.35-.17-4.96-.25-7.48-.25-2.77,0-5.04,2.27-5.04,4.96s2.27,4.96,5.04,4.96c2.35,0,4.62.08,6.8.25,8.06.59,15.03,2.1,21.75,4.96,4.45,1.85,8.31,4.03,12.6,6.38,11.25,6.3,22.93,12.85,46.03,12.85s34.69-6.55,45.94-12.85c4.2-2.35,8.06-4.54,12.6-6.38,8.57-3.61,17.39-5.21,28.64-5.21s19.99,1.6,28.56,5.21c4.62,1.93,8.65,4.2,12.6,6.38,5.96,3.36,12.09,6.8,20.16,9.32,7.73,2.35,16.21,3.53,25.87,3.53,23.1,0,34.77-6.55,46.03-12.85,10.67-5.96,20.66-11.59,41.16-11.59,2.77,0,4.96-2.18,4.96-4.96s-2.18-4.96-4.96-4.96Z"/><path fill="#104f79" d="m372.08,262.35c-.07-.34-.18-.68-.32-1.01-.6-1.39-1.8-2.43-3.26-2.83l-31.79-8.73-6.94-39.29c-.35-1.98-.9-3.89-1.65-5.68-4.17-10.23-14.17-17.18-25.6-17.18h-17.56v-4.44c0-7.43-6.04-13.47-13.47-13.47h-22.83c-7.43,0-13.47,6.04-13.47,13.47v4.44h-17.56c-13.45,0-24.91,9.61-27.25,22.86l-6.69,37.88-.25,1.41-22.31,6.13h-.01l-9.47,2.6c-1.46.4-2.66,1.44-3.26,2.83s-.54,2.98.16,4.32l46.84,89.21c.86,1.64,2.56,2.67,4.42,2.67h120.53c1.86,0,3.56-1.03,4.43-2.67l46.83-89.21c.54-1.02.71-2.19.48-3.31Z"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Model</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html($model ?: ($make ?: '—')); ?></div>
+					</div>
+				</div>
+				<!-- 8. Capacity -->
+				<div class="wpbs-quick-spec">
+					<svg class="wpbs-quick-spec__icon" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19.5" fill="none" stroke="#e0e0e0"/><path fill="#104f79" d="M18.85 11.93c-1.42.39-2.53 1.56-2.9 3.05-.32 1.3.07 2.77.99 3.77l.39.42-.44.16-.44.15-.34-.34c-.21-.2-.55-.44-.86-.6l-.52-.26.22-.27c1.04-1.26 1-3.04-.09-4.27-.74-.83-1.94-1.21-2.97-.92-1.06.29-2 1.29-2.24 2.36-.08.36-.08 1.12 0 1.48.09.41.38.98.67 1.33l.26.31-.34.14c-1.08.46-1.93 1.5-2.16 2.68-.11.51-.13 2.48-.02 2.67.18.34 2.55 1.21 3.32 1.21.26 0 .45-.21.45-.5 0-.31-.13-.4-.77-.54-.69-.15-1.27-.34-1.76-.57l-.37-.18.02-.96c.02-.82.05-1.03.16-1.32.29-.77.88-1.37 1.63-1.66.32-.12.5-.14 1.67-.16.84-.01 1.45.01 1.71.06.45.08 1 .35 1.29.62l.19.18-.44.45c-.81.83-1.28 1.84-1.4 3.02-.04.33-.06 1.11-.05 1.72.02 1.32-.04 1.21.84 1.63 3.35 1.61 7.07 1.61 10.39 0 .91-.44.85-.32.87-1.63.01-.61-.01-1.39-.05-1.72-.12-1.18-.59-2.19-1.4-3.02l-.44-.45.2-.18c.31-.28.86-.55 1.3-.62.25-.05.87-.06 1.71-.06 1.17.01 1.35.03 1.67.16.75.29 1.34.89 1.63 1.66.11.29.14.5.16 1.33l.02.96-.22.12c-.4.23-1.21.48-1.85.62-.69.15-.82.23-.82.54 0 .29.19.5.48.5.28 0 1.11-.2 1.68-.4.67-.23 1.53-.67 1.61-.81.1-.19.08-2.16-.02-2.67-.24-1.16-1.09-2.22-2.16-2.68l-.34-.14.26-.31c.48-.58.74-1.28.74-2.07-.01-.92-.27-1.57-.9-2.23-.64-.67-1.32-.86-2.21-.86-1.64.01-3.03 1.48-3.03 3.2 0 .74.28 1.5.76 2.09l.22.27-.52.26c-.32.16-.65.4-.86.6l-.34.34-.45-.16-.45-.16.21-.17c.52-.45 1.08-1.45 1.24-2.23.36-1.8-.53-3.67-2.17-4.5-.82-.42-1.8-.53-2.65-.32Zm1.53.93c1.11.24 2.11 1.28 2.34 2.44.21 1.04-.08 2.03-.86 2.81-1.22 1.27-2.98 1.27-4.2 0s-1.22-2.54 0-3.81c.76-.79 1.67-1.07 2.72-.85ZM13.5 13.88c.38.18.89.69 1.08 1.11.15.3.16.42.16.93 0 .52-.02.65-.17.98-.21.42-.7.92-1.08 1.11-.23.11-.39.13-.84.13-.49 0-.64-.02-.94-.15-1.24-.63-1.61-2.24-.84-3.38.21-.29.61-.58 1-.73.34-.13 1.15-.13 1.5 0Zm14.3.03c.45.23.84.64 1.03 1.07.14.3.16.43.16.93 0 .52-.02.65-.17.93-.22.45-.61.86-1.03 1.11-.28.15-.39.17-.88.17-.45 0-.61-.03-.84-.13-.39-.19-.87-.62-1.08-1.04-.15-.3-.17-.43-.17-.93 0-.7.11-1.01.52-1.47.47-.57.85-.72 1.52-.69.37.01.56.04.81.15Zm-5.87 6.21c1.34.29 2.49 1.44 2.83 2.82.13.54.18 2.74.07 2.83-.17.14-1.29.59-1.94.78-1.11.33-1.82.43-3.09.43s-1.98-.1-3.09-.43c-.65-.2-1.77-.65-1.94-.78-.11-.09-.06-2.29.07-2.83.34-1.37 1.48-2.51 2.86-2.82.56-.13 2.69-.13 3.23 0Z"/></svg>
+					<div class="wpbs-quick-spec__text">
+						<div class="wpbs-quick-spec__label">Capacity</div>
+						<div class="wpbs-quick-spec__value"><?php echo esc_html(get_post_meta($post_id, 'wpbs_passenger_capacity', true) ?: '—'); ?></div>
+					</div>
 				</div>
 			</div>
 
@@ -221,121 +264,320 @@ while (have_posts()) : the_post();
 				</p>
 			</div>
 
-			<!-- Boat Details Tabs -->
-			<div class="wpbs-tabs">
-				<div class="wpbs-tabs__nav">
-					<button type="button" class="wpbs-tabs__btn is-active" data-tab="description">Description</button>
-					<button type="button" class="wpbs-tabs__btn" data-tab="measurements">Measurements</button>
-					<button type="button" class="wpbs-tabs__btn" data-tab="propulsion">Propulsion</button>
-					<button type="button" class="wpbs-tabs__btn" data-tab="features">Features</button>
-				</div>
-				<div class="wpbs-tabs__content" id="wpbs-tab-content">
-					<!-- Description Tab (default) -->
-					<div class="wpbs-tab-pane" data-pane="description">
+			<!-- Boat Details Accordion -->
+			<div class="wpbs-accordion-details">
+				<h2 class="wpbs-accordion-details__title">Boat Details</h2>
+
+				<!-- Description -->
+				<details class="wpbs-accordion-item" open>
+					<summary class="wpbs-accordion-item__header"><h3>Description</h3></summary>
+					<div class="wpbs-accordion-item__content">
 						<?php if (get_the_content()) : ?>
-							<?php the_content(); ?>
+							<div class="wpbs-description-text" data-wpbs-expandable>
+								<?php the_content(); ?>
+							</div>
+							<button type="button" class="wpbs-show-more-btn" data-wpbs-toggle-expand>Show More</button>
 						<?php else : ?>
 							<p style="color:#666;">No description available.</p>
 						<?php endif; ?>
 					</div>
+				</details>
 
-					<!-- Measurements Tab -->
-					<div class="wpbs-tab-pane" data-pane="measurements" style="display:none;">
-						<div class="wpbs-specs-table">
-							<?php if ($length) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Length Overall</span><span class="wpbs-specs-row__value"><?php echo esc_html($length); ?></span></div>
+				<!-- Measurements -->
+				<details class="wpbs-accordion-item">
+					<summary class="wpbs-accordion-item__header"><h3>Measurements</h3></summary>
+					<div class="wpbs-accordion-item__content">
+						<div class="wpbs-details-grid">
+							<?php
+							// Dimensions
+							$dimensions = array();
+							if ($length) $dimensions['Length Overall'] = $length;
+							$nominal_length = get_post_meta($post_id, 'wpbs_nominal_length', true);
+							if ($nominal_length) $dimensions['Nominal Length'] = $nominal_length;
+							$min_draft = get_post_meta($post_id, 'wpbs_min_draft', true);
+							if ($min_draft) $dimensions['Min Draft'] = $min_draft;
+							if ($beam) $dimensions['Beam'] = $beam;
+							$bridge_clearance = get_post_meta($post_id, 'wpbs_bridge_clearance', true);
+							if ($bridge_clearance) $dimensions['Bridge Clearance'] = $bridge_clearance;
+							$cabin_headroom = get_post_meta($post_id, 'wpbs_cabin_headroom', true);
+							if ($cabin_headroom) $dimensions['Cabin Headroom'] = $cabin_headroom;
+							if ($dry_weight) $dimensions['Dry Weight'] = $dry_weight;
+							$displacement = get_post_meta($post_id, 'wpbs_displacement', true);
+							if ($displacement) $dimensions['Displacement'] = $displacement;
+
+							if (!empty($dimensions)) : ?>
+							<div class="wpbs-details-cell">
+								<h4>Dimensions</h4>
+								<div class="wpbs-details-cell__content">
+									<?php foreach ($dimensions as $label => $value) : ?>
+									<p><span class="wpbs-details-label"><?php echo esc_html($label); ?>:</span><span class="wpbs-details-value"><?php echo esc_html($value); ?></span></p>
+									<?php endforeach; ?>
+								</div>
+							</div>
 							<?php endif; ?>
-							<?php if ($beam) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Beam</span><span class="wpbs-specs-row__value"><?php echo esc_html($beam); ?></span></div>
+
+							<?php
+							// Tanks
+							$tanks = array();
+							if ($water_capacity) $tanks['Fresh Water Tanks'] = $water_capacity;
+							if ($fuel_capacity) $tanks['Fuel Tanks'] = $fuel_capacity;
+
+							if (!empty($tanks)) : ?>
+							<div class="wpbs-details-cell">
+								<h4>Tanks</h4>
+								<div class="wpbs-details-cell__content">
+									<?php foreach ($tanks as $label => $value) : ?>
+									<p><span class="wpbs-details-label"><?php echo esc_html($label); ?>:</span><span class="wpbs-details-value"><?php echo esc_html($value); ?></span></p>
+									<?php endforeach; ?>
+								</div>
+							</div>
 							<?php endif; ?>
-							<?php if ($dry_weight) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Dry Weight</span><span class="wpbs-specs-row__value"><?php echo esc_html($dry_weight); ?></span></div>
-							<?php endif; ?>
-							<?php if ($year) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Year</span><span class="wpbs-specs-row__value"><?php echo esc_html($year); ?></span></div>
-							<?php endif; ?>
-							<?php if ($make) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Make</span><span class="wpbs-specs-row__value"><?php echo esc_html($make); ?></span></div>
-							<?php endif; ?>
-							<?php if ($model) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Model</span><span class="wpbs-specs-row__value"><?php echo esc_html($model); ?></span></div>
-							<?php endif; ?>
-							<?php if ($hull_type) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Hull Material</span><span class="wpbs-specs-row__value"><?php echo esc_html($hull_type); ?></span></div>
-							<?php endif; ?>
-							<?php if ($hull_id) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Hull ID</span><span class="wpbs-specs-row__value"><?php echo esc_html($hull_id); ?></span></div>
-							<?php endif; ?>
-							<?php if ($cabins) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Cabins</span><span class="wpbs-specs-row__value"><?php echo esc_html($cabins); ?></span></div>
-							<?php endif; ?>
-							<?php if ($heads) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Heads</span><span class="wpbs-specs-row__value"><?php echo esc_html($heads); ?></span></div>
+
+							<?php
+							// Miscellaneous
+							$misc = array();
+							if ($cabins) $misc['Cabins'] = $cabins;
+							if ($deadrise) $misc['Deadrise At Transom'] = $deadrise;
+							if ($heads) $misc['Heads'] = $heads;
+							if ($hull_id) $misc['Hull ID'] = $hull_id;
+
+							if (!empty($misc)) : ?>
+							<div class="wpbs-details-cell">
+								<h4>Miscellaneous</h4>
+								<div class="wpbs-details-cell__content">
+									<?php foreach ($misc as $label => $value) : ?>
+									<p><span class="wpbs-details-label"><?php echo esc_html($label); ?>:</span><span class="wpbs-details-value"><?php echo esc_html($value); ?></span></p>
+									<?php endforeach; ?>
+								</div>
+							</div>
 							<?php endif; ?>
 						</div>
 					</div>
+				</details>
 
-					<!-- Propulsion Tab -->
-					<div class="wpbs-tab-pane" data-pane="propulsion" style="display:none;">
-						<div class="wpbs-specs-table">
-							<?php if ($num_engines) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Number of Engines</span><span class="wpbs-specs-row__value"><?php echo esc_html($num_engines); ?></span></div>
+				<!-- Propulsion -->
+				<details class="wpbs-accordion-item">
+					<summary class="wpbs-accordion-item__header"><h3>Propulsion</h3></summary>
+					<div class="wpbs-accordion-item__content">
+						<div class="wpbs-details-grid">
+							<?php
+							// Check for engines JSON data
+							$engines_json = get_post_meta($post_id, 'wpbs_engines_json', true);
+							$engines = array();
+							if ($engines_json) {
+								$engines = json_decode($engines_json, true);
+							}
+
+							if (!empty($engines) && is_array($engines)) :
+								$engine_num = 1;
+								foreach ($engines as $eng) :
+							?>
+							<div class="wpbs-details-cell">
+								<h4>Engine <?php echo $engine_num; ?></h4>
+								<div class="wpbs-details-cell__content">
+									<?php if (!empty($eng['Make'])) : ?>
+									<p><span class="wpbs-details-label">Engine Make:</span><span class="wpbs-details-value"><?php echo esc_html($eng['Make']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['Model'])) : ?>
+									<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value"><?php echo esc_html($eng['Model']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['Year'])) : ?>
+									<p><span class="wpbs-details-label">Engine Year:</span><span class="wpbs-details-value"><?php echo esc_html($eng['Year']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['EnginePower'])) : ?>
+									<p><span class="wpbs-details-label">Total Power:</span><span class="wpbs-details-value"><?php echo esc_html($eng['EnginePower']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['Type'])) : ?>
+									<p><span class="wpbs-details-label">Engine Type:</span><span class="wpbs-details-value"><?php echo esc_html($eng['Type']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['DriveType'])) : ?>
+									<p><span class="wpbs-details-label">Drive Type:</span><span class="wpbs-details-value"><?php echo esc_html($eng['DriveType']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['Fuel'])) : ?>
+									<p><span class="wpbs-details-label">Fuel Type:</span><span class="wpbs-details-value"><?php echo esc_html($eng['Fuel']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['PropellerType'])) : ?>
+									<p><span class="wpbs-details-label">Propeller Type:</span><span class="wpbs-details-value"><?php echo esc_html($eng['PropellerType']); ?></span></p>
+									<?php endif; ?>
+									<?php if (!empty($eng['PropellerMaterial'])) : ?>
+									<p><span class="wpbs-details-label">Propeller Material:</span><span class="wpbs-details-value"><?php echo esc_html($eng['PropellerMaterial']); ?></span></p>
+									<?php endif; ?>
+								</div>
+							</div>
+							<?php
+								$engine_num++;
+								endforeach;
+							else :
+								// Fallback to single engine meta fields
+							?>
+							<div class="wpbs-details-cell">
+								<h4>Engine</h4>
+								<div class="wpbs-details-cell__content">
+									<?php if ($num_engines) : ?>
+									<p><span class="wpbs-details-label">Number of Engines:</span><span class="wpbs-details-value"><?php echo esc_html($num_engines); ?></span></p>
+									<?php endif; ?>
+									<?php if ($engine_make) : ?>
+									<p><span class="wpbs-details-label">Engine Make:</span><span class="wpbs-details-value"><?php echo esc_html($engine_make); ?></span></p>
+									<?php endif; ?>
+									<?php if ($engine_model) : ?>
+									<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value"><?php echo esc_html($engine_model); ?></span></p>
+									<?php endif; ?>
+									<?php if ($engine_type) : ?>
+									<p><span class="wpbs-details-label">Engine Type:</span><span class="wpbs-details-value"><?php echo esc_html($engine_type); ?></span></p>
+									<?php endif; ?>
+									<?php if ($total_power) : ?>
+									<p><span class="wpbs-details-label">Total Power:</span><span class="wpbs-details-value"><?php echo esc_html($total_power); ?></span></p>
+									<?php endif; ?>
+									<?php if ($engine_hrs) : ?>
+									<p><span class="wpbs-details-label">Engine Hours:</span><span class="wpbs-details-value"><?php echo esc_html($engine_hrs); ?></span></p>
+									<?php endif; ?>
+									<?php if ($fuel_type) : ?>
+									<p><span class="wpbs-details-label">Fuel Type:</span><span class="wpbs-details-value"><?php echo esc_html(ucfirst($fuel_type)); ?></span></p>
+									<?php endif; ?>
+									<?php if ($drive_type) : ?>
+									<p><span class="wpbs-details-label">Drive Type:</span><span class="wpbs-details-value"><?php echo esc_html($drive_type); ?></span></p>
+									<?php endif; ?>
+									<?php if ($propeller) : ?>
+									<p><span class="wpbs-details-label">Propeller:</span><span class="wpbs-details-value"><?php echo esc_html($propeller); ?></span></p>
+									<?php endif; ?>
+								</div>
+							</div>
 							<?php endif; ?>
-							<?php if ($engine_make) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Engine Make</span><span class="wpbs-specs-row__value"><?php echo esc_html($engine_make); ?></span></div>
-							<?php endif; ?>
-							<?php if ($engine_model) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Engine Model</span><span class="wpbs-specs-row__value"><?php echo esc_html($engine_model); ?></span></div>
-							<?php endif; ?>
-							<?php if ($engine_type) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Engine Type</span><span class="wpbs-specs-row__value"><?php echo esc_html($engine_type); ?></span></div>
-							<?php endif; ?>
-							<?php if ($total_power) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Total Power</span><span class="wpbs-specs-row__value"><?php echo esc_html($total_power); ?></span></div>
-							<?php endif; ?>
-							<?php if ($engine_hrs) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Engine Hours</span><span class="wpbs-specs-row__value"><?php echo esc_html($engine_hrs); ?></span></div>
-							<?php endif; ?>
-							<?php if ($fuel_type) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Fuel Type</span><span class="wpbs-specs-row__value"><?php echo esc_html(ucfirst($fuel_type)); ?></span></div>
-							<?php endif; ?>
-							<?php if ($fuel_capacity) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Fuel Capacity</span><span class="wpbs-specs-row__value"><?php echo esc_html($fuel_capacity); ?></span></div>
-							<?php endif; ?>
-							<?php if ($water_capacity) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Water Capacity</span><span class="wpbs-specs-row__value"><?php echo esc_html($water_capacity); ?></span></div>
-							<?php endif; ?>
-							<?php if ($propeller) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Propeller</span><span class="wpbs-specs-row__value"><?php echo esc_html($propeller); ?></span></div>
-							<?php endif; ?>
-							<?php if ($drive_type) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Drive Type</span><span class="wpbs-specs-row__value"><?php echo esc_html($drive_type); ?></span></div>
-							<?php endif; ?>
-							<?php if ($cruising_speed) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Cruising Speed</span><span class="wpbs-specs-row__value"><?php echo esc_html($cruising_speed); ?></span></div>
-							<?php endif; ?>
-							<?php if ($max_speed) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Max Speed</span><span class="wpbs-specs-row__value"><?php echo esc_html($max_speed); ?></span></div>
+
+							<?php
+							// Speed & Performance
+							$performance = array();
+							if ($cruising_speed) $performance['Cruising Speed'] = $cruising_speed;
+							if ($max_speed) $performance['Max Speed'] = $max_speed;
+							$range = get_post_meta($post_id, 'wpbs_range', true);
+							if ($range) $performance['Range'] = $range;
+
+							if (!empty($performance)) : ?>
+							<div class="wpbs-details-cell">
+								<h4>Performance</h4>
+								<div class="wpbs-details-cell__content">
+									<?php foreach ($performance as $label => $value) : ?>
+									<p><span class="wpbs-details-label"><?php echo esc_html($label); ?>:</span><span class="wpbs-details-value"><?php echo esc_html($value); ?></span></p>
+									<?php endforeach; ?>
+								</div>
+							</div>
 							<?php endif; ?>
 						</div>
 					</div>
+				</details>
 
-					<!-- Features Tab -->
-					<div class="wpbs-tab-pane" data-pane="features" style="display:none;">
-						<div class="wpbs-specs-table">
-							<?php if ($condition) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Condition</span><span class="wpbs-specs-row__value"><?php echo esc_html($condition); ?></span></div>
+				<!-- Features -->
+				<details class="wpbs-accordion-item">
+					<summary class="wpbs-accordion-item__header"><h3>Features</h3></summary>
+					<div class="wpbs-accordion-item__content">
+						<div class="wpbs-details-grid">
+							<?php
+							// General Features
+							$features = array();
+							if ($condition) $features['Condition'] = $condition;
+							if ($boat_category) $features['Category'] = $boat_category;
+							if ($boat_class) $features['Class'] = $boat_class;
+							if ($hull_type) $features['Hull Material'] = $hull_type;
+							$keel_type = get_post_meta($post_id, 'wpbs_keel_type', true);
+							if ($keel_type) $features['Keel Type'] = $keel_type;
+
+							if (!empty($features)) : ?>
+							<div class="wpbs-details-cell">
+								<h4>General</h4>
+								<div class="wpbs-details-cell__content">
+									<?php foreach ($features as $label => $value) : ?>
+									<p><span class="wpbs-details-label"><?php echo esc_html($label); ?>:</span><span class="wpbs-details-value"><?php echo esc_html($value); ?></span></p>
+									<?php endforeach; ?>
+								</div>
+							</div>
 							<?php endif; ?>
-							<?php if ($boat_category) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Category</span><span class="wpbs-specs-row__value"><?php echo esc_html($boat_category); ?></span></div>
+
+							<?php
+							// Electronics/Equipment indicators
+							$electronics = array();
+							$trim_tabs = get_post_meta($post_id, 'wpbs_trim_tabs', true);
+							if ($trim_tabs) $electronics['Trim Tabs'] = '✓';
+							$windlass = get_post_meta($post_id, 'wpbs_windlass_type', true);
+							if ($windlass) $electronics['Windlass'] = $windlass;
+							$electrical = get_post_meta($post_id, 'wpbs_electrical_circuit', true);
+							if ($electrical) $electronics['Electrical Circuit'] = $electrical;
+
+							if (!empty($electronics)) : ?>
+							<div class="wpbs-details-cell">
+								<h4>Electronics & Equipment</h4>
+								<div class="wpbs-details-cell__content">
+									<?php foreach ($electronics as $label => $value) : ?>
+									<p><span class="wpbs-details-label"><?php echo esc_html($label); ?>:</span><span class="wpbs-details-value"><?php echo esc_html($value); ?></span></p>
+									<?php endforeach; ?>
+								</div>
+							</div>
 							<?php endif; ?>
-							<?php if ($boat_class) : ?>
-							<div class="wpbs-specs-row"><span class="wpbs-specs-row__label">Class</span><span class="wpbs-specs-row__value"><?php echo esc_html($boat_class); ?></span></div>
+
+							<?php
+							// Builder/Designer
+							$builder_info = array();
+							$builder = get_post_meta($post_id, 'wpbs_builder_name', true);
+							$designer = get_post_meta($post_id, 'wpbs_designer_name', true);
+							if ($builder) $builder_info['Builder'] = $builder;
+							if ($designer) $builder_info['Designer'] = $designer;
+
+							if (!empty($builder_info)) : ?>
+							<div class="wpbs-details-cell">
+								<h4>Builder & Designer</h4>
+								<div class="wpbs-details-cell__content">
+									<?php foreach ($builder_info as $label => $value) : ?>
+									<p><span class="wpbs-details-label"><?php echo esc_html($label); ?>:</span><span class="wpbs-details-value"><?php echo esc_html($value); ?></span></p>
+									<?php endforeach; ?>
+								</div>
+							</div>
 							<?php endif; ?>
 						</div>
-						<p style="color:#666;margin-top:16px;">Contact dealer for full features list.</p>
 					</div>
-				</div>
+				</details>
+
+				<!-- More Details (Additional Description) -->
+				<?php
+				$additional_detail = get_post_meta($post_id, 'wpbs_additional_detail_html', true);
+				if ($additional_detail) : ?>
+				<details class="wpbs-accordion-item">
+					<summary class="wpbs-accordion-item__header"><h4>More Details</h4></summary>
+					<div class="wpbs-accordion-item__content">
+						<div class="wpbs-additional-details">
+							<?php echo wp_kses_post($additional_detail); ?>
+						</div>
+					</div>
+				</details>
+				<?php endif; ?>
+
+				<!-- Location -->
+				<?php if ($location) : ?>
+				<details class="wpbs-accordion-item" open>
+					<summary class="wpbs-accordion-item__header"><h4>Location</h4></summary>
+					<div class="wpbs-accordion-item__content">
+						<div class="wpbs-location-info">
+							<p><strong><?php echo esc_html($location); ?></strong></p>
+							<?php
+							$boat_city = get_post_meta($post_id, 'wpbs_boat_city', true);
+							$state = get_post_meta($post_id, 'wpbs_state', true);
+							$country = get_post_meta($post_id, 'wpbs_boat_country', true);
+							?>
+							<?php if ($boat_city || $state || $country) : ?>
+							<p>
+								<?php echo esc_html(implode(', ', array_filter(array($boat_city, $state, $country)))); ?>
+							</p>
+							<?php endif; ?>
+						</div>
+					</div>
+				</details>
+				<?php endif; ?>
+
+				<!-- Disclaimer -->
+				<details class="wpbs-accordion-item">
+					<summary class="wpbs-accordion-item__header"><h4>Disclaimer</h4></summary>
+					<div class="wpbs-accordion-item__content">
+						<p class="wpbs-disclaimer">The Company offers the details of this vessel in good faith but cannot guarantee or warrant the accuracy of this information nor warrant the condition of the vessel. A buyer should instruct his agents, or his surveyors, to investigate such details as the buyer desires validated. This vessel is offered subject to prior sale, price change, or withdrawal without notice.</p>
+					</div>
+				</details>
 			</div>
 
 		</div>
@@ -359,9 +601,6 @@ while (have_posts()) : the_post();
 				<div class="wpbs-price-card__body">
 					<?php if ($price_display) : ?>
 					<div class="wpbs-price-card__price"><?php echo esc_html($price_display); ?></div>
-					<?php if ($monthly) : ?>
-					<div class="wpbs-price-card__monthly"><a href="#calculator"><?php echo esc_html($monthly); ?></a> <small style="color:#999;">or Customize</small></div>
-					<?php endif; ?>
 					<?php else : ?>
 					<div class="wpbs-price-card__price">Contact for Price</div>
 					<?php endif; ?>

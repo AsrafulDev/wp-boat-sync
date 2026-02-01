@@ -104,7 +104,6 @@ class WPBS_Admin
 		add_submenu_page('wpbs', __('Boats', 'wpbs'), __('Boats', 'wpbs'), 'manage_options', 'wpbs-boats', array($this, 'render_boats_table'));
 		add_submenu_page('wpbs', __('Queue', 'wpbs'), __('Queue', 'wpbs'), 'manage_options', 'wpbs-queue', array($this, 'render_queue_table'));
 		add_submenu_page('wpbs', __('Settings', 'wpbs'), __('Settings', 'wpbs'), 'manage_options', 'wpbs-settings', array($this, 'render_settings'));
-		add_submenu_page('wpbs', __('Manual Sync', 'wpbs'), __('Manual Sync', 'wpbs'), 'manage_options', 'wpbs-manual', array($this, 'render_manual'));
 		add_submenu_page('wpbs', __('Shortcode Builder', 'wpbs'), __('Shortcode Builder', 'wpbs'), 'manage_options', 'wpbs-shortcodes', array($this, 'render_shortcode_builder'));
 	}
 
@@ -204,6 +203,18 @@ class WPBS_Admin
 		echo '</form>';
 
 		echo '<p style="opacity:.8;max-width:900px;">Tip: Select multiple jobs and use <strong>Bulk actions → Run selected now</strong> to immediately process those jobs (ignores the Not Before delay). This is useful when jobs are stuck or when you want to force a specific boat sync.</p>';
+
+		// Payload viewer modal.
+		echo '<div id="wpbs-payload-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);">'
+			. '<div id="wpbs-payload-modal" role="dialog" aria-modal="true" style="background:#fff;width:700px;max-width:calc(100% - 40px);max-height:80vh;margin:10vh auto;border-radius:6px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;">'
+			. '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f0f0f1;border-bottom:1px solid #c3c4c7;">'
+			. '<strong style="font-size:14px;">' . esc_html__('Payload Details', 'wpbs') . '</strong>'
+			. '<button type="button" id="wpbs-payload-close" class="button button-small">&times;</button>'
+			. '</div>'
+			. '<pre id="wpbs-payload-content" style="margin:0;padding:16px;overflow:auto;flex:1;white-space:pre-wrap;word-break:break-word;font-size:13px;background:#fff;"></pre>'
+			. '</div>'
+			. '</div>';
+
 		echo '</div>';
 	}
 
@@ -850,36 +861,6 @@ class WPBS_Admin
 		echo '</div>';
 	}
 
-	public function render_manual()
-	{
-		if (!current_user_can('manage_options')) {
-			return;
-		}
-
-		echo '<div class="wrap">';
-		echo '<h1>Manual Sync</h1>';
-
-		echo '<h2>Sync one by DocumentID</h2>';
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-		echo '<input type="hidden" name="action" value="wpbs_manual_sync" />';
-		wp_nonce_field('wpbs_manual_sync');
-		echo '<input type="hidden" name="mode" value="single" />';
-		echo '<p><input name="document_id" type="text" class="regular-text" placeholder="e.g. 9963690" /> ';
-		echo '<label style="margin-left:8px;"><input type="checkbox" name="force" value="1" /> Force by-id refresh</label></p>';
-		echo '<p><button class="button button-primary">Sync Now</button></p>';
-		echo '</form>';
-
-		echo '<h2>Sync all marked for update</h2>';
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-		echo '<input type="hidden" name="action" value="wpbs_sync_marked" />';
-		wp_nonce_field('wpbs_sync_marked');
-		echo '<p><button class="button">Enqueue Marked Updates</button></p>';
-		echo '</form>';
-
-		echo '<p>Tip: you can mark a Boat post by setting post meta <code>_wpbs_force_update</code> = 1 (bulk tools can be added next).</p>';
-		echo '</div>';
-	}
-
 	public function render_shortcode_builder()
 	{
 		if (!current_user_can('manage_options')) {
@@ -888,52 +869,294 @@ class WPBS_Admin
 
 		echo '<div class="wrap">';
 		echo '<h1>Shortcode Builder</h1>';
+		echo '<p style="color:#666;">Select a shortcode type, configure options, and copy the generated shortcode to use in your posts, pages, or page builders.</p>';
 
-		echo '<p><label><strong>Type</strong> '; 
-		echo '<select id="wpbs_sc_type"><option value="grid">Grid</option><option value="single">Single</option></select>';
-		echo '</label></p>';
+		// Shortcode type selector with categories
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th scope="row"><label for="wpbs_sc_type">Shortcode Type</label></th><td>';
+		echo '<select id="wpbs_sc_type" style="min-width:280px;">';
+		echo '<optgroup label="Layout">';
+		echo '<option value="grid">Boat Grid - Display multiple boats in grid</option>';
+		echo '<option value="single">Single Boat - Full boat display</option>';
+		echo '</optgroup>';
+		echo '<optgroup label="Boat Details (Accordion/Tabs)">';
+		echo '<option value="accordion">Accordion Details - Collapsible boat specs</option>';
+		echo '<option value="tabs">Tabs - Tabbed boat specs (legacy)</option>';
+		echo '<option value="tab_description">Tab: Description Only</option>';
+		echo '<option value="tab_measurements">Tab: Measurements Only</option>';
+		echo '<option value="tab_propulsion">Tab: Propulsion Only</option>';
+		echo '<option value="tab_features">Tab: Features Only</option>';
+		echo '</optgroup>';
+		echo '<optgroup label="Media">';
+		echo '<option value="slider">Slider - Image slider (4 images)</option>';
+		echo '<option value="gallery">Gallery - Full gallery with lightbox</option>';
+		echo '</optgroup>';
+		echo '<optgroup label="Boat Info">';
+		echo '<option value="quick_specs">Quick Specs - Key specifications grid</option>';
+		echo '<option value="overview">Overview - Boat overview section</option>';
+		echo '<option value="price">Price - Display boat price</option>';
+		echo '<option value="price_card">Price Card - Price with contact button</option>';
+		echo '<option value="location">Location - Boat location info</option>';
+		echo '</optgroup>';
+		echo '<optgroup label="Dealer">';
+		echo '<option value="dealer_card">Dealer Card - Dealer contact info</option>';
+		echo '<option value="more_boats">More Boats - Other boats from dealer</option>';
+		echo '</optgroup>';
+		echo '</select>';
+		echo '</td></tr>';
+		echo '</table>';
 
-		echo '<div id="wpbs_sc_grid">';
-		echo '<p><label>Posts per page <input id="wpbs_sc_ppp" type="number" value="12" min="1" /></label></p>';
-		echo '<p><label>Columns <input id="wpbs_sc_cols" type="number" value="3" min="1" max="6" /></label></p>';
+		// Description area
+		echo '<div id="wpbs_sc_desc" style="background:#f0f6fc;border-left:4px solid #2271b1;padding:12px 16px;margin:16px 0;"></div>';
+
+		// Options panels for each shortcode type
+		echo '<div class="wpbs-sc-options" style="background:#fff;border:1px solid #c3c4c7;padding:16px;margin:16px 0;">';
+
+		// Grid options
+		echo '<div id="wpbs_sc_opt_grid" class="wpbs-sc-panel">';
+		echo '<h3 style="margin-top:0;">Grid Options</h3>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th><label for="wpbs_sc_ppp">Posts per page</label></th><td><input id="wpbs_sc_ppp" type="number" value="12" min="1" max="100" class="small-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_cols">Columns</label></th><td><input id="wpbs_sc_cols" type="number" value="3" min="1" max="6" class="small-text" /></td></tr>';
+		echo '</table>';
 		echo '</div>';
 
-		echo '<div id="wpbs_sc_single" style="display:none;">';
-		echo '<p><label>DocumentID <input id="wpbs_sc_doc" type="text" placeholder="9963690" /></label></p>';
+		// Single/Element options (post_id or id)
+		echo '<div id="wpbs_sc_opt_single" class="wpbs-sc-panel" style="display:none;">';
+		echo '<h3 style="margin-top:0;">Boat Selection</h3>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th><label for="wpbs_sc_doc">Document ID</label></th><td><input id="wpbs_sc_doc" type="text" placeholder="e.g. 9963690" class="regular-text" /><p class="description">The boats.com document ID. Leave empty to use current boat (in single boat pages or loops).</p></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_postid">Or Post ID</label></th><td><input id="wpbs_sc_postid" type="number" placeholder="e.g. 123" class="small-text" /><p class="description">WordPress post ID of the boat. Takes priority over Document ID.</p></td></tr>';
+		echo '</table>';
 		echo '</div>';
 
-		echo '<p><textarea id="wpbs_sc_out" class="large-text" rows="2" readonly></textarea></p>';
-		echo '<p><button class="button" id="wpbs_sc_copy" type="button">Copy</button></p>';
+		// Slider options
+		echo '<div id="wpbs_sc_opt_slider" class="wpbs-sc-panel" style="display:none;">';
+		echo '<h3 style="margin-top:0;">Slider Options</h3>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th><label for="wpbs_sc_doc_slider">Document ID</label></th><td><input id="wpbs_sc_doc_slider" type="text" placeholder="e.g. 9963690" class="regular-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_postid_slider">Or Post ID</label></th><td><input id="wpbs_sc_postid_slider" type="number" placeholder="e.g. 123" class="small-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_max">Max images</label></th><td><input id="wpbs_sc_max" type="number" value="4" min="1" max="20" class="small-text" /></td></tr>';
+		echo '</table>';
+		echo '</div>';
+
+		// Price options
+		echo '<div id="wpbs_sc_opt_price" class="wpbs-sc-panel" style="display:none;">';
+		echo '<h3 style="margin-top:0;">Price Options</h3>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th><label for="wpbs_sc_doc_price">Document ID</label></th><td><input id="wpbs_sc_doc_price" type="text" placeholder="e.g. 9963690" class="regular-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_postid_price">Or Post ID</label></th><td><input id="wpbs_sc_postid_price" type="number" placeholder="e.g. 123" class="small-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_monthly">Show monthly</label></th><td><select id="wpbs_sc_monthly"><option value="yes">Yes</option><option value="no">No</option></select><p class="description">Display estimated monthly payment.</p></td></tr>';
+		echo '</table>';
+		echo '</div>';
+
+		// More boats options
+		echo '<div id="wpbs_sc_opt_more" class="wpbs-sc-panel" style="display:none;">';
+		echo '<h3 style="margin-top:0;">More Boats Options</h3>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th><label for="wpbs_sc_doc_more">Document ID</label></th><td><input id="wpbs_sc_doc_more" type="text" placeholder="e.g. 9963690" class="regular-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_postid_more">Or Post ID</label></th><td><input id="wpbs_sc_postid_more" type="number" placeholder="e.g. 123" class="small-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_limit">Limit</label></th><td><input id="wpbs_sc_limit" type="number" value="4" min="1" max="20" class="small-text" /><p class="description">Maximum number of boats to display.</p></td></tr>';
+		echo '</table>';
+		echo '</div>';
+
+		// No options panel (for shortcodes with just id/post_id)
+		echo '<div id="wpbs_sc_opt_basic" class="wpbs-sc-panel" style="display:none;">';
+		echo '<h3 style="margin-top:0;">Boat Selection</h3>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th><label for="wpbs_sc_doc_basic">Document ID</label></th><td><input id="wpbs_sc_doc_basic" type="text" placeholder="e.g. 9963690" class="regular-text" /><p class="description">Leave empty to use current boat context.</p></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_postid_basic">Or Post ID</label></th><td><input id="wpbs_sc_postid_basic" type="number" placeholder="e.g. 123" class="small-text" /></td></tr>';
+		echo '</table>';
+		echo '</div>';
+
+		echo '</div>'; // .wpbs-sc-options
+
+		// Output
+		echo '<h3>Generated Shortcode</h3>';
+		echo '<p><textarea id="wpbs_sc_out" class="large-text code" rows="2" readonly style="font-family:monospace;font-size:14px;"></textarea></p>';
+		echo '<p><button class="button button-primary" id="wpbs_sc_copy" type="button">📋 Copy to Clipboard</button> <span id="wpbs_sc_copied" style="color:#00a32a;display:none;margin-left:8px;">Copied!</span></p>';
+
+		// Shortcode reference
+		echo '<div style="margin-top:32px;padding-top:24px;border-top:1px solid #c3c4c7;">';
+		echo '<h2>Shortcode Reference</h2>';
+		echo '<table class="widefat striped" style="max-width:900px;">';
+		echo '<thead><tr><th>Shortcode</th><th>Description</th><th>Key Attributes</th></tr></thead>';
+		echo '<tbody>';
+		echo '<tr><td><code>[wpbs_boat_grid]</code></td><td>Display boats in a responsive grid layout</td><td>posts_per_page, columns</td></tr>';
+		echo '<tr><td><code>[wpbs_boat_single]</code></td><td>Full single boat display with all sections</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_accordion]</code></td><td>Accordion-style boat details (collapsible sections)</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_tabs]</code></td><td>Tabbed boat details interface</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_slider]</code></td><td>Image slider with navigation arrows</td><td>id, post_id, max</td></tr>';
+		echo '<tr><td><code>[wpbs_gallery]</code></td><td>Full image gallery with lightbox</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_quick_specs]</code></td><td>Key specifications in grid format</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_overview]</code></td><td>Boat overview section</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_price]</code></td><td>Display price with optional monthly estimate</td><td>id, post_id, monthly</td></tr>';
+		echo '<tr><td><code>[wpbs_price_card]</code></td><td>Price card with contact seller button</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_location]</code></td><td>Boat location information</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_dealer_card]</code></td><td>Dealer contact card</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_more_boats]</code></td><td>Other boats from the same dealer</td><td>id, post_id, limit</td></tr>';
+		echo '<tr><td><code>[wpbs_tab_description]</code></td><td>Description section only</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_tab_measurements]</code></td><td>Measurements section only</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_tab_propulsion]</code></td><td>Propulsion/engine section only</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_tab_features]</code></td><td>Features section only</td><td>id, post_id</td></tr>';
+		echo '</tbody></table>';
+		echo '</div>';
 
 		echo '<script>
 (function(){
-	function build(){
-		var type=document.getElementById("wpbs_sc_type").value;
-		var out="";
-		if(type==="grid"){
-			var ppp=document.getElementById("wpbs_sc_ppp").value||"12";
-			var cols=document.getElementById("wpbs_sc_cols").value||"3";
-			out="[wpbs_boat_grid posts_per_page=\""+ppp+"\" columns=\""+cols+"\"]";
-			document.getElementById("wpbs_sc_grid").style.display="block";
-			document.getElementById("wpbs_sc_single").style.display="none";
-		}else{
-			var doc=document.getElementById("wpbs_sc_doc").value||"";
-			out="[wpbs_boat_single id=\""+doc+"\"]";
-			document.getElementById("wpbs_sc_grid").style.display="none";
-			document.getElementById("wpbs_sc_single").style.display="block";
-		}
-		document.getElementById("wpbs_sc_out").value=out;
+	var descriptions = {
+		grid: "Display multiple boats in a responsive grid layout. Perfect for inventory pages and boat listings.",
+		single: "Full single boat display including gallery, specs, details, and dealer info. Use on dedicated boat pages.",
+		accordion: "Modern accordion-style boat details with collapsible sections for Description, Measurements, Propulsion, Features, Location, and Disclaimer.",
+		tabs: "Classic tabbed interface for boat specifications. Shows Description, Measurements, Propulsion, and Features tabs.",
+		tab_description: "Display only the boat description content.",
+		tab_measurements: "Display only the measurements/dimensions section.",
+		tab_propulsion: "Display only the propulsion/engine specifications.",
+		tab_features: "Display only the boat features and equipment.",
+		slider: "Compact image slider with navigation arrows. Great for cards and previews.",
+		gallery: "Full image gallery with thumbnail strip and lightbox. Click images to view full-size.",
+		quick_specs: "Display key specifications (Year, Length, Engine, Fuel, etc.) in a compact grid.",
+		overview: "Boat overview section with main details.",
+		price: "Display the boat price. Optionally shows estimated monthly payment.",
+		price_card: "Price card with title, location, and Contact Seller button.",
+		location: "Display boat location (city, state, country).",
+		dealer_card: "Dealer contact card with name, phone, and email.",
+		more_boats: "Show other boats from the same dealer. Great for cross-selling."
+	};
+
+	var panelMap = {
+		grid: "grid",
+		single: "single",
+		accordion: "basic",
+		tabs: "basic",
+		tab_description: "basic",
+		tab_measurements: "basic",
+		tab_propulsion: "basic",
+		tab_features: "basic",
+		slider: "slider",
+		gallery: "basic",
+		quick_specs: "basic",
+		overview: "basic",
+		price: "price",
+		price_card: "basic",
+		location: "basic",
+		dealer_card: "basic",
+		more_boats: "more"
+	};
+
+	var shortcodeNames = {
+		grid: "wpbs_boat_grid",
+		single: "wpbs_boat_single",
+		accordion: "wpbs_accordion",
+		tabs: "wpbs_tabs",
+		tab_description: "wpbs_tab_description",
+		tab_measurements: "wpbs_tab_measurements",
+		tab_propulsion: "wpbs_tab_propulsion",
+		tab_features: "wpbs_tab_features",
+		slider: "wpbs_slider",
+		gallery: "wpbs_gallery",
+		quick_specs: "wpbs_quick_specs",
+		overview: "wpbs_overview",
+		price: "wpbs_price",
+		price_card: "wpbs_price_card",
+		location: "wpbs_location",
+		dealer_card: "wpbs_dealer_card",
+		more_boats: "wpbs_more_boats"
+	};
+
+	function hideAllPanels(){
+		var panels = document.querySelectorAll(".wpbs-sc-panel");
+		panels.forEach(function(p){ p.style.display = "none"; });
 	}
+
+	function showPanel(name){
+		hideAllPanels();
+		var panel = document.getElementById("wpbs_sc_opt_" + name);
+		if(panel) panel.style.display = "block";
+	}
+
+	function build(){
+		var type = document.getElementById("wpbs_sc_type").value;
+		var scName = shortcodeNames[type] || "wpbs_boat_grid";
+		var attrs = [];
+		var panel = panelMap[type] || "basic";
+
+		// Update description
+		document.getElementById("wpbs_sc_desc").innerHTML = "<strong>" + scName + "</strong>: " + (descriptions[type] || "");
+
+		// Show correct panel
+		showPanel(panel);
+
+		// Build attributes based on panel
+		if(panel === "grid"){
+			var ppp = document.getElementById("wpbs_sc_ppp").value;
+			var cols = document.getElementById("wpbs_sc_cols").value;
+			if(ppp && ppp !== "12") attrs.push("posts_per_page=\"" + ppp + "\"");
+			if(cols && cols !== "3") attrs.push("columns=\"" + cols + "\"");
+		}
+		else if(panel === "single"){
+			var doc = document.getElementById("wpbs_sc_doc").value.trim();
+			var postid = document.getElementById("wpbs_sc_postid").value.trim();
+			if(postid) attrs.push("post_id=\"" + postid + "\"");
+			else if(doc) attrs.push("id=\"" + doc + "\"");
+		}
+		else if(panel === "slider"){
+			var doc = document.getElementById("wpbs_sc_doc_slider").value.trim();
+			var postid = document.getElementById("wpbs_sc_postid_slider").value.trim();
+			var max = document.getElementById("wpbs_sc_max").value;
+			if(postid) attrs.push("post_id=\"" + postid + "\"");
+			else if(doc) attrs.push("id=\"" + doc + "\"");
+			if(max && max !== "4") attrs.push("max=\"" + max + "\"");
+		}
+		else if(panel === "price"){
+			var doc = document.getElementById("wpbs_sc_doc_price").value.trim();
+			var postid = document.getElementById("wpbs_sc_postid_price").value.trim();
+			var monthly = document.getElementById("wpbs_sc_monthly").value;
+			if(postid) attrs.push("post_id=\"" + postid + "\"");
+			else if(doc) attrs.push("id=\"" + doc + "\"");
+			if(monthly === "no") attrs.push("monthly=\"no\"");
+		}
+		else if(panel === "more"){
+			var doc = document.getElementById("wpbs_sc_doc_more").value.trim();
+			var postid = document.getElementById("wpbs_sc_postid_more").value.trim();
+			var limit = document.getElementById("wpbs_sc_limit").value;
+			if(postid) attrs.push("post_id=\"" + postid + "\"");
+			else if(doc) attrs.push("id=\"" + doc + "\"");
+			if(limit && limit !== "4") attrs.push("limit=\"" + limit + "\"");
+		}
+		else if(panel === "basic"){
+			var doc = document.getElementById("wpbs_sc_doc_basic").value.trim();
+			var postid = document.getElementById("wpbs_sc_postid_basic").value.trim();
+			if(postid) attrs.push("post_id=\"" + postid + "\"");
+			else if(doc) attrs.push("id=\"" + doc + "\"");
+		}
+
+		var out = "[" + scName + (attrs.length ? " " + attrs.join(" ") : "") + "]";
+		document.getElementById("wpbs_sc_out").value = out;
+	}
+
+	// Initial build
 	build();
+
+	// Event listeners
 	document.getElementById("wpbs_sc_type").addEventListener("change", build);
-	["wpbs_sc_ppp","wpbs_sc_cols","wpbs_sc_doc"].forEach(function(id){
-		var el=document.getElementById(id);
-		if(el){ el.addEventListener("input", build); }
+
+	// All inputs trigger rebuild
+	var inputs = document.querySelectorAll(".wpbs-sc-panel input, .wpbs-sc-panel select");
+	inputs.forEach(function(el){
+		el.addEventListener("input", build);
+		el.addEventListener("change", build);
 	});
+
+	// Copy button
 	document.getElementById("wpbs_sc_copy").addEventListener("click", function(){
-		var el=document.getElementById("wpbs_sc_out");
+		var el = document.getElementById("wpbs_sc_out");
 		el.select();
+		el.setSelectionRange(0, 99999);
 		document.execCommand("copy");
+		var copied = document.getElementById("wpbs_sc_copied");
+		copied.style.display = "inline";
+		setTimeout(function(){ copied.style.display = "none"; }, 2000);
 	});
 })();
 </script>';
