@@ -638,13 +638,13 @@ class WPBS_Shortcodes
 		}
 
 		// Disclaimer
-		$out .= '<details class="wpbs-accordion-item">';
-		$out .= '<summary class="wpbs-accordion-item__header"><h4>Disclaimer</h4></summary>';
-		$out .= '<div class="wpbs-accordion-item__content">';
-		$out .= '<p class="wpbs-disclaimer">The Company offers the details of this vessel in good faith but cannot guarantee or warrant the accuracy of this information nor warrant the condition of the vessel. A buyer should instruct his agents, or his surveyors, to investigate such details as the buyer desires validated. This vessel is offered subject to prior sale, price change, or withdrawal without notice.</p>';
-		$out .= '</div></details>';
+		// $out .= '<details class="wpbs-accordion-item">';
+		// $out .= '<summary class="wpbs-accordion-item__header"><h4>Disclaimer</h4></summary>';
+		// $out .= '<div class="wpbs-accordion-item__content">';
+		// $out .= '<p class="wpbs-disclaimer">The Company offers the details of this vessel in good faith but cannot guarantee or warrant the accuracy of this information nor warrant the condition of the vessel. A buyer should instruct his agents, or his surveyors, to investigate such details as the buyer desires validated. This vessel is offered subject to prior sale, price change, or withdrawal without notice.</p>';
+		// $out .= '</div></details>';
 
-		$out .= '</div>';
+		// $out .= '</div>';
 
 		return $out;
 	}
