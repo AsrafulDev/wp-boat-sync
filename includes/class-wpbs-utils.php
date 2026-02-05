@@ -30,6 +30,9 @@ class WPBS_Utils
 			'style_grid_gap' => 16,
 			'style_font_size' => 16,
 			'style_accent_color' => '#0b5fff',
+			'loan_down_payment' => 20,
+			'loan_interest_rate' => 7.5,
+			'loan_term_years' => 1,
 		);
 
 		$saved = get_option(WPBS_OPTION_SETTINGS, array());

@@ -33,6 +33,7 @@ class WPBS_Shortcodes
 		add_shortcode('wpbs_location', array($this, 'shortcode_location'));
 		add_shortcode('wpbs_dealer_card', array($this, 'shortcode_dealer_card'));
 		add_shortcode('wpbs_more_boats', array($this, 'shortcode_more_boats'));
+		add_shortcode('wpbs_loan_calculator', array($this, 'shortcode_loan_calculator'));
 	}
 
 	/**
@@ -1394,5 +1395,253 @@ class WPBS_Shortcodes
 		$out .= '</div>';
 
 		return $out;
+	}
+
+	/**
+	 * [wpbs_loan_calculator] - Loan Payment Calculator
+	 * 
+	 * Attributes:
+	 *   id/post_id - Boat ID to get price from (optional, uses current post)
+	 *   price      - Override purchase price (optional)
+	 *   down       - Default down payment amount or percentage (e.g., "20%" or "10000")
+	 *   term       - Default loan term in years (default: 15)
+	 *   rate       - Default annual interest rate (default: 7.5)
+	 *   title      - Calculator title (default: "Loan Payment Calculator")
+	 */
+	public function shortcode_loan_calculator($atts)
+	{
+		$atts = shortcode_atts(array(
+			'id' => '',
+			'post_id' => 0,
+			'price' => '',
+			'down' => '20%',
+			'term' => 1,
+			'rate' => 7.5,
+			'title' => 'Loan Payment Calculator',
+		), $atts);
+
+		// Get price from boat post if not specified
+		$purchase_price = 0;
+		if (!empty($atts['price'])) {
+			$purchase_price = (float)preg_replace('/[^0-9.]/', '', $atts['price']);
+		} else {
+			$post_id = $this->get_boat_id($atts);
+			if ($post_id) {
+				$meta = $this->get_boat_meta($post_id);
+				$price_data = $this->format_price($meta['price']);
+				$purchase_price = $price_data['num'];
+			}
+		}
+
+		// Calculate default down payment
+		$down_str = trim($atts['down']);
+		$default_down = 0;
+		$down_is_percent = false;
+		if (strpos($down_str, '%') !== false) {
+			$down_percent = (float)preg_replace('/[^0-9.]/', '', $down_str);
+			$default_down = $purchase_price * ($down_percent / 100);
+			$down_is_percent = true;
+		} else {
+			$default_down = (float)preg_replace('/[^0-9.]/', '', $down_str);
+		}
+
+		$default_term = max(1, (int)$atts['term']);
+		$default_rate = max(0, (float)$atts['rate']);
+
+		// Calculate initial monthly payment
+		$loan_amount = max(0, $purchase_price - $default_down);
+		$monthly_payment = $this->calculate_monthly_payment($loan_amount, $default_rate, $default_term);
+
+		// Generate unique ID for this calculator instance
+		$calc_id = 'wpbs-calc-' . wp_rand(1000, 9999);
+
+		$out = '<div class="wpbs-loan-calculator" id="' . esc_attr($calc_id) . '">';
+		$out .= '<div class="wpbs-loan-calculator__header">';
+		$out .= '<h3 class="wpbs-loan-calculator__title">' . esc_html($atts['title']) . '</h3>';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-loan-calculator__body">';
+
+		// Purchase Price
+		$out .= '<div class="wpbs-loan-calculator__field">';
+		$out .= '<label for="' . esc_attr($calc_id) . '-price">Purchase Price</label>';
+		$out .= '<div class="wpbs-loan-calculator__input-wrap">';
+		$out .= '<span class="wpbs-loan-calculator__prefix">$</span>';
+		$out .= '<input type="text" id="' . esc_attr($calc_id) . '-price" class="wpbs-loan-calculator__input" data-field="price" value="' . esc_attr(number_format($purchase_price, 0, '.', ',')) . '">';
+		$out .= '</div>';
+		$out .= '</div>';
+
+		// Down Payment
+		$out .= '<div class="wpbs-loan-calculator__field">';
+		$out .= '<label for="' . esc_attr($calc_id) . '-down">Down Payment</label>';
+		$out .= '<div class="wpbs-loan-calculator__input-wrap">';
+		$out .= '<span class="wpbs-loan-calculator__prefix">$</span>';
+		$out .= '<input type="text" id="' . esc_attr($calc_id) . '-down" class="wpbs-loan-calculator__input" data-field="down" value="' . esc_attr(number_format($default_down, 0, '.', ',')) . '">';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-loan-calculator__percent-info">(<span data-down-percent>' . ($purchase_price > 0 ? number_format(($default_down / $purchase_price) * 100, 1) : '0') . '</span>% of price)</div>';
+		$out .= '</div>';
+
+		// Loan Term
+		$out .= '<div class="wpbs-loan-calculator__field">';
+		$out .= '<label for="' . esc_attr($calc_id) . '-term">Loan Term</label>';
+		$out .= '<div class="wpbs-loan-calculator__select-wrap">';
+		$out .= '<select id="' . esc_attr($calc_id) . '-term" class="wpbs-loan-calculator__select" data-field="term">';
+		foreach (array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15) as $term) {
+			$selected = $term == $default_term ? ' selected' : '';
+			$out .= '<option value="' . $term . '"' . $selected . '>' . $term . ' Years</option>';
+		}
+		$out .= '</select>';
+		$out .= '</div>';
+		$out .= '</div>';
+
+		// Interest Rate
+		$out .= '<div class="wpbs-loan-calculator__field">';
+		$out .= '<label for="' . esc_attr($calc_id) . '-rate">Annual Interest Rate</label>';
+		$out .= '<div class="wpbs-loan-calculator__input-wrap">';
+		$out .= '<input type="text" id="' . esc_attr($calc_id) . '-rate" class="wpbs-loan-calculator__input wpbs-loan-calculator__input--rate" data-field="rate" value="' . esc_attr(number_format($default_rate, 2)) . '">';
+		$out .= '<span class="wpbs-loan-calculator__suffix">%</span>';
+		$out .= '</div>';
+		$out .= '</div>';
+
+		// Results Section
+		$out .= '<div class="wpbs-loan-calculator__results">';
+		$out .= '<div class="wpbs-loan-calculator__result-row">';
+		$out .= '<span class="wpbs-loan-calculator__result-label">Loan Amount</span>';
+		$out .= '<span class="wpbs-loan-calculator__result-value" data-result="loan-amount">$' . number_format($loan_amount, 0) . '</span>';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-loan-calculator__result-row wpbs-loan-calculator__result-row--highlight">';
+		$out .= '<span class="wpbs-loan-calculator__result-label">Est. Monthly Payment</span>';
+		$out .= '<span class="wpbs-loan-calculator__result-value wpbs-loan-calculator__result-value--large" data-result="monthly-payment">$' . number_format($monthly_payment, 2) . '</span>';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-loan-calculator__result-row">';
+		$out .= '<span class="wpbs-loan-calculator__result-label">Total of Payments</span>';
+		$out .= '<span class="wpbs-loan-calculator__result-value" data-result="total-payments">$' . number_format($monthly_payment * $default_term * 12, 0) . '</span>';
+		$out .= '</div>';
+		$out .= '<div class="wpbs-loan-calculator__result-row">';
+		$out .= '<span class="wpbs-loan-calculator__result-label">Total Interest</span>';
+		$out .= '<span class="wpbs-loan-calculator__result-value" data-result="total-interest">$' . number_format(($monthly_payment * $default_term * 12) - $loan_amount, 0) . '</span>';
+		$out .= '</div>';
+		$out .= '</div>';
+
+		// Disclaimer
+		$out .= '<p class="wpbs-loan-calculator__disclaimer">*This calculator provides estimates for informational purposes only. Actual loan terms, rates, and payments may vary based on credit qualifications and lender requirements.</p>';
+
+		$out .= '</div>'; // __body
+		$out .= '</div>'; // wpbs-loan-calculator
+
+		// Inline JavaScript for calculator functionality
+		$out .= $this->get_loan_calculator_script($calc_id);
+
+		return $out;
+	}
+
+	/**
+	 * Calculate monthly payment using amortization formula
+	 * M = L × [r(1 + r)^n] / [(1 + r)^n − 1]
+	 */
+	private function calculate_monthly_payment($loan_amount, $annual_rate, $term_years)
+	{
+		if ($loan_amount <= 0) return 0;
+
+		$n = $term_years * 12; // Total number of payments
+		$r = ($annual_rate / 100) / 12; // Monthly interest rate
+
+		// Zero interest case
+		if ($r == 0) {
+			return $loan_amount / $n;
+		}
+
+		// Standard amortization formula
+		$payment = $loan_amount * ($r * pow(1 + $r, $n)) / (pow(1 + $r, $n) - 1);
+
+		return $payment;
+	}
+
+	/**
+	 * Generate JavaScript for the loan calculator
+	 */
+	private function get_loan_calculator_script($calc_id)
+	{
+		return '
+		<script>
+		(function() {
+			const calc = document.getElementById("' . esc_js($calc_id) . '");
+			if (!calc) return;
+
+			const priceInput = calc.querySelector("[data-field=price]");
+			const downInput = calc.querySelector("[data-field=down]");
+			const termSelect = calc.querySelector("[data-field=term]");
+			const rateInput = calc.querySelector("[data-field=rate]");
+			const downPercent = calc.querySelector("[data-down-percent]");
+			const loanAmountEl = calc.querySelector("[data-result=loan-amount]");
+			const monthlyPaymentEl = calc.querySelector("[data-result=monthly-payment]");
+			const totalPaymentsEl = calc.querySelector("[data-result=total-payments]");
+			const totalInterestEl = calc.querySelector("[data-result=total-interest]");
+
+			function parseNumber(str) {
+				return parseFloat(str.replace(/[^0-9.]/g, "")) || 0;
+			}
+
+			function formatNumber(num, decimals = 0) {
+				return num.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+			}
+
+			function calculatePayment() {
+				const price = parseNumber(priceInput.value);
+				const down = parseNumber(downInput.value);
+				const term = parseInt(termSelect.value) || 15;
+				const rate = parseFloat(rateInput.value.replace(/[^0-9.]/g, "")) || 0;
+
+				const loanAmount = Math.max(0, price - down);
+				const n = term * 12;
+				const r = (rate / 100) / 12;
+
+				let monthlyPayment = 0;
+				if (loanAmount > 0) {
+					if (r === 0) {
+						monthlyPayment = loanAmount / n;
+					} else {
+						monthlyPayment = loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+					}
+				}
+
+				const totalPayments = monthlyPayment * n;
+				const totalInterest = totalPayments - loanAmount;
+
+				// Update down payment percentage
+				if (downPercent && price > 0) {
+					downPercent.textContent = ((down / price) * 100).toFixed(1);
+				}
+
+				// Update results
+				loanAmountEl.textContent = "$" + formatNumber(loanAmount);
+				monthlyPaymentEl.textContent = "$" + formatNumber(monthlyPayment, 2);
+				totalPaymentsEl.textContent = "$" + formatNumber(totalPayments);
+				totalInterestEl.textContent = "$" + formatNumber(Math.max(0, totalInterest));
+			}
+
+			// Format input on blur
+			function formatInput(input, decimals = 0) {
+				const val = parseNumber(input.value);
+				input.value = formatNumber(val, decimals);
+			}
+
+			// Event listeners
+			[priceInput, downInput].forEach(input => {
+				input.addEventListener("input", calculatePayment);
+				input.addEventListener("blur", function() {
+					formatInput(this);
+					calculatePayment();
+				});
+			});
+
+			rateInput.addEventListener("input", calculatePayment);
+			rateInput.addEventListener("blur", function() {
+				formatInput(this, 2);
+				calculatePayment();
+			});
+
+			termSelect.addEventListener("change", calculatePayment);
+		})();
+		</script>';
 	}
 }

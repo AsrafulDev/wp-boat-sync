@@ -601,6 +601,27 @@ while (have_posts()) : the_post();
 				<div class="wpbs-price-card__body">
 					<?php if ($price_display) : ?>
 					<div class="wpbs-price-card__price"><?php echo esc_html($price_display); ?></div>
+					<?php 
+					// Calculate monthly payment estimate from admin settings
+					if ($price_num > 0) :
+						$loan_settings = WPBS_Utils::get_settings();
+						$down_payment_percent = (float)($loan_settings['loan_down_payment'] ?? 20) / 100;
+						$annual_rate = (float)($loan_settings['loan_interest_rate'] ?? 7.5) / 100;
+						$loan_term_years = (int)($loan_settings['loan_term_years'] ?? 1);
+						$loan_term_months = $loan_term_years * 12;
+						$loan_amount = $price_num * (1 - $down_payment_percent);
+						$monthly_rate = $annual_rate / 12;
+						if ($monthly_rate > 0) {
+							$monthly_payment = $loan_amount * ($monthly_rate * pow(1 + $monthly_rate, $loan_term_months)) / (pow(1 + $monthly_rate, $loan_term_months) - 1);
+						} else {
+							$monthly_payment = $loan_amount / $loan_term_months;
+						}
+					?>
+					<div class="wpbs-price-card__monthly" style="font-size:14px;color:#666;margin-top:4px;">
+						Est. <strong style="color:#333;">$<?php echo number_format($monthly_payment); ?>/mo</strong>
+						<span style="font-size:11px;color:#999;display:block;margin-top:2px;"><?php echo (int)($down_payment_percent * 100); ?>% down, <?php echo number_format($annual_rate * 100, 2); ?>% APR, <?php echo $loan_term_years; ?> yr<?php echo $loan_term_years > 1 ? 's' : ''; ?></span>
+					</div>
+					<?php endif; ?>
 					<?php else : ?>
 					<div class="wpbs-price-card__price">Contact for Price</div>
 					<?php endif; ?>
@@ -645,6 +666,12 @@ while (have_posts()) : the_post();
 					<a href="<?php echo esc_url(get_post_type_archive_link('boats')); ?>" class="wpbs-btn wpbs-btn--outline">View All Boats</a>
 				</div>
 			</div>
+
+			<!-- Loan Payment Calculator -->
+			<?php if ($price_num > 0) : ?>
+			<?php echo do_shortcode('[wpbs_loan_calculator post_id="' . $post_id . '"]'); ?>
+			<?php endif; ?>
+							
 		</div>
 	</div>
 

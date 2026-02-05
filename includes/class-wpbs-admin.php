@@ -856,6 +856,18 @@ class WPBS_Admin
 		echo '<tr><th scope="row"><label for="style_accent_color">Accent color</label></th><td><input name="style_accent_color" id="style_accent_color" type="text" class="regular-text" value="' . esc_attr($settings['style_accent_color']) . '" placeholder="#0b5fff" /></td></tr>';
 		echo '</table>';
 
+		echo '<h2 style="margin-top:30px;">Loan Calculator Defaults</h2>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th scope="row"><label for="loan_down_payment">Down Payment (%)</label></th><td><input name="loan_down_payment" id="loan_down_payment" type="number" min="0" max="100" step="0.1" value="' . esc_attr($settings['loan_down_payment']) . '" class="small-text" /> <span style="opacity:.75;">Default: 20%</span></td></tr>';
+		echo '<tr><th scope="row"><label for="loan_interest_rate">Interest Rate (%)</label></th><td><input name="loan_interest_rate" id="loan_interest_rate" type="number" min="0" max="30" step="0.01" value="' . esc_attr($settings['loan_interest_rate']) . '" class="small-text" /> <span style="opacity:.75;">Annual APR. Default: 7.5%</span></td></tr>';
+		echo '<tr><th scope="row"><label for="loan_term_years">Loan Term (Years)</label></th><td><select name="loan_term_years" id="loan_term_years">';
+		$term = isset($settings['loan_term_years']) ? (int)$settings['loan_term_years'] : 1;
+		foreach (array(1, 2, 3, 5, 7, 10, 12, 15, 20, 25, 30) as $y) {
+			echo '<option value="' . $y . '" ' . selected($term, $y, false) . '>' . $y . ' year' . ($y > 1 ? 's' : '') . '</option>';
+		}
+		echo '</select></td></tr>';
+		echo '</table>';
+
 		submit_button('Save Settings');
 		echo '</form>';
 		echo '</div>';
@@ -897,6 +909,7 @@ class WPBS_Admin
 		echo '<option value="price">Price - Display boat price</option>';
 		echo '<option value="price_card">Price Card - Price with contact button</option>';
 		echo '<option value="location">Location - Boat location info</option>';
+		echo '<option value="loan_calculator">Loan Calculator - Monthly payment calculator</option>';
 		echo '</optgroup>';
 		echo '<optgroup label="Dealer">';
 		echo '<option value="dealer_card">Dealer Card - Dealer contact info</option>';
@@ -971,6 +984,20 @@ class WPBS_Admin
 		echo '</table>';
 		echo '</div>';
 
+		// Loan Calculator options panel
+		echo '<div id="wpbs_sc_opt_loan" class="wpbs-sc-panel" style="display:none;">';
+		echo '<h3 style="margin-top:0;">Loan Calculator Options</h3>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th><label for="wpbs_sc_doc_loan">Document ID</label></th><td><input id="wpbs_sc_doc_loan" type="text" placeholder="e.g. 9963690" class="regular-text" /><p class="description">Leave empty to use current boat context.</p></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_postid_loan">Or Post ID</label></th><td><input id="wpbs_sc_postid_loan" type="number" placeholder="e.g. 123" class="small-text" /></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_loan_price">Override Price</label></th><td><input id="wpbs_sc_loan_price" type="text" placeholder="e.g. 150000" class="regular-text" /><p class="description">Custom purchase price. Leave empty to use boat price.</p></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_loan_down">Down Payment</label></th><td><input id="wpbs_sc_loan_down" type="text" value="20%" class="small-text" /><p class="description">Default down payment. Use % or fixed amount (e.g. 20% or 10000).</p></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_loan_term">Loan Term (Years)</label></th><td><select id="wpbs_sc_loan_term"><option value="5">5</option><option value="7">7</option><option value="10">10</option><option value="12">12</option><option value="15" selected>15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option></select></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_loan_rate">Interest Rate (%)</label></th><td><input id="wpbs_sc_loan_rate" type="text" value="7.5" class="small-text" /><p class="description">Default annual interest rate.</p></td></tr>';
+		echo '<tr><th><label for="wpbs_sc_loan_title">Calculator Title</label></th><td><input id="wpbs_sc_loan_title" type="text" value="Loan Payment Calculator" class="regular-text" /></td></tr>';
+		echo '</table>';
+		echo '</div>';
+
 		echo '</div>'; // .wpbs-sc-options
 
 		// Output
@@ -1001,6 +1028,7 @@ class WPBS_Admin
 		echo '<tr><td><code>[wpbs_tab_measurements]</code></td><td>Measurements section only</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_tab_propulsion]</code></td><td>Propulsion/engine section only</td><td>id, post_id</td></tr>';
 		echo '<tr><td><code>[wpbs_tab_features]</code></td><td>Features section only</td><td>id, post_id</td></tr>';
+		echo '<tr><td><code>[wpbs_loan_calculator]</code></td><td>Loan payment calculator with amortization formula</td><td>id, post_id, price, down, term, rate, title</td></tr>';
 		echo '</tbody></table>';
 		echo '</div>';
 
@@ -1023,7 +1051,8 @@ class WPBS_Admin
 		price_card: "Price card with title, location, and Contact Seller button.",
 		location: "Display boat location (city, state, country).",
 		dealer_card: "Dealer contact card with name, phone, and email.",
-		more_boats: "Show other boats from the same dealer. Great for cross-selling."
+		more_boats: "Show other boats from the same dealer. Great for cross-selling.",
+		loan_calculator: "Interactive loan payment calculator. Calculates monthly payments using standard amortization formula with configurable down payment, term, and interest rate."
 	};
 
 	var panelMap = {
@@ -1043,7 +1072,8 @@ class WPBS_Admin
 		price_card: "basic",
 		location: "basic",
 		dealer_card: "basic",
-		more_boats: "more"
+		more_boats: "more",
+		loan_calculator: "loan"
 	};
 
 	var shortcodeNames = {
@@ -1063,7 +1093,8 @@ class WPBS_Admin
 		price_card: "wpbs_price_card",
 		location: "wpbs_location",
 		dealer_card: "wpbs_dealer_card",
-		more_boats: "wpbs_more_boats"
+		more_boats: "wpbs_more_boats",
+		loan_calculator: "wpbs_loan_calculator"
 	};
 
 	function hideAllPanels(){
@@ -1142,6 +1173,22 @@ class WPBS_Admin
 			if(postid) attrs.push("post_id=\"" + postid + "\"");
 			else if(doc) attrs.push("id=\"" + doc + "\"");
 		}
+		else if(panel === "loan"){
+			var doc = document.getElementById("wpbs_sc_doc_loan").value.trim();
+			var postid = document.getElementById("wpbs_sc_postid_loan").value.trim();
+			var price = document.getElementById("wpbs_sc_loan_price").value.trim();
+			var down = document.getElementById("wpbs_sc_loan_down").value.trim();
+			var term = document.getElementById("wpbs_sc_loan_term").value;
+			var rate = document.getElementById("wpbs_sc_loan_rate").value.trim();
+			var title = document.getElementById("wpbs_sc_loan_title").value.trim();
+			if(postid) attrs.push("post_id=\"" + postid + "\"");
+			else if(doc) attrs.push("id=\"" + doc + "\"");
+			if(price) attrs.push("price=\"" + price + "\"");
+			if(down && down !== "20%") attrs.push("down=\"" + down + "\"");
+			if(term && term !== "15") attrs.push("term=\"" + term + "\"");
+			if(rate && rate !== "7.5") attrs.push("rate=\"" + rate + "\"");
+			if(title && title !== "Loan Payment Calculator") attrs.push("title=\"" + title + "\"");
+		}
 
 		var out = "[" + scName + (attrs.length ? " " + attrs.join(" ") : "") + "]";
 		document.getElementById("wpbs_sc_out").value = out;
@@ -1202,6 +1249,9 @@ class WPBS_Admin
 			'style_grid_gap' => isset($_POST['style_grid_gap']) ? (int)$_POST['style_grid_gap'] : 16,
 			'style_font_size' => isset($_POST['style_font_size']) ? (int)$_POST['style_font_size'] : 16,
 			'style_accent_color' => isset($_POST['style_accent_color']) ? sanitize_text_field(wp_unslash($_POST['style_accent_color'])) : '#0b5fff',
+			'loan_down_payment' => isset($_POST['loan_down_payment']) ? (float)$_POST['loan_down_payment'] : 20,
+			'loan_interest_rate' => isset($_POST['loan_interest_rate']) ? (float)$_POST['loan_interest_rate'] : 7.5,
+			'loan_term_years' => isset($_POST['loan_term_years']) ? (int)$_POST['loan_term_years'] : 1,
 		);
 
 		WPBS_Utils::update_settings($settings);
