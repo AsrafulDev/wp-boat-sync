@@ -810,13 +810,14 @@ document.addEventListener('DOMContentLoaded', function() {
 			lightboxImg.style.display = 'block';
 			lightboxVideo.innerHTML = '';
 			lightboxVideo.style.display = 'none';
-		} else if (item.type === 'video') {
+		else if (item.type === 'video') {
 			lightboxImg.style.display = 'none';
-			var videoUrl = item.url;
+			var videoUrl = item.url || '';
 			var embedHtml = '';
-			// YouTube
-			if (videoUrl.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/) || videoUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/)) {
-				var vid = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)[1];
+			// YouTube (watch, youtu.be, or shorts)
+			var ytMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/);
+			if (ytMatch) {
+				var vid = ytMatch[1];
 				embedHtml = '<iframe src="https://www.youtube.com/embed/' + vid + '?autoplay=1" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>';
 			}
 			// Vimeo
@@ -826,7 +827,11 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 			// Direct video
 			else {
-				embedHtml = '<video src="' + videoUrl + '" controls autoplay style="max-width:100%;max-height:80vh;"></video>';
+				// strip accidental trailing pipe or params (defensive)
+				videoUrl = videoUrl.replace(/\|.*$/, '').trim();
+				if (videoUrl) {
+					embedHtml = '<video src="' + videoUrl + '" controls autoplay style="max-width:100%;max-height:80vh;"></video>';
+				}
 			}
 			lightboxVideo.innerHTML = embedHtml;
 			lightboxVideo.style.display = 'flex';
