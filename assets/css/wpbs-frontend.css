@@ -1900,6 +1900,7 @@ body:has(#wpadminbar) .wpbs-sidebar {
 
 .wpbs-filter-layout--top .wpbs-filter-bar {
   width: 100%;
+  max-width: -webkit-fill-available;
 }
 
 .wpbs-filter-layout--top .wpbs-filter-content {
