@@ -29,6 +29,10 @@ class WPBS_Admin
 		add_action('wp_ajax_wpbs_dedupe_start', array($this, 'ajax_dedupe_start'));
 		add_action('wp_ajax_wpbs_dedupe_tick', array($this, 'ajax_dedupe_tick'));
 		add_action('wp_ajax_wpbs_queue_recover_processing', array($this, 'ajax_queue_recover_processing'));
+		// One-off retrofit to assign brand terms from existing meta
+		add_action('admin_post_wpbs_retrofit_brands', array($this, 'handle_retrofit_brands'));
+		// Dry-run version (reports what would change without making assignments)
+		add_action('admin_post_wpbs_retrofit_brands_dryrun', array($this, 'handle_retrofit_brands_dryrun'));
 	}
 
 	public function enqueue_admin_assets($hook)
@@ -870,7 +874,153 @@ class WPBS_Admin
 
 		submit_button('Save Settings');
 		echo '</form>';
+
+		// One-off retrofit button: assign brand terms from existing wpbs_make/_exact meta.
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:18px;">';
+		echo '<input type="hidden" name="action" value="wpbs_retrofit_brands" />';
+		wp_nonce_field('wpbs_retrofit_brands');
+		echo '<p><strong>Retrofit existing boats:</strong> Assign `brand` terms from the existing <code>wpbs_make_exact</code> / <code>wpbs_make</code> post meta. This will create missing brand terms and attach them to boats.</p>';
+		echo '<p><button type="submit" class="button button-secondary">Run retrofit now</button> <span style="margin-left:10px; color:#666;">You will be redirected back with a summary.</span></p>';
+		echo '</form>';
+
+		// Dry-run button: report what would change without making modifications
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:8px;">';
+		echo '<input type="hidden" name="action" value="wpbs_retrofit_brands_dryrun" />';
+		wp_nonce_field('wpbs_retrofit_brands_dryrun');
+		echo '<p><strong>Dry-run:</strong> Simulate assigning `brand` terms and report counts (no changes will be made).</p>';
+		echo '<p><button type="submit" class="button">Run dry-run</button> <span style="margin-left:10px; color:#666;">You will be redirected back with a summary of what would change.</span></p>';
+		echo '</form>';
+
 		echo '</div>';
+	}
+
+	/**
+	 * Handle admin POST to retrofit brand terms for existing boat posts.
+	 */
+	public function handle_retrofit_brands()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_die('Forbidden', '', array('response' => 403));
+		}
+		check_admin_referer('wpbs_retrofit_brands');
+
+		$assigned = 0;
+		$skipped = 0;
+		$created_terms = 0;
+
+		$paged = 1;
+		$per_page = 200;
+
+		while (true) {
+			$query = new WP_Query(array(
+				'post_type' => WPBS_POST_TYPE,
+				'post_status' => 'any',
+				'posts_per_page' => $per_page,
+				'paged' => $paged,
+				'fields' => 'ids',
+			));
+
+			if (empty($query->posts)) break;
+
+			foreach ($query->posts as $post_id) {
+				$make = (string)get_post_meta($post_id, 'wpbs_make_exact', true);
+				if ($make === '') {
+					$make = (string)get_post_meta($post_id, 'wpbs_make', true);
+				}
+				$make = trim($make);
+				if ($make === '') {
+					$skipped++;
+					continue;
+				}
+
+				$slug = sanitize_title($make);
+				$term = get_term_by('slug', $slug, 'brand');
+				if (!$term) {
+					$res = wp_insert_term($make, 'brand', array('slug' => $slug));
+					if (!is_wp_error($res)) {
+						$created_terms++;
+						$term_id = is_array($res) && isset($res['term_id']) ? (int)$res['term_id'] : 0;
+					} else {
+						// If term creation failed, skip
+						$skipped++;
+						continue;
+					}
+				} else {
+					$term_id = (int)$term->term_id;
+				}
+
+				// Assign term by slug (non-hierarchical)
+				wp_set_object_terms($post_id, $slug, 'brand', false);
+				$assigned++;
+			}
+
+			$paged++;
+			// Allow other processes to run between batches
+			if (function_exists('wp_suspend_cache_invalidation')) {
+				wp_suspend_cache_invalidation(true);
+			}
+		}
+
+		// Redirect back to settings with summary
+		$redirect = add_query_arg(array('page' => 'wpbs-settings', 'retro_assigned' => $assigned, 'retro_skipped' => $skipped, 'retro_created' => $created_terms), admin_url('admin.php'));
+		wp_safe_redirect($redirect);
+		exit;
+	}
+
+	/**
+	 * Dry-run: simulate retrofit and report counts without making changes.
+	 */
+	public function handle_retrofit_brands_dryrun()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_die('Forbidden', '', array('response' => 403));
+		}
+		check_admin_referer('wpbs_retrofit_brands_dryrun');
+
+		$assigned = 0; // would-be assignments
+		$skipped = 0; // posts skipped (no make)
+		$would_create = 0; // terms that would be created
+
+		$paged = 1;
+		$per_page = 200;
+
+		while (true) {
+			$query = new WP_Query(array(
+				'post_type' => WPBS_POST_TYPE,
+				'post_status' => 'any',
+				'posts_per_page' => $per_page,
+				'paged' => $paged,
+				'fields' => 'ids',
+			));
+
+			if (empty($query->posts)) break;
+
+			foreach ($query->posts as $post_id) {
+				$make = (string)get_post_meta($post_id, 'wpbs_make_exact', true);
+				if ($make === '') {
+					$make = (string)get_post_meta($post_id, 'wpbs_make', true);
+				}
+				$make = trim($make);
+				if ($make === '') {
+					$skipped++;
+					continue;
+				}
+
+				$slug = sanitize_title($make);
+				$term = get_term_by('slug', $slug, 'brand');
+				if (!$term) {
+					$would_create++;
+				}
+				// In dry-run we count as would-be assignment regardless of existing term
+				$assigned++;
+			}
+
+			$paged++;
+		}
+
+		$redirect = add_query_arg(array('page' => 'wpbs-settings', 'dry_assigned' => $assigned, 'dry_skipped' => $skipped, 'dry_would_create' => $would_create), admin_url('admin.php'));
+		wp_safe_redirect($redirect);
+		exit;
 	}
 
 	public function render_shortcode_builder()

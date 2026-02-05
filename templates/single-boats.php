@@ -61,11 +61,18 @@ while (have_posts()) : the_post();
 	$gallery_ids  = array_values(array_unique(array_filter(array_map('intval', $gallery_ids))));
 	$total_images = count($gallery_ids);
 
-	// Get embedded videos
 	$video_urls_raw = get_post_meta($post_id, 'wpbs_embedded_video_urls', true);
 	$video_urls = array();
 	if ($video_urls_raw) {
-		$video_urls = array_filter(array_map('trim', explode("\n", $video_urls_raw)));
+		$lines = array_map('trim', explode("\n", $video_urls_raw));
+		foreach ($lines as $line) {
+			// Strip any trailing pipe and anything after it (malformed save)
+			$clean = preg_replace('/\|.*$/', '', $line);
+			$clean = trim($clean);
+			if ($clean !== '') {
+				$video_urls[] = $clean;
+			}
+		}
 	}
 	$has_videos = !empty($video_urls);
 	$total_media = $total_images + count($video_urls);
@@ -85,9 +92,11 @@ while (have_posts()) : the_post();
 		);
 	}
 	foreach ($video_urls as $vurl) {
+		$vclean = preg_replace('/\|.*$/', '', trim($vurl));
+		if ($vclean === '') continue;
 		$gallery_items[] = array(
 			'type' => 'video',
-			'url' => $vurl,
+			'url' => $vclean,
 			'thumb' => '', // Video thumbnail placeholder
 		);
 	}
@@ -163,13 +172,14 @@ while (have_posts()) : the_post();
 					foreach ($video_urls as $vurl) :
 						// Try to extract YouTube/Vimeo thumbnail
 						$video_thumb = '';
-						if (preg_match('/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/', $vurl, $m) || preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $vurl, $m)) {
+						$vclean = preg_replace('/\|.*$/', '', trim($vurl));
+						if (preg_match('/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/', $vclean, $m) || preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $vclean, $m)) {
 							$video_thumb = 'https://img.youtube.com/vi/' . $m[1] . '/mqdefault.jpg';
-						} elseif (preg_match('/vimeo\.com\/(\d+)/', $vurl, $m)) {
+						} elseif (preg_match('/vimeo\.com\/(\d+)/', $vclean, $m)) {
 							$video_thumb = ''; // Vimeo requires API call
 						}
 					?>
-					<button type="button" class="wpbs-gallery__thumb wpbs-gallery__thumb--video" data-index="<?php echo $video_index; ?>" data-type="video" data-video-url="<?php echo esc_url($vurl); ?>">
+					<button type="button" class="wpbs-gallery__thumb wpbs-gallery__thumb--video" data-index="<?php echo $video_index; ?>" data-type="video" data-video-url="<?php echo esc_url($vclean); ?>">
 						<?php if ($video_thumb) : ?>
 						<img src="<?php echo esc_url($video_thumb); ?>" alt="Video" loading="lazy">
 						<?php endif; ?>
@@ -596,6 +606,21 @@ while (have_posts()) : the_post();
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="#999"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
 						<?php echo esc_html($location); ?>
 					</div>
+					<?php endif; ?>
+					<?php
+					// Show brand(s) in sidebar (linked to brand archive)
+					$brand_terms = get_the_terms($post_id, 'brand');
+					if ($brand_terms && !is_wp_error($brand_terms)) :
+						$brand_links = array();
+						foreach ($brand_terms as $bt) {
+							$link = get_term_link($bt);
+							if (!is_wp_error($link)) {
+								$brand_links[] = '<a href="' . esc_url($link) . '" style="color:#0066cc;text-decoration:none;">' . esc_html($bt->name) . '</a>';
+							}
+						}
+						if (!empty($brand_links)) : ?>
+						<div style="font-size:12px;color:#999;margin-top:6px;">Brand: <?php echo wp_kses_post(implode(', ', $brand_links)); ?></div>
+						<?php endif; ?>
 					<?php endif; ?>
 				</div>
 				<div class="wpbs-price-card__body">

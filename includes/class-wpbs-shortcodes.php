@@ -20,6 +20,7 @@ class WPBS_Shortcodes
 		// Individual element shortcodes
 		add_shortcode('wpbs_slider', array($this, 'shortcode_slider'));
 		add_shortcode('wpbs_gallery', array($this, 'shortcode_gallery'));
+		add_shortcode('wpbs_brand_list', array($this, 'shortcode_brand_list'));
 		add_shortcode('wpbs_quick_specs', array($this, 'shortcode_quick_specs'));
 		add_shortcode('wpbs_overview', array($this, 'shortcode_overview'));
 		add_shortcode('wpbs_tabs', array($this, 'shortcode_tabs'));
@@ -204,6 +205,36 @@ class WPBS_Shortcodes
 		}
 
 		$out .= '</div>';
+		return $out;
+	}
+
+	/**
+	 * [wpbs_brand_list] - simple list of brand terms with counts
+	 */
+	public function shortcode_brand_list($atts)
+	{
+		$atts = shortcode_atts(array(
+			'orderby' => 'name',
+			'hide_empty' => 1,
+		), $atts, 'wpbs_brand_list');
+
+		$terms = get_terms(array(
+			'taxonomy' => 'brand',
+			'orderby' => $atts['orderby'],
+			'hide_empty' => (bool)$atts['hide_empty'],
+		));
+
+		if (is_wp_error($terms) || empty($terms)) {
+			return '';
+		}
+
+		$out = '<ul class="wpbs-brand-list">';
+		foreach ($terms as $t) {
+			$link = get_term_link($t);
+			if (is_wp_error($link)) continue;
+			$out .= '<li><a href="' . esc_url($link) . '">' . esc_html($t->name) . ' <span class="wpbs-brand-count">(' . intval($t->count) . ')</span></a></li>';
+		}
+		$out .= '</ul>';
 		return $out;
 	}
 
@@ -914,7 +945,17 @@ class WPBS_Shortcodes
 
 		$exclude_id = $this->get_boat_id($atts);
 		$count = max(1, min(12, (int)$atts['count']));
-		$cols = max(1, min(6, (int)$atts['columns']));
+
+		// Responsive columns parsing (same shorthand as grid): supports "3", "3,2", "3,2,1" or "3,21"
+		$cols_attr = trim((string)$atts['columns']);
+		$parts = strpos($cols_attr, ',') !== false ? array_map('trim', explode(',', $cols_attr)) : array($cols_attr);
+		if (count($parts) === 2 && ctype_digit($parts[1]) && strlen($parts[1]) === 2) {
+			$parts = array($parts[0], $parts[1][0], $parts[1][1]);
+		}
+		$desktop_cols = isset($parts[0]) && is_numeric($parts[0]) ? max(1, min(6, (int)$parts[0])) : 4;
+		$tablet_cols = isset($parts[1]) && is_numeric($parts[1]) ? max(1, min(6, (int)$parts[1])) : $desktop_cols;
+		$mobile_cols = isset($parts[2]) && is_numeric($parts[2]) ? max(1, min(6, (int)$parts[2])) : min($tablet_cols, 1);
+		$uid = 'wpbs-more-' . wp_unique_id();
 		$is_slider = $atts['type'] === 'slider';
 
 		$q = new WP_Query(array(
@@ -933,10 +974,17 @@ class WPBS_Shortcodes
 		$out .= '<a href="' . esc_url(get_post_type_archive_link('boats')) . '" class="wpbs-more-boats__link">View All Boats</a>';
 		$out .= '</div>';
 
+		// scoped inline styles for responsive columns on this instance
+		$style = '<style id="' . esc_attr($uid) . '-styles">';
+		$style .= '#' . esc_attr($uid) . ' .wpbs-more-boats__grid{display:grid;grid-template-columns:repeat(' . esc_attr($desktop_cols) . ',1fr);gap:16px;}';
+		$style .= '@media (max-width:900px){#' . esc_attr($uid) . ' .wpbs-more-boats__grid{grid-template-columns:repeat(' . esc_attr($tablet_cols) . ',1fr);}}';
+		$style .= '@media (max-width:600px){#' . esc_attr($uid) . ' .wpbs-more-boats__grid{grid-template-columns:repeat(' . esc_attr($mobile_cols) . ',1fr);}}';
+		$style .= '</style>';
+
 		if ($is_slider) {
-			$out .= '<div class="wpbs-more-boats__slider" data-wpbs-boats-slider>';
+			$out .= '<div id="' . esc_attr($uid) . '" class="wpbs-more-boats__slider" data-wpbs-boats-slider>';
 		} else {
-			$out .= '<div class="wpbs-more-boats__grid" style="display:grid;grid-template-columns:repeat(' . $cols . ',1fr);gap:16px;">';
+			$out .= $style . '<div id="' . esc_attr($uid) . '" class="wpbs-more-boats__grid">';
 		}
 
 		while ($q->have_posts()) {
@@ -976,7 +1024,20 @@ class WPBS_Shortcodes
 		), $atts);
 
 		$ppp = max(1, (int)$atts['posts_per_page']);
-		$cols = max(1, min(6, (int)$atts['columns']));
+
+		// Responsive columns parsing: support formats like "3", "3,2", "3,2,1" or shorthand "3,21"
+		$cols_attr = trim((string)$atts['columns']);
+		$parts = strpos($cols_attr, ',') !== false ? array_map('trim', explode(',', $cols_attr)) : array($cols_attr);
+		if (count($parts) === 2 && ctype_digit($parts[1]) && strlen($parts[1]) === 2) {
+			// Accept shorthand like "3,21" -> [3,2,1]
+			$parts = array($parts[0], $parts[1][0], $parts[1][1]);
+		}
+		$desktop_cols = isset($parts[0]) && is_numeric($parts[0]) ? max(1, min(6, (int)$parts[0])) : 3;
+		$tablet_cols = isset($parts[1]) && is_numeric($parts[1]) ? max(1, min(6, (int)$parts[1])) : $desktop_cols;
+		$mobile_cols = isset($parts[2]) && is_numeric($parts[2]) ? max(1, min(6, (int)$parts[2])) : min($tablet_cols, 1);
+
+		// Unique id for scoped inline styles
+		$uid = 'wpbs-grid-' . wp_unique_id();
 		$show_filter = in_array(strtolower($atts['filter']), array('true', 'yes', '1'), true);
 		$filter_position = in_array($atts['filter_position'], array('top', 'left', 'right')) ? $atts['filter_position'] : 'top';
 		$orderby = sanitize_text_field($atts['orderby']);
@@ -1080,20 +1141,28 @@ class WPBS_Shortcodes
 		// Layout class based on filter position
 		$layout_class = $show_filter ? 'wpbs-filter-layout--' . $filter_position : '';
 
+		// Inline responsive styles scoped to this instance
+		$style = '<style id="' . esc_attr($uid) . '-styles">';
+		$style .= '#' . esc_attr($uid) . ' .wpbs-grid{grid-template-columns:repeat(' . esc_attr($desktop_cols) . ',1fr);}';
+		$style .= '@media (max-width:900px){#' . esc_attr($uid) . ' .wpbs-grid{grid-template-columns:repeat(' . esc_attr($tablet_cols) . ',1fr);}}';
+		$style .= '@media (max-width:600px){#' . esc_attr($uid) . ' .wpbs-grid{grid-template-columns:repeat(' . esc_attr($mobile_cols) . ',1fr);}}';
+		$style .= '</style>';
+
 		if (!$q->have_posts()) {
-			$out = '<div class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($cols) . '">';
+
+			$out = $style . '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 			if ($show_filter) {
 				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_featured, $f_orderby);
 			}
 			$out .= '<div class="wpbs-filter-content">';
 			$out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
-			$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($cols) . ',1fr);">';
+			$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($desktop_cols) . ',1fr);">';
 			$out .= '<div class="wpbs-no-results" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background:#fff; border-radius:8px;"><p style="color:#666;">No boats found.</p></div>';
 			$out .= '</div></div></div>';
 			return $out;
 		}
 
-		$out = '<div class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($cols) . '">';
+		$out = $style . '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 
 		// Render filter bar if enabled
 		if ($show_filter) {
@@ -1122,7 +1191,7 @@ class WPBS_Shortcodes
 			$out .= '<div class="wpbs-filter-loading" data-wpbs-filter-loading style="display:none;"><div class="wpbs-filter-loading__spinner"></div><span>Loading boats...</span></div>';
 		}
 
-		$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($cols) . ',1fr);">';
+		$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($desktop_cols) . ',1fr);">';
 
 		while ($q->have_posts()) {
 			$q->the_post();
@@ -1262,7 +1331,7 @@ class WPBS_Shortcodes
 
 		// Builder
 		$out .= '<div class="wpbs-filter-bar__field"><label>Builder</label>';
-		$out .= '<select name="builder" data-wpbs-filter="builder"><option value="">Any Builder</option>';
+		$out .= '<select name="builder" data-wpbs-filter="builder" onchange="(function(){var b=document.querySelector(\'[data-wpbs-filter-submit]\'); if(b) b.click();})();"><option value="">Any Builder</option>';
 		foreach ($filter_options['builders'] as $b) {
 			$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
 		}

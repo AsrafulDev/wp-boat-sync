@@ -914,6 +914,22 @@ class WPBS_Sync
 		foreach ($map as $key => $value) {
 			$this->update_field_or_meta($post_id, $key, $value);
 		}
+
+		// Assign brand taxonomy from make fields (prefer exact string if available)
+		$make = (string)get_post_meta($post_id, 'wpbs_make_exact', true);
+		if ($make === '') {
+			$make = (string)get_post_meta($post_id, 'wpbs_make', true);
+		}
+		$make = trim($make);
+		if ($make !== '') {
+			$slug = sanitize_title($make);
+			// Ensure term exists (create by slug/name)
+			if (!get_term_by('slug', $slug, 'brand')) {
+				wp_insert_term($make, 'brand', array('slug' => $slug));
+			}
+			// Assign term by slug (non-hierarchical)
+			@wp_set_object_terms($post_id, $slug, 'brand', false);
+		}
 	}
 
 	private function update_field_or_meta($post_id, $field_name, $value)

@@ -39,6 +39,8 @@ class WPBS_Plugin
 		$this->shortcodes->init();
 
 		add_action('init', array($this, 'register_cpt'));
+		add_action('init', array($this, 'add_rewrite_rules'));
+		add_filter('query_vars', array($this, 'add_query_vars'));
 		add_filter('template_include', array($this, 'template_include'));
 		add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
 
@@ -71,6 +73,8 @@ class WPBS_Plugin
 	{
 		WPBS_DB::install();
 		self::schedule_cron_events();
+		// Ensure rewrite rules include our /brand/ index
+		flush_rewrite_rules();
 		self::schedule_cleanup_cron();
 	}
 
@@ -80,6 +84,25 @@ class WPBS_Plugin
 		wp_clear_scheduled_hook(WPBS_CRON_PROCESS_QUEUE);
 		wp_clear_scheduled_hook(WPBS_CRON_DELETE_BOAT);
 		wp_clear_scheduled_hook(WPBS_CRON_CLEANUP_QUEUE);
+		// Flush rewrite rules to remove custom rules
+		flush_rewrite_rules();
+	}
+
+	/**
+	 * Add custom rewrite rules for plugin endpoints.
+	 */
+	public function add_rewrite_rules()
+	{
+		add_rewrite_rule('^brand/?$', 'index.php?wpbs_brand_index=1', 'top');
+	}
+
+	/**
+	 * Allow custom query vars
+	 */
+	public function add_query_vars($vars)
+	{
+		$vars[] = 'wpbs_brand_index';
+		return $vars;
 	}
 
 	public static function schedule_cron_events()
@@ -161,6 +184,21 @@ class WPBS_Plugin
 		if (!term_exists('available', 'boat_status')) {
 			wp_insert_term('Available', 'boat_status', array('slug' => 'available'));
 		}
+
+		// Register Brand taxonomy (boat manufacturer / make)
+		register_taxonomy('brand', WPBS_POST_TYPE, array(
+			'labels' => array(
+				'name' => __('Brands', 'wpbs'),
+				'singular_name' => __('Brand', 'wpbs'),
+				'show_ui' => __('Show Brands', 'wpbs'),
+			),
+			'public' => true,
+			'hierarchical' => false,
+			'show_ui' => true,
+			'show_admin_column' => true,
+			'show_in_rest' => true,
+			'rewrite' => array('slug' => 'brand'),
+		));
 	}
 
 	public function template_include($template)
@@ -171,8 +209,23 @@ class WPBS_Plugin
 		if (empty($settings['use_default_templates'])) {
 			return $template;
 		}
+
+		// Brand index (/brand/) handled by plugin template when query var is set
+		if (get_query_var('wpbs_brand_index')) {
+			$brands = WPBS_PLUGIN_DIR . 'templates/brands-index.php';
+			if (file_exists($brands)) {
+				return $brands;
+			}
+		}
 		
 		if (is_post_type_archive(WPBS_POST_TYPE)) {
+			$archive = WPBS_PLUGIN_DIR . 'templates/archive-boats.php';
+			if (file_exists($archive)) {
+				return $archive;
+			}
+		}
+		// Brand or boat_status taxonomy archives (use same archive template)
+		if (is_tax('brand') || is_tax('boat_status')) {
 			$archive = WPBS_PLUGIN_DIR . 'templates/archive-boats.php';
 			if (file_exists($archive)) {
 				return $archive;
@@ -189,7 +242,7 @@ class WPBS_Plugin
 
 	public function enqueue_frontend_assets()
 	{
-		$should_enqueue = is_post_type_archive(WPBS_POST_TYPE) || is_singular(WPBS_POST_TYPE);
+		$should_enqueue = is_post_type_archive(WPBS_POST_TYPE) || is_singular(WPBS_POST_TYPE) || is_tax('brand') || is_tax('boat_status') || get_query_var('wpbs_brand_index');
 		if (!$should_enqueue && !is_admin()) {
 			// Also enqueue when shortcodes exist on the current post.
 			global $post;

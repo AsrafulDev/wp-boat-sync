@@ -41,6 +41,18 @@ if (!$f_condition_new && !$f_condition_used) {
 	$f_condition_used = true;
 }
 
+// If viewing a brand taxonomy archive, preselect the builder filter and mark brand page
+$brand_page = false;
+if (is_tax('brand')) {
+	$term = get_queried_object();
+	if ($term && !empty($term->name)) {
+		if ($f_builder === '') {
+			$f_builder = (string)$term->name;
+		}
+		$brand_page = true;
+	}
+}
+
 // Get range limits from database
 $len_min = max(0, (int)($filter_options['lengths']['min'] ?? 0));
 $len_max = max($len_min + 10, (int)($filter_options['lengths']['max'] ?? 200));
@@ -84,7 +96,7 @@ function wpbs_format_price_short($price) {
 			</div>
 			<div class="wpbs-filter-bar__field">
 				<label>Builder</label>
-				<select name="builder" data-wpbs-filter="builder">
+				<select name="builder" data-wpbs-filter="builder" onchange="(function(){var b=document.querySelector('[data-wpbs-filter-submit]'); if(b) b.click();})();">
 					<option value="">Any Builder</option>
 					<?php foreach ($filter_options['builders'] as $builder) : ?>
 					<option value="<?php echo esc_attr($builder); ?>" <?php selected($f_builder, $builder); ?>><?php echo esc_html($builder); ?></option>
@@ -191,7 +203,18 @@ function wpbs_format_price_short($price) {
 	<!-- Header Bar -->
 	<div class="wpbs-archive-header">
 		<div>
-			<h1><?php echo(str_replace('Archives: ', '', get_the_archive_title(''))); ?></h1>
+			<?php
+			if (is_tax('brand')) {
+				$term = get_queried_object();
+				if ($term && !empty($term->name)) {
+					echo '<h1>Brand: ' . esc_html($term->name) . '</h1>';
+				} else {
+					echo '<h1>' . esc_html(str_replace('Archives: ', '', get_the_archive_title(''))) . '</h1>';
+				}
+			} else {
+				echo '<h1>' . esc_html(str_replace('Archives: ', '', get_the_archive_title(''))) . '</h1>';
+			}
+			?>
 		</div>
 		<div class="wpbs-archive-count" data-wpbs-total-count><?php echo number_format($total); ?> boats</div>
 		<div class="wpbs-archive-sort">
