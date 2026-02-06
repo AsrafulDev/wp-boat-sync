@@ -544,6 +544,494 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		);
 
 		$this->end_controls_section();
+
+		// Filter Style Section
+		$this->start_controls_section(
+			'filter_style_section',
+			[
+				'label' => esc_html__('Filter', 'wp-boat-sync'),
+				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+				'condition' => [
+					'filter' => 'yes',
+				],
+			]
+		);
+
+		$this->add_control(
+			'filter_background',
+			[
+				'label' => esc_html__('Background Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Border::get_type(),
+			[
+				'name' => 'filter_border',
+				'selector' => '{{WRAPPER}} .wpbs-filter-bar',
+			]
+		);
+
+		$this->add_responsive_control(
+			'filter_border_radius',
+			[
+				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'filter_padding',
+			[
+				'label' => esc_html__('Padding', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'filter_margin',
+			[
+				'label' => esc_html__('Margin', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar' => 'margin: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		// Filter Label
+		$this->add_control(
+			'filter_label_heading',
+			[
+				'label' => esc_html__('Labels', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::HEADING,
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'filter_label_color',
+			[
+				'label' => esc_html__('Label Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar label' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-filter-bar .wpbs-filter-label' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'filter_label_typography',
+				'selector' => '{{WRAPPER}} .wpbs-filter-bar label, {{WRAPPER}} .wpbs-filter-bar .wpbs-filter-label',
+			]
+		);
+
+		// Filter Inputs
+		$this->add_control(
+			'filter_input_heading',
+			[
+				'label' => esc_html__('Input Fields', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::HEADING,
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'filter_input_text_color',
+			[
+				'label' => esc_html__('Text Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar input' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-filter-bar select' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_control(
+			'filter_input_background',
+			[
+				'label' => esc_html__('Background Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar input' => 'background-color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-filter-bar select' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Border::get_type(),
+			[
+				'name' => 'filter_input_border',
+				'selector' => '{{WRAPPER}} .wpbs-filter-bar input, {{WRAPPER}} .wpbs-filter-bar select',
+			]
+		);
+
+		$this->add_responsive_control(
+			'filter_input_border_radius',
+			[
+				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar input' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+					'{{WRAPPER}} .wpbs-filter-bar select' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'filter_input_padding',
+			[
+				'label' => esc_html__('Padding', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar input' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+					'{{WRAPPER}} .wpbs-filter-bar select' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'filter_input_typography',
+				'selector' => '{{WRAPPER}} .wpbs-filter-bar input, {{WRAPPER}} .wpbs-filter-bar select',
+			]
+		);
+
+		// Filter Button
+		$this->add_control(
+			'filter_button_heading',
+			[
+				'label' => esc_html__('Search Button', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::HEADING,
+				'separator' => 'before',
+			]
+		);
+
+		$this->start_controls_tabs('filter_button_tabs');
+
+		$this->start_controls_tab(
+			'filter_button_normal',
+			[
+				'label' => esc_html__('Normal', 'wp-boat-sync'),
+			]
+		);
+
+		$this->add_control(
+			'filter_button_text_color',
+			[
+				'label' => esc_html__('Text Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar button[type="submit"]' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_control(
+			'filter_button_background',
+			[
+				'label' => esc_html__('Background Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar button[type="submit"]' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->end_controls_tab();
+
+		$this->start_controls_tab(
+			'filter_button_hover',
+			[
+				'label' => esc_html__('Hover', 'wp-boat-sync'),
+			]
+		);
+
+		$this->add_control(
+			'filter_button_hover_text_color',
+			[
+				'label' => esc_html__('Text Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar button[type="submit"]:hover' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_control(
+			'filter_button_hover_background',
+			[
+				'label' => esc_html__('Background Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar button[type="submit"]:hover' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->end_controls_tab();
+
+		$this->end_controls_tabs();
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Border::get_type(),
+			[
+				'name' => 'filter_button_border',
+				'selector' => '{{WRAPPER}} .wpbs-filter-bar button[type="submit"]',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_responsive_control(
+			'filter_button_border_radius',
+			[
+				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar button[type="submit"]' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'filter_button_padding',
+			[
+				'label' => esc_html__('Padding', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-filter-bar button[type="submit"]' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'filter_button_typography',
+				'selector' => '{{WRAPPER}} .wpbs-filter-bar button[type="submit"]',
+			]
+		);
+
+		$this->end_controls_section();
+
+		// Sort Bar Style Section
+		$this->start_controls_section(
+			'sort_style_section',
+			[
+				'label' => esc_html__('Sort Bar', 'wp-boat-sync'),
+				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+			]
+		);
+
+		$this->add_control(
+			'sort_bar_background',
+			[
+				'label' => esc_html__('Background Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-header' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Border::get_type(),
+			[
+				'name' => 'sort_bar_border',
+				'selector' => '{{WRAPPER}} .wpbs-archive-header',
+			]
+		);
+
+		$this->add_responsive_control(
+			'sort_bar_border_radius',
+			[
+				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-header' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'sort_bar_padding',
+			[
+				'label' => esc_html__('Padding', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-header' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'sort_bar_margin',
+			[
+				'label' => esc_html__('Margin', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-header' => 'margin: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		// Count Text
+		$this->add_control(
+			'sort_count_heading',
+			[
+				'label' => esc_html__('Count Text', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::HEADING,
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'sort_count_color',
+			[
+				'label' => esc_html__('Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-count' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'sort_count_typography',
+				'selector' => '{{WRAPPER}} .wpbs-archive-count',
+			]
+		);
+
+		// Sort Label
+		$this->add_control(
+			'sort_label_heading',
+			[
+				'label' => esc_html__('Sort Label', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::HEADING,
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'sort_label_color',
+			[
+				'label' => esc_html__('Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-sort > span' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'sort_label_typography',
+				'selector' => '{{WRAPPER}} .wpbs-archive-sort > span',
+			]
+		);
+
+		// Sort Dropdown
+		$this->add_control(
+			'sort_dropdown_heading',
+			[
+				'label' => esc_html__('Sort Dropdown', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::HEADING,
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'sort_dropdown_text_color',
+			[
+				'label' => esc_html__('Text Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-sort select' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_control(
+			'sort_dropdown_background',
+			[
+				'label' => esc_html__('Background Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-sort select' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Border::get_type(),
+			[
+				'name' => 'sort_dropdown_border',
+				'selector' => '{{WRAPPER}} .wpbs-archive-sort select',
+			]
+		);
+
+		$this->add_responsive_control(
+			'sort_dropdown_border_radius',
+			[
+				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-sort select' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'sort_dropdown_padding',
+			[
+				'label' => esc_html__('Padding', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-archive-sort select' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'sort_dropdown_typography',
+				'selector' => '{{WRAPPER}} .wpbs-archive-sort select',
+			]
+		);
+
+		$this->end_controls_section();
 	}
 
 	protected function render()
