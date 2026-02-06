@@ -1010,7 +1010,8 @@ class WPBS_Shortcodes
 	}
 
 	/**
-	 * Grid shortcode [wpbs_boat_grid posts_per_page="12" columns="3"]
+	 * Grid shortcode [wpbs_boat_grid posts_per_page="12" columns="3,2,1" filter="true" orderby="date"]
+	 * columns can be a single number (e.g. "3") or responsive format "desktop,tablet,mobile" (e.g. "3,2,1")
 	 */
 	public function shortcode_grid($atts)
 	{
@@ -1025,7 +1026,7 @@ class WPBS_Shortcodes
 
 		$ppp = max(1, (int)$atts['posts_per_page']);
 
-		// Responsive columns parsing: support formats like "3", "3,2", "3,2,1" or shorthand "3,21"
+		// Responsive columns parsing: support formats like "3", "3,2", "3,2,1"
 		$cols_attr = trim((string)$atts['columns']);
 		$parts = strpos($cols_attr, ',') !== false ? array_map('trim', explode(',', $cols_attr)) : array($cols_attr);
 		if (count($parts) === 2 && ctype_digit($parts[1]) && strlen($parts[1]) === 2) {
@@ -1554,7 +1555,7 @@ class WPBS_Shortcodes
 		$out .= '<label for="' . esc_attr($calc_id) . '-term">Loan Term</label>';
 		$out .= '<div class="wpbs-loan-calculator__select-wrap">';
 		$out .= '<select id="' . esc_attr($calc_id) . '-term" class="wpbs-loan-calculator__select" data-field="term">';
-		foreach (array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15) as $term) {
+		foreach (array(.5,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15) as $term) {
 			$selected = $term == $default_term ? ' selected' : '';
 			$out .= '<option value="' . $term . '"' . $selected . '>' . $term . ' Years</option>';
 		}

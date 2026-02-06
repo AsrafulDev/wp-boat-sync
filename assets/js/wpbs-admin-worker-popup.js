@@ -103,19 +103,34 @@
 			consecutiveAjaxErrors = 0;
 
 			var remaining = setCounts(resp.data.queueCounts);
-			setStatus('Processing… (updated ' + new Date().toLocaleTimeString() + ')');
+			setStatus('Processing… (' + (resp.data.processed || 0) + ' processed, updated ' + new Date().toLocaleTimeString() + ')');
 
 			if (remaining <= 0) {
-				setStatus('Queue complete.');
+				setStatus('Queue complete. All jobs processed!');
 				stop();
 			}
 		}).fail(function (xhr) {
 			consecutiveAjaxErrors++;
-			var msg = 'Request failed.';
+			var msg = 'Request failed';
 			if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
 				msg = xhr.responseJSON.data.message;
+			} else if (xhr && xhr.status === 0) {
+				msg = 'Network error or timeout';
+			} else if (xhr && xhr.statusText) {
+				msg = xhr.statusText;
 			}
-			setStatus('Error: ' + msg + ' (retrying)');
+			setStatus('Error: ' + msg + ' (retry ' + consecutiveAjaxErrors + ')');
+			
+			// Update counts even on error if available
+			if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.queueCounts) {
+				setCounts(xhr.responseJSON.data.queueCounts);
+			}
+			
+			// Stop after 5 consecutive errors
+			if (consecutiveAjaxErrors >= 5) {
+				setStatus('Too many errors. Stopped. Please check server logs.');
+				stop();
+			}
 		}).always(function () {
 			inFlight = false;
 		});

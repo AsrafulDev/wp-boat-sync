@@ -46,6 +46,22 @@ class WPBS_Admin
 			return;
 		}
 
+		// Add responsive CSS for admin pages
+		wp_add_inline_style('wp-admin', '
+			@media (max-width: 782px) {
+				.wpbs-stats-grid { grid-template-columns: 1fr !important; }
+				#wpbs-worker-modal, #wpbs-dedupe-modal { width: calc(100% - 20px) !important; margin: 4vh 10px !important; }
+				.wp-list-table { font-size: 13px; }
+				.wp-list-table td, .wp-list-table th { padding: 8px 4px !important; }
+			}
+			@media (max-width: 600px) {
+				.wpbs-stats-grid { gap: 8px !important; }
+				.wpbs-chart-container { height: 250px !important; }
+				#wpbs-worker-modal > div:first-child, #wpbs-dedupe-modal > div:first-child { flex-wrap: wrap; gap: 8px; }
+				.button { font-size: 13px; padding: 4px 8px; }
+			}
+		');
+
 		wp_register_script('wpbs-admin-queue-recover', WPBS_PLUGIN_URL . 'assets/js/wpbs-admin-queue-recover.js', array('jquery'), WPBS_VERSION, true);
 		wp_localize_script('wpbs-admin-queue-recover', 'WPBS_QUEUE_RECOVER', array(
 			'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -532,25 +548,22 @@ class WPBS_Admin
 		echo '<p><strong>Speed:</strong> ' . esc_html($speed_label) . '</p>';
 		echo '<p><strong>ETA (estimate):</strong> ' . esc_html($eta_label) . '</p>';
 		echo '</div>';
-		echo '</div>';
-
-		echo '<div style="display:grid;grid-template-columns: 2fr 1fr; gap:12px; align-items:stretch;">';
-		echo '<div class="card" style="max-width:100%;">';
+		
+		echo '<div class="static-row">';
+		echo '<div class="card col-8 col-md-12 col-sm-12">';
 		echo '<h2 style="margin-top:0;">Sync activity (last 7 days hourly)</h2>';
 		echo '<div style="height:260px;"><canvas id="wpbsChartSync" aria-label="Sync activity chart" role="img"></canvas></div>';
 		echo '</div>';
-		echo '<div class="card">';
+		echo '<div class="card col-4 col-md-12 col-sm-12">';
 		echo '<h2 style="margin-top:0;">Status</h2>';
 		echo '<div style="height:260px;"><canvas id="wpbsChartStatus" aria-label="Status chart" role="img"></canvas></div>';
 		echo '</div>';
-		echo '</div>';
 
-		echo '<div style="display:grid;grid-template-columns: 1fr 1fr; gap:12px; align-items:stretch; margin-top:12px;">';
-		echo '<div class="card">';
+		echo '<div class="card col-8 col-md-12 col-sm-12">';
 		echo '<h2 style="margin-top:0;">Queue overview</h2>';
 		echo '<div style="height:260px;"><canvas id="wpbsChartQueue" aria-label="Queue chart" role="img"></canvas></div>';
 		echo '</div>';
-		echo '<div class="card">';
+		echo '<div class="card col-4 col-md-12 col-sm-12">';
 		echo '<h2 style="margin-top:0;">Actions</h2>';
 		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
 		echo '<input type="hidden" name="action" value="wpbs_manual_sync" />';
@@ -580,7 +593,34 @@ class WPBS_Admin
 		echo '</div>';
 
 		// Simple modal (no dependencies) for the queue worker.
-		echo '<div id="wpbs-worker-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:99999;">'
+		?>
+		<style>
+			#wpbs-worker-overlay, #wpbs-dedupe-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 99999; display: none; }
+			#wpbs-worker-modal, #wpbs-dedupe-modal { background: #fff; width: 520px; max-width: calc(100% - 24px); margin: 8vh auto; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+			@media (max-width: 600px) {
+				#wpbs-worker-modal, #wpbs-dedupe-modal { width: calc(100% - 20px); margin: 4vh 10px; }
+				#wpbs-worker-modal > div, #wpbs-dedupe-modal > div { padding: 10px !important; }
+				#wpbs-worker-modal button, #wpbs-dedupe-modal button { font-size: 12px; padding: 4px 8px; }
+			}
+			.static-row { display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 18px;}
+			.static-row .col-8 { width: 66.6667%; }
+			.static-row .col-4 { width: 33.3333%; }
+			.card { background: #fff; padding: 16px; border: 1px solid #e5e5e5; border-radius: 6px; }
+			@media (max-width: 1080px) {
+				.static-row .col-md-8 { width: 66.6667%; }
+				.static-row .col-md-4 { width: 33.3333%;}
+				.static-row .col-md-12 { width: 100%; }
+			}
+			
+			@media (max-width: 756px) {
+				.static-row { flex-direction: column; }
+				.card { max-width: 100%; margin: 0 auto; }
+				.static-row .col-sm-8, .static-row .col-sm-4, .static-row .col-sm-12 { width: 100%; }
+				
+			}
+		</style>
+		<?php
+		echo '<div id="wpbs-worker-overlay">'
 			. '<div id="wpbs-worker-modal" role="dialog" aria-modal="true" style="background:#fff; width:520px; max-width:calc(100% - 24px); margin:8vh auto; border-radius:6px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.25);">'
 			. '<div style="padding:12px 14px; border-bottom:1px solid #e5e5e5; display:flex; align-items:center; justify-content:space-between;">'
 			. '<strong>Queue Worker</strong>'
@@ -606,7 +646,7 @@ class WPBS_Admin
 			. '</div>';
 
 		// Simple modal (no dependencies) for deduplicate all.
-		echo '<div id="wpbs-dedupe-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100000;">'
+		echo '<div id="wpbs-dedupe-overlay">'
 			. '<div id="wpbs-dedupe-modal" role="dialog" aria-modal="true" style="background:#fff; width:520px; max-width:calc(100% - 24px); margin:8vh auto; border-radius:6px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.25);">'
 			. '<div style="padding:12px 14px; border-bottom:1px solid #e5e5e5; display:flex; align-items:center; justify-content:space-between;">'
 			. '<strong>Deduplicate Boats</strong>'
@@ -1447,12 +1487,20 @@ class WPBS_Admin
 		$batch_size = isset($_POST['batchSize']) ? (int)$_POST['batchSize'] : 1;
 		$batch_size = max(1, min(5, $batch_size));
 
-		// Run a small batch to avoid timeouts.
-		$this->sync->process_queue_batch($batch_size);
+		try {
+			// Run a small batch to avoid timeouts.
+			$processed = $this->sync->process_queue_batch($batch_size);
 
-		wp_send_json_success(array(
-			'queueCounts' => $this->get_queue_counts_simple(),
-		));
+			wp_send_json_success(array(
+				'queueCounts' => $this->get_queue_counts_simple(),
+				'processed' => $processed,
+			));
+		} catch (Exception $e) {
+			wp_send_json_error(array(
+				'message' => 'Processing error: ' . $e->getMessage(),
+				'queueCounts' => $this->get_queue_counts_simple(),
+			), 500);
+		}
 	}
 
 	public function handle_run_queue_now()
