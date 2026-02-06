@@ -227,8 +227,22 @@ class WPBS_Plugin
 				return $archive;
 			}
 		}
-		// Brand or boat_status taxonomy archives (use same archive template)
+		// Brand or boat_status taxonomy archives
 		if (is_tax('brand') || is_tax('boat_status')) {
+			// Check if Elementor has a template assigned for this taxonomy
+			if (class_exists('\Elementor\Plugin')) {
+				$term = get_queried_object();
+				if ($term) {
+					// Check for Elementor template assigned to this taxonomy
+					$document_id = \Elementor\Plugin::instance()->modules_manager->get_modules('theme-builder')->get_conditions_manager()->get_documents_for_location('archive');
+					if (!empty($document_id)) {
+						// Let Elementor handle it
+						return $template;
+					}
+				}
+			}
+			
+			// Use default plugin template
 			$archive = WPBS_PLUGIN_DIR . 'templates/archive-boats.php';
 			if (file_exists($archive)) {
 				return $archive;

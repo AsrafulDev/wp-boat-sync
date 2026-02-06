@@ -1052,6 +1052,21 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			'orderby' => $settings['orderby'],
 		];
 
+		// If on a taxonomy page, auto-filter by that taxonomy
+		if (is_tax('brand')) {
+			$term = get_queried_object();
+			if ($term && isset($term->name)) {
+				// Pre-filter by brand - pass to URL param so filter works
+				$_GET['builder'] = $term->name;
+			}
+		} elseif (is_tax('boat_status')) {
+			// Handle boat_status taxonomy if needed
+			$term = get_queried_object();
+			if ($term) {
+				// You can add status filtering here if your shortcode supports it
+			}
+		}
+
 		// Call the shortcode
 		$shortcodes = new WPBS_Shortcodes();
 		echo $shortcodes->shortcode_grid($atts);

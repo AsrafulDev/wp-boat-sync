@@ -1096,10 +1096,10 @@ class WPBS_Shortcodes
 			if ($f_year_max !== '') {
 				$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_max, 'compare' => '<=', 'type' => 'NUMERIC');
 			}
-			if ($f_price_min !== '') {
+			if ($f_price_min !== '' && $f_price_min > 0) {
 				$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_min, 'compare' => '>=', 'type' => 'NUMERIC');
 			}
-			if ($f_price_max !== '') {
+			if ($f_price_max !== '' && $f_price_max > 0) {
 				$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_max, 'compare' => '<=', 'type' => 'NUMERIC');
 			}
 			if ($f_condition_new && !$f_condition_used) {
