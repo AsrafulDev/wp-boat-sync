@@ -49,13 +49,15 @@ class WPBS_Admin
 		// Add responsive CSS for admin pages
 		wp_add_inline_style('wp-admin', '
 			@media (max-width: 782px) {
-				.wpbs-stats-grid { grid-template-columns: 1fr !important; }
+				.wpbs-stats-grid { grid-template-columns: 1fr !important; max-width: 100%; overflow-x: auto; }
+				.card { max-width: 100%; overflow-x: auto; }
 				#wpbs-worker-modal, #wpbs-dedupe-modal { width: calc(100% - 20px) !important; margin: 4vh 10px !important; }
 				.wp-list-table { font-size: 13px; }
 				.wp-list-table td, .wp-list-table th { padding: 8px 4px !important; }
 			}
 			@media (max-width: 600px) {
-				.wpbs-stats-grid { gap: 8px !important; }
+				.wpbs-stats-grid { gap: 8px !important; max-width: 100%; overflow-x: auto; }
+				.card { max-width: 100%; overflow-x: auto; }
 				.wpbs-chart-container { height: 250px !important; }
 				#wpbs-worker-modal > div:first-child, #wpbs-dedupe-modal > div:first-child { flex-wrap: wrap; gap: 8px; }
 				.button { font-size: 13px; padding: 4px 8px; }
@@ -597,49 +599,57 @@ class WPBS_Admin
 		<style>
 			#wpbs-worker-overlay, #wpbs-dedupe-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 99999; display: none; }
 			#wpbs-worker-modal, #wpbs-dedupe-modal { background: #fff; width: 520px; max-width: calc(100% - 24px); margin: 8vh auto; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+			.wpbs-modal-header { padding: 12px 14px; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between; }
+			.wpbs-modal-body { padding: 14px; }
+			.wpbs-status { margin-bottom: 10px; }
+			.wpbs-progress { height: 10px; background: #f0f0f1; border-radius: 999px; overflow: hidden; }
+			.wpbs-progress-bar { height: 10px; width: 0%; background: #2271b1; transition: width 0.3s ease; }
+			.wpbs-stats { display: flex; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+			.wpbs-actions { margin-top: 14px; }
+			.wpbs-note { opacity: .75; margin-left: 8px; }
 			@media (max-width: 600px) {
 				#wpbs-worker-modal, #wpbs-dedupe-modal { width: calc(100% - 20px); margin: 4vh 10px; }
-				#wpbs-worker-modal > div, #wpbs-dedupe-modal > div { padding: 10px !important; }
+				.wpbs-modal-header, .wpbs-modal-body { padding: 10px !important; }
 				#wpbs-worker-modal button, #wpbs-dedupe-modal button { font-size: 12px; padding: 4px 8px; }
+				.wpbs-stats { gap: 8px; font-size: 13px; }
+				.wpbs-note { display: block; margin-left: 0; margin-top: 8px; }
 			}
 			.static-row { display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 18px;}
-			.static-row .col-8 { width: 66.6667%; }
-			.static-row .col-4 { width: 33.3333%; }
+			.static-row .col-8 { width: 65.6667% !important; }
+			.static-row .col-4 { width: 33.3333% !important; }
 			.card { background: #fff; padding: 16px; border: 1px solid #e5e5e5; border-radius: 6px; }
 			@media (max-width: 1080px) {
-				.static-row .col-md-8 { width: 66.6667%; }
-				.static-row .col-md-4 { width: 33.3333%;}
-				.static-row .col-md-12 { width: 100%; }
+				.static-row .col-md-8 { width: 66.6667% !important; }
+				.static-row .col-md-4 { width: 33.3333% !important; }
+				.static-row .col-md-12 { width: 100% !important; }
 			}
-			
 			@media (max-width: 756px) {
 				.static-row { flex-direction: column; }
 				.card { max-width: 100%; margin: 0 auto; }
 				.static-row .col-sm-8, .static-row .col-sm-4, .static-row .col-sm-12 { width: 100%; }
-				
 			}
 		</style>
 		<?php
 		echo '<div id="wpbs-worker-overlay">'
-			. '<div id="wpbs-worker-modal" role="dialog" aria-modal="true" style="background:#fff; width:520px; max-width:calc(100% - 24px); margin:8vh auto; border-radius:6px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.25);">'
-			. '<div style="padding:12px 14px; border-bottom:1px solid #e5e5e5; display:flex; align-items:center; justify-content:space-between;">'
+			. '<div id="wpbs-worker-modal" role="dialog" aria-modal="true">'
+			. '<div class="wpbs-modal-header">'
 			. '<strong>Queue Worker</strong>'
 			. '<button type="button" class="button" id="wpbs-worker-close">Close</button>'
 			. '</div>'
-			. '<div style="padding:14px;">'
-			. '<div id="wpbs-worker-status" style="margin-bottom:10px;">Starting…</div>'
-			. '<div id="wpbs-worker-progress" style="height:10px; background:#f0f0f1; border-radius:999px; overflow:hidden;">'
-			. '<div id="wpbs-worker-progress-bar" style="height:10px; width:0%; background:#2271b1;"></div>'
+			. '<div class="wpbs-modal-body">'
+			. '<div id="wpbs-worker-status" class="wpbs-status">Starting…</div>'
+			. '<div id="wpbs-worker-progress" class="wpbs-progress">'
+			. '<div id="wpbs-worker-progress-bar" class="wpbs-progress-bar"></div>'
 			. '</div>'
-			. '<div style="display:flex; gap:14px; margin-top:12px; flex-wrap:wrap;">'
+			. '<div class="wpbs-stats">'
 			. '<div><strong>Complete:</strong> <span id="wpbs-worker-done">0</span></div>'
 			. '<div><strong>Processing:</strong> <span id="wpbs-worker-processing">0</span></div>'
 			. '<div><strong>Pending:</strong> <span id="wpbs-worker-pending">0</span></div>'
 			. '<div><strong>Failed:</strong> <span id="wpbs-worker-failed">0</span></div>'
 			. '</div>'
-			. '<div style="margin-top:14px;">'
+			. '<div class="wpbs-actions">'
 			. '<button type="button" class="button" id="wpbs-worker-stop">Stop</button>'
-			. '<span style="opacity:.75; margin-left:8px;">Updates every second. Stop/Close does not cancel jobs; queue continues normally.</span>'
+			. '<span class="wpbs-note">Updates every second. Stop/Close does not cancel jobs; queue continues normally.</span>'
 			. '</div>'
 			. '</div>'
 			. '</div>'
@@ -647,24 +657,24 @@ class WPBS_Admin
 
 		// Simple modal (no dependencies) for deduplicate all.
 		echo '<div id="wpbs-dedupe-overlay">'
-			. '<div id="wpbs-dedupe-modal" role="dialog" aria-modal="true" style="background:#fff; width:520px; max-width:calc(100% - 24px); margin:8vh auto; border-radius:6px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.25);">'
-			. '<div style="padding:12px 14px; border-bottom:1px solid #e5e5e5; display:flex; align-items:center; justify-content:space-between;">'
+			. '<div id="wpbs-dedupe-modal" role="dialog" aria-modal="true">'
+			. '<div class="wpbs-modal-header">'
 			. '<strong>Deduplicate Boats</strong>'
 			. '<button type="button" class="button" id="wpbs-dedupe-close">Close</button>'
 			. '</div>'
-			. '<div style="padding:14px;">'
-			. '<div id="wpbs-dedupe-status" style="margin-bottom:10px;">Starting…</div>'
-			. '<div id="wpbs-dedupe-progress" style="height:10px; background:#f0f0f1; border-radius:999px; overflow:hidden;">'
-			. '<div id="wpbs-dedupe-progress-bar" style="height:10px; width:0%; background:#b32d2e;"></div>'
+			. '<div class="wpbs-modal-body">'
+			. '<div id="wpbs-dedupe-status" class="wpbs-status">Starting…</div>'
+			. '<div id="wpbs-dedupe-progress" class="wpbs-progress">'
+			. '<div id="wpbs-dedupe-progress-bar" class="wpbs-progress-bar" style="background:#b32d2e;"></div>'
 			. '</div>'
-			. '<div style="display:flex; gap:14px; margin-top:12px; flex-wrap:wrap;">'
+			. '<div class="wpbs-stats">'
 			. '<div><strong>Groups:</strong> <span id="wpbs-dedupe-processed">0</span> / <span id="wpbs-dedupe-total">0</span></div>'
 			. '<div><strong>Posts deleted:</strong> <span id="wpbs-dedupe-deleted">0</span></div>'
 			. '<div><strong>Images moved:</strong> <span id="wpbs-dedupe-reparented">0</span></div>'
 			. '</div>'
-			. '<div style="margin-top:14px;">'
+			. '<div class="wpbs-actions">'
 			. '<button type="button" class="button" id="wpbs-dedupe-stop">Stop</button>'
-			. '<span style="opacity:.75; margin-left:8px;">Updates every second.</span>'
+			. '<span class="wpbs-note">Updates every second.</span>'
 			. '</div>'
 			. '</div>'
 			. '</div>'

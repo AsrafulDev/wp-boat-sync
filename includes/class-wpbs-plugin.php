@@ -44,6 +44,9 @@ class WPBS_Plugin
 		add_filter('template_include', array($this, 'template_include'));
 		add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
 
+		// Elementor integration
+		add_action('elementor/widgets/register', array($this, 'register_elementor_widgets'));
+
 		// AJAX filter for boats (public - both logged in and not)
 		add_action('wp_ajax_wpbs_filter_boats', array($this, 'ajax_filter_boats'));
 		add_action('wp_ajax_nopriv_wpbs_filter_boats', array($this, 'ajax_filter_boats'));
@@ -242,25 +245,11 @@ class WPBS_Plugin
 
 	public function enqueue_frontend_assets()
 	{
-		$should_enqueue = is_post_type_archive(WPBS_POST_TYPE) || is_singular(WPBS_POST_TYPE) || is_tax('brand') || is_tax('boat_status') || get_query_var('wpbs_brand_index');
-		if (!$should_enqueue && !is_admin()) {
-			// Also enqueue when shortcodes exist on the current post.
-			global $post;
-			if ($post && isset($post->post_content) && (has_shortcode($post->post_content, 'wpbs_boat_grid') || has_shortcode($post->post_content, 'wpbs_boat_single'))) {
-				$should_enqueue = true;
-			}
-		}
-
-		if (!$should_enqueue) {
-			return;
-		}
-
+		// Always register assets so Elementor can load them
 		wp_register_style('wpbs-frontend', WPBS_PLUGIN_URL . 'assets/css/wpbs-frontend.css', array(), WPBS_VERSION);
-		wp_enqueue_style('wpbs-frontend');
-
 		wp_register_script('wpbs-gallery', WPBS_PLUGIN_URL . 'assets/js/wpbs-gallery.js', array(), WPBS_VERSION, true);
-		wp_enqueue_script('wpbs-gallery');
 
+		// Add inline CSS variables
 		$settings = WPBS_Utils::get_settings();
 		$vars = array(
 			'--wpbs-accent' => isset($settings['style_accent_color']) ? (string)$settings['style_accent_color'] : '#0b5fff',
@@ -281,6 +270,23 @@ class WPBS_Plugin
 			'ajaxUrl' => admin_url('admin-ajax.php'),
 			'nonce' => wp_create_nonce('wpbs_filter_nonce'),
 		));
+
+		// Enqueue on appropriate pages
+		$should_enqueue = is_post_type_archive(WPBS_POST_TYPE) || is_singular(WPBS_POST_TYPE) || is_tax('brand') || is_tax('boat_status') || get_query_var('wpbs_brand_index');
+		if (!$should_enqueue && !is_admin()) {
+			// Also enqueue when shortcodes exist on the current post.
+			global $post;
+			if ($post && isset($post->post_content) && (has_shortcode($post->post_content, 'wpbs_boat_grid') || has_shortcode($post->post_content, 'wpbs_boat_single'))) {
+				$should_enqueue = true;
+			}
+		}
+
+		if (!$should_enqueue) {
+			return;
+		}
+
+		wp_enqueue_style('wpbs-frontend');
+		wp_enqueue_script('wpbs-gallery');
 	}
 
 	/**
@@ -602,5 +608,22 @@ class WPBS_Plugin
 		set_transient($cache_key, $options, HOUR_IN_SECONDS);
 
 		return $options;
+	}
+
+	/**
+	 * Register Elementor widgets
+	 */
+	public function register_elementor_widgets($widgets_manager)
+	{
+		// Check if Elementor is active
+		if (!did_action('elementor/loaded')) {
+			return;
+		}
+
+		// Load widget class
+		require_once WPBS_PLUGIN_DIR . 'includes/class-wpbs-elementor-widget.php';
+
+		// Register widget
+		$widgets_manager->register(new WPBS_Elementor_Widget());
 	}
 }
