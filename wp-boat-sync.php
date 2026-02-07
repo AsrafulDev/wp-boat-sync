@@ -1,8 +1,12 @@
 <?php
 /**
  * Plugin Name: WP Boat Sync
- * Description: Sync Boats.com inventory into WordPress (CPT + meta + custom tables) with scheduled async sync and manual tools.
- * Version: 1.0.1
+ * Description: Sync Boats.com inventory into WordPress (Custom Post Type, post meta, and custom DB tables).
+ *              Provides scheduled asynchronous imports, manual sync tools, and queue processing for large
+ *              inventories. Features include API credentials management, field mapping, image import,
+ *              delta updates to minimize API usage, deletion handling, detailed logging, WP-CLI commands,
+ *              and admin UI for monitoring sync status and run history.
+ * Version: 1.1.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Plugin URI: https://github.com/AsrafulDev/wp-boat-sync
@@ -21,7 +25,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('WPBS_VERSION', '1.0.1');
+define('WPBS_VERSION', '1.1.0');
 define('WPBS_PLUGIN_FILE', __FILE__);
 define('WPBS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPBS_PLUGIN_URL', plugin_dir_url(__FILE__));

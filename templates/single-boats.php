@@ -580,14 +580,6 @@ while (have_posts()) : the_post();
 					</div>
 				</details>
 				<?php endif; ?>
-
-				<!-- Disclaimer -->
-				<!-- <details class="wpbs-accordion-item">
-					<summary class="wpbs-accordion-item__header"><h4>Disclaimer</h4></summary>
-					<div class="wpbs-accordion-item__content">
-						<p class="wpbs-disclaimer">The Company offers the details of this vessel in good faith but cannot guarantee or warrant the accuracy of this information nor warrant the condition of the vessel. A buyer should instruct his agents, or his surveyors, to investigate such details as the buyer desires validated. This vessel is offered subject to prior sale, price change, or withdrawal without notice.</p>
-					</div>
-				</details> -->
 			</div>
 
 		</div>

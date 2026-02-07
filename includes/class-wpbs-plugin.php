@@ -42,10 +42,11 @@ class WPBS_Plugin
 		add_action('init', array($this, 'add_rewrite_rules'));
 		add_filter('query_vars', array($this, 'add_query_vars'));
 		add_filter('template_include', array($this, 'template_include'));
-		add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
+		add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'), 10);
 
 		// Elementor integration
 		add_action('elementor/widgets/register', array($this, 'register_elementor_widgets'));
+		add_action('elementor/elements/categories_registered', array($this, 'register_elementor_category'));
 
 		// AJAX filter for boats (public - both logged in and not)
 		add_action('wp_ajax_wpbs_filter_boats', array($this, 'ajax_filter_boats'));
@@ -625,6 +626,20 @@ class WPBS_Plugin
 	}
 
 	/**
+	 * Register Elementor category
+	 */
+	public function register_elementor_category($elements_manager)
+	{
+		$elements_manager->add_category(
+			'wpbs-boat',
+			[
+				'title' => esc_html__('Boat Elements', 'wp-boat-sync'),
+				'icon' => 'fa fa-ship',
+			]
+		);
+	}
+
+	/**
 	 * Register Elementor widgets
 	 */
 	public function register_elementor_widgets($widgets_manager)
@@ -634,10 +649,45 @@ class WPBS_Plugin
 			return;
 		}
 
-		// Load widget class
+		// Load main grid widget
 		require_once WPBS_PLUGIN_DIR . 'includes/class-wpbs-elementor-widget.php';
 
-		// Register widget
+		// Load individual widget files from widgets folder
+		$widget_files = [
+			'gallery.php',
+			'quick-specs.php',
+			'price-card.php',
+			'dealer-card.php',
+			'tabs.php',
+			'accordion.php',
+			'more-boats.php',
+			'brand-list.php',
+			'loan-calculator.php',
+			'overview.php',
+			'breadcrumb.php',
+		];
+
+		foreach ($widget_files as $file) {
+			$file_path = WPBS_PLUGIN_DIR . 'includes/widgets/' . $file;
+			if (file_exists($file_path)) {
+				require_once $file_path;
+			}
+		}
+
+		// Register Grid widget
 		$widgets_manager->register(new WPBS_Elementor_Widget());
+
+		// Register all other widgets
+		$widgets_manager->register(new WPBS_Elementor_Gallery_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Quick_Specs_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Price_Card_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Dealer_Card_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Tabs_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Accordion_Widget());
+		$widgets_manager->register(new WPBS_Elementor_More_Boats_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Brand_List_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Loan_Calculator_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Overview_Widget());
+		$widgets_manager->register(new WPBS_Elementor_Breadcrumb_Widget());
 	}
 }

@@ -28,7 +28,7 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 
 	public function get_categories()
 	{
-		return ['general'];
+		return ['wpbs-boat'];
 	}
 
 	public function get_keywords()
@@ -125,6 +125,145 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 					'price_high' => esc_html__('Price: High to Low', 'wp-boat-sync'),
 					'year' => esc_html__('Year: Newest', 'wp-boat-sync'),
 				],
+			]
+		);
+
+		$this->add_control(
+			'show_pagination',
+			[
+				'label' => esc_html__('Show Pagination', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+			]
+		);
+
+		$this->end_controls_section();
+
+		// Pre-Filter Section
+		$this->start_controls_section(
+			'prefilter_section',
+			[
+				'label' => esc_html__('Pre-Filter', 'wp-boat-sync'),
+				'tab' => \Elementor\Controls_Manager::TAB_CONTENT,
+			]
+		);
+
+		// Get fresh filter options (bypass cache for admin)
+		global $wpdb;
+		
+		// Get all categories (no limit)
+		$categories = $wpdb->get_col(
+			"SELECT DISTINCT pm.meta_value 
+			 FROM {$wpdb->postmeta} pm 
+			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
+			 WHERE p.post_type = 'boats' 
+			 AND p.post_status = 'publish' 
+			 AND pm.meta_key = 'wpbs_boat_category' 
+			 AND pm.meta_value != '' 
+			 ORDER BY pm.meta_value ASC"
+		);
+		
+		// Build category options
+		$category_options = ['' => esc_html__('All Categories', 'wp-boat-sync')];
+		foreach (array_filter($categories) as $cat) {
+			$category_options[$cat] = $cat;
+		}
+
+		$this->add_control(
+			'prefilter_category',
+			[
+				'label' => esc_html__('Category', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SELECT2,
+				'default' => '',
+				'options' => $category_options,
+				'label_block' => true,
+			]
+		);
+
+		// Get all builders (no limit)
+		$builders = $wpdb->get_col(
+			"SELECT DISTINCT pm.meta_value 
+			 FROM {$wpdb->postmeta} pm 
+			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
+			 WHERE p.post_type = 'boats' 
+			 AND p.post_status = 'publish' 
+			 AND pm.meta_key = 'wpbs_make' 
+			 AND pm.meta_value != '' 
+			 ORDER BY pm.meta_value ASC"
+		);
+		
+		// Build builder options
+		$builder_options = ['' => esc_html__('All Builders', 'wp-boat-sync')];
+		foreach (array_filter($builders) as $builder) {
+			$builder_options[$builder] = $builder;
+		}
+
+		$this->add_control(
+			'prefilter_builder',
+			[
+				'label' => esc_html__('Builder/Make', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SELECT2,
+				'default' => '',
+				'options' => $builder_options,
+				'label_block' => true,
+			]
+		);
+
+		// Get all locations (no limit)
+		$locations = $wpdb->get_col(
+			"SELECT DISTINCT pm.meta_value 
+			 FROM {$wpdb->postmeta} pm 
+			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
+			 WHERE p.post_type = 'boats' 
+			 AND p.post_status = 'publish' 
+			 AND pm.meta_key = 'wpbs_location' 
+			 AND pm.meta_value != '' 
+			 ORDER BY pm.meta_value ASC"
+		);
+		
+		// Build location options
+		$location_options = ['' => esc_html__('All Locations', 'wp-boat-sync')];
+		foreach (array_filter($locations) as $loc) {
+			$location_options[$loc] = $loc;
+		}
+
+		$this->add_control(
+			'prefilter_location',
+			[
+				'label' => esc_html__('Location', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SELECT2,
+				'default' => '',
+				'options' => $location_options,
+				'label_block' => true,
+			]
+		);
+
+		$this->add_control(
+			'prefilter_condition',
+			[
+				'label' => esc_html__('Condition', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SELECT,
+				'default' => '',
+				'options' => [
+					'' => esc_html__('All', 'wp-boat-sync'),
+					'new' => esc_html__('New', 'wp-boat-sync'),
+					'used' => esc_html__('Used', 'wp-boat-sync'),
+				],
+			]
+		);
+
+		$this->add_control(
+			'prefilter_featured',
+			[
+				'label' => esc_html__('Featured Only', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'no',
 			]
 		);
 
@@ -1052,12 +1191,40 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			'orderby' => $settings['orderby'],
 		];
 
+		// Apply pre-filters
+		if (!empty($settings['prefilter_category'])) {
+			$atts['category'] = $settings['prefilter_category'];
+		}
+		
+		if (!empty($settings['prefilter_builder'])) {
+			$atts['builder'] = $settings['prefilter_builder'];
+		}
+		
+		if (!empty($settings['prefilter_location'])) {
+			$atts['location'] = $settings['prefilter_location'];
+		}
+		
+		if (!empty($settings['prefilter_condition'])) {
+			$atts['condition'] = $settings['prefilter_condition'];
+		}
+		
+		if ($settings['prefilter_featured'] === 'yes') {
+			$atts['featured'] = 'true';
+		}
+		
+		// Pass pagination setting
+		if (isset($settings['show_pagination'])) {
+			$atts['pagination'] = $settings['show_pagination'];
+		}
+
 		// If on a taxonomy page, auto-filter by that taxonomy
 		if (is_tax('brand')) {
 			$term = get_queried_object();
 			if ($term && isset($term->name)) {
-				// Pre-filter by brand - pass to URL param so filter works
-				$_GET['builder'] = $term->name;
+				// Pre-filter by brand - override if not already set
+				if (empty($atts['builder'])) {
+					$atts['builder'] = $term->name;
+				}
 			}
 		} elseif (is_tax('boat_status')) {
 			// Handle boat_status taxonomy if needed
@@ -1072,36 +1239,4 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		echo $shortcodes->shortcode_grid($atts);
 	}
 
-	protected function content_template()
-	{
-		?>
-		<# 
-		var desktop_cols = settings.columns || 3;
-		var tablet_cols = settings.columns_tablet || 2;
-		var mobile_cols = settings.columns_mobile || 1;
-		#>
-		<div class="wpbs-wrap">
-			<div class="wpbs-filter-content">
-				<div class="wpbs-archive-header">
-					<div class="wpbs-archive-count">Loading boats...</div>
-				</div>
-				<div class="wpbs-grid" style="grid-template-columns: repeat({{ desktop_cols }}, 1fr);">
-					<div class="wpbs-card">
-						<div class="wpbs-card__slider" style="background: #f0f0f0; height: 280px; display: flex; align-items: center; justify-content: center; color: #999;">
-							<svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-						</div>
-						<div class="wpbs-card__body">
-							<div class="wpbs-card__title"><a href="#">Sample Boat Title</a></div>
-							<div class="wpbs-card__price">$125,000</div>
-							<div class="wpbs-card__meta">
-								<span>2023</span> • <span>35 ft</span> • <span>Miami, FL</span>
-							</div>
-							<a href="#" class="wpbs-card__button">View Details</a>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-		<?php
-	}
 }

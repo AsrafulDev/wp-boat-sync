@@ -298,10 +298,9 @@ class WPBS_Shortcodes
 			$out .= '<button type="button" class="wpbs-lightbox__close" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>';
 			$out .= '<button type="button" class="wpbs-lightbox__nav wpbs-lightbox__nav--prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>';
 			$out .= '<button type="button" class="wpbs-lightbox__nav wpbs-lightbox__nav--next" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg></button>';
-			$out .= '<div class="wpbs-lightbox__content"><img class="wpbs-lightbox__img" id="wpbs-lightbox-img" src="" alt=""><div class="wpbs-lightbox__video" id="wpbs-lightbox-video" style="display:none;"></div></div>';
-			$out .= '<div class="wpbs-lightbox__counter"><span id="wpbs-lightbox-current">1</span> / <span id="wpbs-lightbox-total">' . $total . '</span></div>';
+			$out .= '<div class="wpbs-lightbox__content"><img class="wpbs-lightbox__main-img" src="" alt=""></div>';
+			$out .= '<div class="wpbs-lightbox__counter"></div>';
 			$out .= '</div></div>';
-			$out .= '<script>var wpbsGalleryItems = ' . json_encode($gallery_items) . ';</script>';
 		}
 
 		return $out;
@@ -446,6 +445,18 @@ class WPBS_Shortcodes
 	 */
 	public function shortcode_accordion($atts)
 	{
+		$atts = shortcode_atts(array(
+			'id' => '',
+			'post_id' => 0,
+			'show_description' => 'yes',
+			'show_measurements' => 'yes',
+			'show_propulsion' => 'yes',
+			'show_features' => 'yes',
+			'show_additional' => 'yes',
+			'show_location' => 'yes',
+			'default_open' => 'description',
+		), $atts);
+
 		$post_id = $this->get_boat_id($atts);
 		if (!$post_id) return '';
 
@@ -472,23 +483,28 @@ class WPBS_Shortcodes
 		$out .= '<h2 class="wpbs-accordion-details__title">Boat Details</h2>';
 
 		// Description
-		$out .= '<details class="wpbs-accordion-item" open>';
-		$out .= '<summary class="wpbs-accordion-item__header"><h3>Description</h3></summary>';
-		$out .= '<div class="wpbs-accordion-item__content">';
-		if ($post->post_content) {
-			$out .= '<div class="wpbs-description-text" data-wpbs-expandable>';
-			$out .= apply_filters('the_content', $post->post_content);
+		if ($atts['show_description'] === 'yes') {
+			$is_open = $atts['default_open'] === 'description' ? ' open' : '';
+			$out .= '<details class="wpbs-accordion-item"' . $is_open . '>';
+			$out .= '<summary class="wpbs-accordion-item__header"><h3>Description</h3></summary>';
+			$out .= '<div class="wpbs-accordion-item__content">';
+			if ($post->post_content) {
+				$out .= '<div class="wpbs-description-text" data-wpbs-expandable>';
+				$out .= apply_filters('the_content', $post->post_content);
 			$out .= '</div>';
 			$out .= '<button type="button" class="wpbs-show-more-btn" data-wpbs-toggle-expand>Show More</button>';
 		} else {
 			$out .= '<p style="color:#666;">No description available.</p>';
 		}
 		$out .= '</div></details>';
+		}
 
 		// Measurements
-		$out .= '<details class="wpbs-accordion-item">';
-		$out .= '<summary class="wpbs-accordion-item__header"><h3>Measurements</h3></summary>';
-		$out .= '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
+		if ($atts['show_measurements'] === 'yes') {
+			$is_open = $atts['default_open'] === 'measurements' ? ' open' : '';
+			$out .= '<details class="wpbs-accordion-item"' . $is_open . '>';
+			$out .= '<summary class="wpbs-accordion-item__header"><h3>Measurements</h3></summary>';
+			$out .= '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
 
 		// Dimensions Cell
 		$dimensions = array();
@@ -538,11 +554,14 @@ class WPBS_Shortcodes
 		}
 
 		$out .= '</div></div></details>';
+		}
 
 		// Propulsion
-		$out .= '<details class="wpbs-accordion-item">';
-		$out .= '<summary class="wpbs-accordion-item__header"><h3>Propulsion</h3></summary>';
-		$out .= '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
+		if ($atts['show_propulsion'] === 'yes') {
+			$is_open = $atts['default_open'] === 'propulsion' ? ' open' : '';
+			$out .= '<details class="wpbs-accordion-item"' . $is_open . '>';
+			$out .= '<summary class="wpbs-accordion-item__header"><h3>Propulsion</h3></summary>';
+			$out .= '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
 
 		// Parse engines JSON
 		$engines = array();
@@ -596,11 +615,14 @@ class WPBS_Shortcodes
 		}
 
 		$out .= '</div></div></details>';
+		}
 
 		// Features
-		$out .= '<details class="wpbs-accordion-item">';
-		$out .= '<summary class="wpbs-accordion-item__header"><h3>Features</h3></summary>';
-		$out .= '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
+		if ($atts['show_features'] === 'yes') {
+			$is_open = $atts['default_open'] === 'features' ? ' open' : '';
+			$out .= '<details class="wpbs-accordion-item"' . $is_open . '>';
+			$out .= '<summary class="wpbs-accordion-item__header"><h3>Features</h3></summary>';
+			$out .= '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
 
 		// General Features Cell
 		$features = array();
@@ -646,9 +668,10 @@ class WPBS_Shortcodes
 		}
 
 		$out .= '</div></div></details>';
+		}
 
 		// More Details (Additional Description)
-		if ($additional_detail) {
+		if ($atts['show_additional'] === 'yes' && $additional_detail) {
 			$out .= '<details class="wpbs-accordion-item">';
 			$out .= '<summary class="wpbs-accordion-item__header"><h4>More Details</h4></summary>';
 			$out .= '<div class="wpbs-accordion-item__content">';
@@ -657,7 +680,7 @@ class WPBS_Shortcodes
 		}
 
 		// Location
-		if ($meta['location']) {
+		if ($atts['show_location'] === 'yes' && $meta['location']) {
 			$out .= '<details class="wpbs-accordion-item" open>';
 			$out .= '<summary class="wpbs-accordion-item__header"><h4>Location</h4></summary>';
 			$out .= '<div class="wpbs-accordion-item__content">';
@@ -832,28 +855,106 @@ class WPBS_Shortcodes
 		$price = $this->format_price($meta['price']);
 		$is_sold = $meta['status'] && strtolower($meta['status']) !== 'active';
 		$title = get_the_title($post_id);
+		$year = $meta['year'] ?? '';
+		$make = $meta['make'] ?? '';
+		$model = $meta['model'] ?? '';
+		$location = $meta['location'] ?? '';
+		$price_num = $meta['price'] ?? 0;
+		$office_phone = get_post_meta($post_id, 'wpbs_office_phone', true);
 
 		$out = '<div class="wpbs-price-card">';
+		
+		// Header with title, year/make/model, location, brand
 		$out .= '<div class="wpbs-price-card__header">';
+		$out .= '<h1 style="font-size:18px;font-weight:600;margin:0 0 8px;">' . esc_html($title) . '</h1>';
+		
+		$year_make_model = trim(($year ?: '') . ' ' . ($make ?: '') . ' ' . ($model ?: ''));
+		if ($year_make_model) {
+			$out .= '<div style="font-size:13px;color:#666;margin-bottom:8px;">' . esc_html($year_make_model) . '</div>';
+		}
+		
+		if ($location) {
+			$out .= '<div style="font-size:12px;color:#999;display:flex;align-items:center;gap:4px;">';
+			$out .= '<svg width="12" height="12" viewBox="0 0 24 24" fill="#999"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>';
+			$out .= esc_html($location);
+			$out .= '</div>';
+		}
+		
+		// Brand links
+		$brand_terms = get_the_terms($post_id, 'brand');
+		if ($brand_terms && !is_wp_error($brand_terms)) {
+			$brand_links = array();
+			foreach ($brand_terms as $bt) {
+				$link = get_term_link($bt);
+				if (!is_wp_error($link)) {
+					$brand_links[] = '<a href="' . esc_url($link) . '" style="color:#0066cc;text-decoration:none;">' . esc_html($bt->name) . '</a>';
+				}
+			}
+			if (!empty($brand_links)) {
+				$out .= '<div style="font-size:12px;color:#999;margin-top:6px;">Brand: ' . wp_kses_post(implode(', ', $brand_links)) . '</div>';
+			}
+		}
+		$out .= '</div>';
+		
+		// Body with price, monthly payment, buttons
+		$out .= '<div class="wpbs-price-card__body">';
+		
 		if ($price['display']) {
 			$out .= '<div class="wpbs-price-card__price">' . esc_html($price['display']) . '</div>';
-			if ($price['monthly']) {
-				$out .= '<div class="wpbs-price-card__monthly">' . esc_html($price['monthly']) . '</div>';
+			
+			// Calculate monthly payment
+			if ($price_num > 0) {
+				$loan_settings = WPBS_Utils::get_settings();
+				$down_payment = isset($loan_settings['loan_down_payment']) && $loan_settings['loan_down_payment'] !== '' ? (float)$loan_settings['loan_down_payment'] : 20;
+				$interest_rate = isset($loan_settings['loan_interest_rate']) && $loan_settings['loan_interest_rate'] !== '' ? (float)$loan_settings['loan_interest_rate'] : 7.5;
+				$term_years = isset($loan_settings['loan_term_years']) && $loan_settings['loan_term_years'] !== '' ? (int)$loan_settings['loan_term_years'] : 1;
+				
+				$down_payment_percent = $down_payment / 100;
+				$annual_rate = $interest_rate / 100;
+				$loan_term_years = max(1, $term_years);
+				$loan_term_months = $loan_term_years * 12;
+				$loan_amount = $price_num * (1 - $down_payment_percent);
+				$monthly_rate = $annual_rate / 12;
+				
+				if ($monthly_rate > 0 && $loan_term_months > 0) {
+					$monthly_payment = $loan_amount * ($monthly_rate * pow(1 + $monthly_rate, $loan_term_months)) / (pow(1 + $monthly_rate, $loan_term_months) - 1);
+				} else {
+					$monthly_payment = $loan_term_months > 0 ? $loan_amount / $loan_term_months : 0;
+				}
+				
+				$out .= '<div class="wpbs-price-card__monthly" style="font-size:14px;color:#666;margin-top:4px;">';
+				$out .= 'Est. <strong style="color:#333;">$' . number_format($monthly_payment) . '/mo</strong>';
+				$out .= '<span style="font-size:11px;color:#999;display:block;margin-top:2px;">';
+				$out .= (int)($down_payment_percent * 100) . '% down, ' . number_format($annual_rate * 100, 2) . '% APR, ';
+				$out .= $loan_term_years . ' yr' . ($loan_term_years > 1 ? 's' : '');
+				$out .= '</span></div>';
 			}
 		} else {
 			$out .= '<div class="wpbs-price-card__price">Contact for Price</div>';
 		}
+		
+		// Sold badge
 		if ($is_sold) {
 			$out .= '<span class="wpbs-badge wpbs-badge--sold" style="margin-top:8px;display:inline-block;">Sold</span>';
 		}
-		$out .= '</div>';
-		$out .= '<div class="wpbs-price-card__body">';
-		$out .= '<h3 style="margin:0 0 8px;font-size:16px;">' . esc_html($title) . '</h3>';
-		if ($meta['location']) {
-			$out .= '<p style="margin:0 0 16px;color:#666;font-size:13px;">📍 ' . esc_html($meta['location']) . '</p>';
+		
+		// Buttons
+		$out .= '<div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">';
+		$out .= '<a href="' . esc_url(get_permalink($post_id)) . '#contact" class="wpbs-btn wpbs-btn--primary">';
+		$out .= '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>';
+		$out .= 'Contact Seller</a>';
+		
+		if ($office_phone) {
+			$out .= '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $office_phone)) . '" class="wpbs-btn wpbs-btn--green">';
+			$out .= '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>';
+			$out .= esc_html($office_phone) . '</a>';
+		} else {
+			$out .= '<a href="tel:" class="wpbs-btn wpbs-btn--green">';
+			$out .= '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>';
+			$out .= 'Call Now</a>';
 		}
-		$out .= '<a href="' . esc_url(get_permalink($post_id)) . '#contact" class="wpbs-btn wpbs-btn--primary" style="width:100%;">Contact Seller</a>';
-		$out .= '</div></div>';
+		
+		$out .= '</div></div></div>';
 		return $out;
 	}
 
@@ -1022,6 +1123,12 @@ class WPBS_Shortcodes
 			'filter' => 'false',
 			'filter_position' => 'top', // top, left, right
 			'orderby' => 'date',
+			'category' => '',
+			'builder' => '',
+			'location' => '',
+			'condition' => '',
+			'featured' => 'false',
+			'pagination' => 'yes',
 		), $atts);
 
 		$ppp = max(1, (int)$atts['posts_per_page']);
@@ -1043,23 +1150,37 @@ class WPBS_Shortcodes
 		$filter_position = in_array($atts['filter_position'], array('top', 'left', 'right')) ? $atts['filter_position'] : 'top';
 		$orderby = sanitize_text_field($atts['orderby']);
 
-		// Get filter values from URL if filter is enabled
-		$f_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '';
-		$f_builder = isset($_GET['builder']) ? sanitize_text_field($_GET['builder']) : '';
-		$f_location = isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '';
+		// Get filter values from URL if filter is enabled, or from shortcode attributes
+		$f_category = !empty($atts['category']) ? sanitize_text_field($atts['category']) : (isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '');
+		$f_builder = !empty($atts['builder']) ? sanitize_text_field($atts['builder']) : (isset($_GET['builder']) ? sanitize_text_field($_GET['builder']) : '');
+		$f_location = !empty($atts['location']) ? sanitize_text_field($atts['location']) : (isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '');
 		$f_length_min = isset($_GET['length_min']) ? (float)$_GET['length_min'] : '';
 		$f_length_max = isset($_GET['length_max']) ? (float)$_GET['length_max'] : '';
 		$f_year_min = isset($_GET['year_min']) ? (int)$_GET['year_min'] : '';
 		$f_year_max = isset($_GET['year_max']) ? (int)$_GET['year_max'] : '';
 		$f_price_min = isset($_GET['price_min']) ? (float)$_GET['price_min'] : '';
 		$f_price_max = isset($_GET['price_max']) ? (float)$_GET['price_max'] : '';
-		$f_condition_new = isset($_GET['condition_new']) && $_GET['condition_new'] === '1';
-		$f_condition_used = isset($_GET['condition_used']) && $_GET['condition_used'] === '1';
-		$f_featured = isset($_GET['featured']) && $_GET['featured'] === '1';
+		
+		// Handle condition from shortcode attribute or URL
+		$condition_attr = strtolower($atts['condition']);
+		if ($condition_attr === 'new') {
+			$f_condition_new = true;
+			$f_condition_used = false;
+		} elseif ($condition_attr === 'used') {
+			$f_condition_new = false;
+			$f_condition_used = true;
+		} else {
+			$f_condition_new = isset($_GET['condition_new']) && $_GET['condition_new'] === '1';
+			$f_condition_used = isset($_GET['condition_used']) && $_GET['condition_used'] === '1';
+		}
+		
+		// Handle featured from shortcode attribute or URL
+		$f_featured = in_array(strtolower($atts['featured']), array('true', 'yes', '1'), true) || (isset($_GET['featured']) && $_GET['featured'] === '1');
+		
 		$f_orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : $orderby;
 
-		// Default both conditions if neither specified
-		if (!$f_condition_new && !$f_condition_used) {
+		// Default both conditions if neither specified and no attribute given
+		if (!$f_condition_new && !$f_condition_used && empty($condition_attr)) {
 			$f_condition_new = true;
 			$f_condition_used = true;
 		}
@@ -1071,68 +1192,69 @@ class WPBS_Shortcodes
 			'posts_per_page' => $ppp,
 		);
 
-		// Apply URL filters to initial query
-		if ($show_filter) {
-			$meta_query = array('relation' => 'AND');
+		// Apply filters to initial query (from both URL and shortcode attributes)
+		$meta_query = array('relation' => 'AND');
 
-			if ($f_category) {
-				$meta_query[] = array('key' => 'wpbs_boat_category', 'value' => $f_category, 'compare' => '=');
-			}
-			if ($f_builder) {
-				$meta_query[] = array('key' => 'wpbs_make', 'value' => $f_builder, 'compare' => '=');
-			}
-			if ($f_location) {
-				$meta_query[] = array('key' => 'wpbs_location', 'value' => $f_location, 'compare' => 'LIKE');
-			}
-			if ($f_length_min !== '') {
-				$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_min, 'compare' => '>=', 'type' => 'NUMERIC');
-			}
-			if ($f_length_max !== '') {
-				$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_max, 'compare' => '<=', 'type' => 'NUMERIC');
-			}
-			if ($f_year_min !== '') {
-				$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_min, 'compare' => '>=', 'type' => 'NUMERIC');
-			}
-			if ($f_year_max !== '') {
-				$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_max, 'compare' => '<=', 'type' => 'NUMERIC');
-			}
-			if ($f_price_min !== '' && $f_price_min > 0) {
-				$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_min, 'compare' => '>=', 'type' => 'NUMERIC');
-			}
-			if ($f_price_max !== '' && $f_price_max > 0) {
-				$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_max, 'compare' => '<=', 'type' => 'NUMERIC');
-			}
-			if ($f_condition_new && !$f_condition_used) {
-				$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'new', 'compare' => '=');
-			} elseif ($f_condition_used && !$f_condition_new) {
-				$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'used', 'compare' => '=');
-			}
-			if ($f_featured) {
-				$meta_query[] = array('key' => 'wpbs_featured', 'value' => '1', 'compare' => '=');
-			}
+		if ($f_category) {
+			$meta_query[] = array('key' => 'wpbs_boat_category', 'value' => $f_category, 'compare' => '=');
+		}
+		if ($f_builder) {
+			$meta_query[] = array('key' => 'wpbs_make', 'value' => $f_builder, 'compare' => '=');
+		}
+		if ($f_location) {
+			$meta_query[] = array('key' => 'wpbs_location', 'value' => $f_location, 'compare' => 'LIKE');
+		}
+		if ($f_length_min !== '') {
+			$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_min, 'compare' => '>=', 'type' => 'NUMERIC');
+		}
+		if ($f_length_max !== '') {
+			$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_max, 'compare' => '<=', 'type' => 'NUMERIC');
+		}
+		if ($f_year_min !== '') {
+			$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_min, 'compare' => '>=', 'type' => 'NUMERIC');
+		}
+		if ($f_year_max !== '') {
+			$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_max, 'compare' => '<=', 'type' => 'NUMERIC');
+		}
+		if ($f_price_min !== '' && $f_price_min > 0) {
+			$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_min, 'compare' => '>=', 'type' => 'NUMERIC');
+		}
+		if ($f_price_max !== '' && $f_price_max > 0) {
+			$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_max, 'compare' => '<=', 'type' => 'NUMERIC');
+		}
+		if ($f_condition_new && !$f_condition_used) {
+			$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'new', 'compare' => '=');
+		} elseif ($f_condition_used && !$f_condition_new) {
+			$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'used', 'compare' => '=');
+		}
+		if ($f_featured) {
+			$meta_query[] = array('key' => 'wpbs_featured', 'value' => '1', 'compare' => '=');
+		}
 
-			if (count($meta_query) > 1) {
-				$args['meta_query'] = $meta_query;
-			}
+		if (count($meta_query) > 1) {
+			$args['meta_query'] = $meta_query;
+		}
 
-			// Orderby from URL
-			switch ($f_orderby) {
-				case 'price_low':
-					$args['meta_key'] = 'wpbs_price';
-					$args['orderby'] = 'meta_value_num';
-					$args['order'] = 'ASC';
-					break;
-				case 'price_high':
-					$args['meta_key'] = 'wpbs_price';
-					$args['orderby'] = 'meta_value_num';
-					$args['order'] = 'DESC';
-					break;
-				case 'year':
-					$args['meta_key'] = 'wpbs_model_year';
-					$args['orderby'] = 'meta_value_num';
-					$args['order'] = 'DESC';
-					break;
-			}
+		// Orderby from URL
+		switch ($f_orderby) {
+			case 'price_low':
+				$args['meta_key'] = 'wpbs_price';
+				$args['orderby'] = 'meta_value_num';
+				$args['order'] = 'ASC';
+				break;
+			case 'price_high':
+				$args['meta_key'] = 'wpbs_price';
+				$args['orderby'] = 'meta_value_num';
+				$args['order'] = 'DESC';
+				break;
+			case 'year':
+				$args['meta_key'] = 'wpbs_model_year';
+				$args['orderby'] = 'meta_value_num';
+				$args['order'] = 'DESC';
+				break;
+			default:
+				$args['orderby'] = 'date';
+				$args['order'] = 'DESC';
 		}
 
 		$q = new WP_Query($args);
@@ -1281,8 +1403,11 @@ class WPBS_Shortcodes
 		wp_reset_postdata();
 		$out .= '</div>'; // End grid
 
-		// Pagination for filtered grid
-		if ($show_filter && $max_pages > 1) {
+		// Check if pagination should be shown
+		$show_pagination = in_array(strtolower($atts['pagination']), array('true', 'yes', '1'), true);
+		
+		// Pagination for filtered grid (when filter is enabled) or static pagination (when filter is disabled but pagination is enabled)
+		if ($max_pages > 1 && ($show_filter || $show_pagination)) {
 			$out .= '<nav class="wpbs-pagination" data-wpbs-pagination data-max-pages="' . esc_attr($max_pages) . '" data-current-page="1" style="margin-top: 24px; text-align: center;">';
 			$out .= '<button type="button" class="wpbs-pagination__btn wpbs-pagination__btn--prev" data-wpbs-page="prev" disabled>← Previous</button>';
 			$out .= '<span class="wpbs-pagination__info">Page 1 of ' . esc_html($max_pages) . ' (' . number_format($total) . ' boats)</span>';
@@ -1453,16 +1578,50 @@ class WPBS_Shortcodes
 			return '<div class="wpbs-wrap"><p style="text-align:center;padding:40px;color:#666;">Boat not found.</p></div>';
 		}
 
+		// Get metadata for breadcrumb
+		$title = get_the_title($post_id);
+		$price = get_post_meta($post_id, 'wpbs_price', true);
+		$price_num = 0;
+		if ($price) {
+			$price_num = (float)preg_replace('/[^0-9.]/', '', $price);
+		}
+		
+		// Build output
 		$out = '<div class="wpbs-wrap">';
+		
+		// Breadcrumb
+		$out .= '<div style="font-size:12px;color:#666;margin-bottom:12px;">';
+		$out .= '<a href="' . esc_url(home_url('/')) . '" style="color:#0066cc;text-decoration:none;">Home</a> &rsaquo; ';
+		$out .= '<a href="' . esc_url(get_post_type_archive_link('boats')) . '" style="color:#0066cc;text-decoration:none;">Boats for Sale</a> &rsaquo; ';
+		$out .= '<span>' . esc_html($title) . '</span>';
+		$out .= '</div>';
+		
+		// Two-column layout (direct children of wpbs-single-wrap for CSS grid)
+		$out .= '<div class="wpbs-single-wrap">';
+		
+		// Main column (no wrapper div, direct child)
+		$out .= '<div>';
 		$out .= $this->shortcode_gallery(array('post_id' => $post_id));
 		$out .= $this->shortcode_quick_specs(array('post_id' => $post_id));
-		$out .= $this->shortcode_overview(array('post_id' => $post_id, 'words' => 50));
-		$out .= '<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;margin-top:20px;">';
-		$out .= '<div>' . $this->shortcode_tabs(array('post_id' => $post_id)) . '</div>';
-		$out .= '<div>' . $this->shortcode_price_card(array('post_id' => $post_id)) . $this->shortcode_dealer_card(array('post_id' => $post_id)) . '</div>';
+		$out .= $this->shortcode_overview(array('post_id' => $post_id));
+		$out .= $this->shortcode_accordion(array('post_id' => $post_id));
 		$out .= '</div>';
+		
+		// Sidebar column (no wrapper div, direct child)
+		$out .= '<div class="wpbs-sidebar">';
+		$out .= $this->shortcode_price_card(array('post_id' => $post_id));
+		$out .= $this->shortcode_dealer_card(array('post_id' => $post_id));
+		if ($price_num > 0) {
+			$out .= $this->shortcode_loan_calculator(array('post_id' => $post_id));
+		}
+		$out .= '</div>';
+		
+		$out .= '</div>'; // wpbs-single-wrap
+		
+		// More boats section
 		$out .= $this->shortcode_more_boats(array('post_id' => $post_id));
-		$out .= '</div>';
+		
+		$out .= '</div>'; // wpbs-wrap
 
 		return $out;
 	}
