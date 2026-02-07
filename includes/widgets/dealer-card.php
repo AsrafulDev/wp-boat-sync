@@ -269,12 +269,12 @@ class WPBS_Elementor_Dealer_Card_Widget extends \Elementor\Widget_Base
             ]
         );
         $this->add_control(
-            'button_hover_background_color',
+            'button_hover_text_color',
             [
-                'label' => esc_html__('Button Hover Background Color', 'wp-boat-sync'),
+                'label' => esc_html__('Button Hover Text Color', 'wp-boat-sync'),
                 'type' => \Elementor\Controls_Manager::COLOR,
                 'selectors' => [
-                    '{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'background-color: {{VALUE}} !important;',
+                    '{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'color: {{VALUE}} !important;',
                 ],
             ]
         );
@@ -343,6 +343,7 @@ class WPBS_Elementor_Dealer_Card_Widget extends \Elementor\Widget_Base
 			);
 			$query = new \WP_Query($args);
 			$final_id = $query->posts ? $query->posts[0] : 0;
+			wp_reset_postdata();
 		} else {
 			$final_id = get_the_ID();
 		}

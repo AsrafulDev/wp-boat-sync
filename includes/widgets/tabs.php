@@ -335,37 +335,24 @@ class WPBS_Elementor_Tabs_Widget extends \Elementor\Widget_Base
 
 	private function get_boat_meta($post_id)
 	{
-		return array(
-			'length' => get_post_meta($post_id, 'wpbs_length', true),
-			'beam' => get_post_meta($post_id, 'wpbs_beam', true),
-			'draft' => get_post_meta($post_id, 'wpbs_draft', true),
-			'displacement' => get_post_meta($post_id, 'wpbs_displacement', true),
-			'dry_weight' => get_post_meta($post_id, 'wpbs_dry_weight', true),
-			'bridge_clearance' => get_post_meta($post_id, 'wpbs_bridge_clearance', true),
-			'deadrise' => get_post_meta($post_id, 'wpbs_deadrise', true),
-			'cabins' => get_post_meta($post_id, 'wpbs_cabins', true),
-			'heads' => get_post_meta($post_id, 'wpbs_heads', true),
-			'engine' => get_post_meta($post_id, 'wpbs_engine', true),
-			'num_engines' => get_post_meta($post_id, 'wpbs_num_engines', true),
-			'total_power' => get_post_meta($post_id, 'wpbs_total_power', true),
-			'engine_hours' => get_post_meta($post_id, 'wpbs_engine_hours', true),
-			'engine_type' => get_post_meta($post_id, 'wpbs_engine_type', true),
-			'engine_make' => get_post_meta($post_id, 'wpbs_engine_make', true),
-			'engine_model' => get_post_meta($post_id, 'wpbs_engine_model', true),
-			'fuel_type' => get_post_meta($post_id, 'wpbs_fuel_type', true),
-			'drive_type' => get_post_meta($post_id, 'wpbs_drive_type', true),
-			'propeller' => get_post_meta($post_id, 'wpbs_propeller', true),
-			'cruising_speed' => get_post_meta($post_id, 'wpbs_cruising_speed', true),
-			'max_speed' => get_post_meta($post_id, 'wpbs_max_speed', true),
-			'fuel_capacity' => get_post_meta($post_id, 'wpbs_fuel_capacity', true),
-			'range' => get_post_meta($post_id, 'wpbs_range', true),
-			'hull_material' => get_post_meta($post_id, 'wpbs_hull_material', true),
-			'hull_id' => get_post_meta($post_id, 'wpbs_hull_id', true),
-			'boat_category' => get_post_meta($post_id, 'wpbs_boat_category', true),
-			'boat_class' => get_post_meta($post_id, 'wpbs_boat_class', true),
-			'condition' => get_post_meta($post_id, 'wpbs_condition', true),
-			'water_capacity' => get_post_meta($post_id, 'wpbs_water_capacity', true),
-		);
+		// Fetch ALL meta at once to avoid 29 individual queries
+		$all_meta = get_post_meta($post_id);
+		
+		$fields = [
+			'length', 'beam', 'draft', 'displacement', 'dry_weight', 'bridge_clearance',
+			'deadrise', 'cabins', 'heads', 'engine', 'num_engines', 'total_power',
+			'engine_hours', 'engine_type', 'engine_make', 'engine_model', 'fuel_type',
+			'drive_type', 'propeller', 'cruising_speed', 'max_speed', 'fuel_capacity',
+			'range', 'hull_material', 'hull_id', 'boat_category', 'boat_class',
+			'condition', 'water_capacity'
+		];
+		
+		$meta = [];
+		foreach ($fields as $field) {
+			$key = 'wpbs_' . $field;
+			$meta[$field] = isset($all_meta[$key]) ? $all_meta[$key][0] : '';
+		}
+		return $meta;
 	}
 
 	protected function render()
@@ -395,6 +382,7 @@ class WPBS_Elementor_Tabs_Widget extends \Elementor\Widget_Base
 			);
 			$query = new \WP_Query($args);
 			$final_id = $query->posts ? $query->posts[0] : 0;
+			wp_reset_postdata();
 		} else {
 			$final_id = get_the_ID();
 		}

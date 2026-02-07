@@ -1005,9 +1005,10 @@ class WPBS_Admin
 			}
 
 			$paged++;
-			// Allow other processes to run between batches
-			if (function_exists('wp_suspend_cache_invalidation')) {
-				wp_suspend_cache_invalidation(true);
+			// Clean up memory between batches
+			wp_cache_flush();
+			if (function_exists('gc_collect_cycles')) {
+				gc_collect_cycles();
 			}
 		}
 

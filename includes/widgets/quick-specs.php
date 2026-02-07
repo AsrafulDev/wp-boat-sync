@@ -407,6 +407,7 @@ class WPBS_Elementor_Quick_Specs_Widget extends \Elementor\Widget_Base
 			);
 			$query = new \WP_Query($args);
 			$final_id = $query->posts ? $query->posts[0] : 0;
+			wp_reset_postdata();
 		} else {
 			$final_id = get_the_ID();
 		}
@@ -416,21 +417,17 @@ class WPBS_Elementor_Quick_Specs_Widget extends \Elementor\Widget_Base
 			return;
 		}
 		
-		// Get boat meta data
-		$meta = array(
-			'engine' => get_post_meta($final_id, 'wpbs_engine', true),
-			'engine_make' => get_post_meta($final_id, 'wpbs_engine_make', true),
-			'engine_model' => get_post_meta($final_id, 'wpbs_engine_model', true),
-			'total_power' => get_post_meta($final_id, 'wpbs_total_power', true),
-			'engine_hours' => get_post_meta($final_id, 'wpbs_engine_hours', true),
-			'boat_class' => get_post_meta($final_id, 'wpbs_boat_class', true),
-			'boat_category' => get_post_meta($final_id, 'wpbs_boat_category', true),
-			'length' => get_post_meta($final_id, 'wpbs_length', true),
-			'year' => get_post_meta($final_id, 'wpbs_year', true),
-			'model' => get_post_meta($final_id, 'wpbs_model', true),
-			'make' => get_post_meta($final_id, 'wpbs_make', true),
-		);
-		$capacity = get_post_meta($final_id, 'wpbs_passenger_capacity', true);
+		// Get boat meta data - bulk fetch to avoid 13 individual queries
+		$all_meta = get_post_meta($final_id);
+		$fields = ['engine', 'engine_make', 'engine_model', 'total_power', 'engine_hours',
+			'boat_class', 'boat_category', 'length', 'year', 'model', 'make', 'passenger_capacity'];
+		
+		$meta = [];
+		foreach ($fields as $field) {
+			$key = 'wpbs_' . $field;
+			$meta[$field] = isset($all_meta[$key]) ? $all_meta[$key][0] : '';
+		}
+		$capacity = $meta['passenger_capacity'];
 		
 		// Prepare values
 		$engine_label = $meta['engine'] ?: ($meta['engine_make'] && $meta['engine_model'] ? $meta['engine_make'] . ' ' . $meta['engine_model'] : '—');

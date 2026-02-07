@@ -170,6 +170,52 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 
 		$this->end_controls_section();
 
+        //card Title Style
+        $this->start_controls_section(
+            'card_title_style',
+            [
+                'label' => esc_html__('Card Title', 'wp-boat-sync'),
+                'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+            ]
+        );
+        $this->add_control(
+            'card_title_color',
+            [
+                'label' => esc_html__('Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-accordion-details__title' => 'color: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name' => 'card_title_typography',
+                'selector' => '{{WRAPPER}} .wpbs-accordion-details__title',
+                'fields_options' => [
+                    'typography' => ['default' => 'custom'],
+                    'font_size' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-details__title' => 'font-size: {{SIZE}}{{UNIT}} !important;']],
+                    'font_weight' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-details__title' => 'font-weight: {{VALUE}} !important;']],
+                    'line_height' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-details__title' => 'line-height: {{SIZE}}{{UNIT}} !important;']],
+                    'font_family' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-details__title' => 'font-family: {{VALUE}} !important;']],
+                ],
+            ]
+        );
+        $this->add_responsive_control(
+            'card_title_padding',
+            [
+                'label' => esc_html__('Padding', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::DIMENSIONS,
+                'size_units' => ['px', '%'],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-accordion-details__title' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+                ],
+            ]
+        );
+        $this->end_controls_section();
+
+
 		// Title/Header Style
 		$this->start_controls_section(
 			'header_style',
@@ -189,7 +235,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Text Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion-item__header' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header h3' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -200,7 +246,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Background', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion-item__header' => 'background-color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header h3' => 'background-color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -241,7 +287,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Text Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion-item__header' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion-item__header h3' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -252,7 +298,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Background', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion-item__header' => 'background-color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion-item__header h3' => 'background-color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -264,14 +310,14 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			\Elementor\Group_Control_Typography::get_type(),
 			[
 				'name' => 'header_typography',
-				'selector' => '{{WRAPPER}} .wpbs-accordion-item__header',
+				'selector' => '{{WRAPPER}} .wpbs-accordion-item__header h3',
 				'separator' => 'before',
 				'fields_options' => [
 					'typography' => ['default' => 'custom'],
-					'font_size' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'font-size: {{SIZE}}{{UNIT}} !important;']],
-					'font_weight' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'font-weight: {{VALUE}} !important;']],
-					'line_height' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'line-height: {{SIZE}}{{UNIT}} !important;']],
-					'font_family' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'font-family: {{VALUE}} !important;']],
+					'font_size' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header h3' => 'font-size: {{SIZE}}{{UNIT}} !important;']],
+					'font_weight' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header h3' => 'font-weight: {{VALUE}} !important;']],
+					'line_height' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header h3' => 'line-height: {{SIZE}}{{UNIT}} !important;']],
+					'font_family' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header h3' => 'font-family: {{VALUE}} !important;']],
 				],
 			]
 		);
@@ -283,7 +329,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'type' => \Elementor\Controls_Manager::DIMENSIONS,
 				'size_units' => ['px', '%'],
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion-item__header' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header h3' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
 				],
 			]
 		);
@@ -387,22 +433,29 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 	}
 
 	/**
-	 * Helper to get boat meta fields
+	 * Helper to get boat meta fields - OPTIMIZED to use single bulk fetch
 	 */
 	private function get_boat_meta($post_id)
 	{
+		// Fetch ALL meta at once to avoid 40+ individual queries
+		$all_meta = get_post_meta($post_id);
+		
 		$fields = [
 			'length', 'beam', 'draft', 'displacement', 'dry_weight', 'bridge_clearance',
 			'deadrise', 'cabins', 'heads', 'num_engines', 'engine_make', 'engine_model',
 			'engine_type', 'total_power', 'engine_hours', 'fuel_type', 'drive_type',
 			'propeller', 'cruising_speed', 'max_speed', 'fuel_capacity', 'range',
 			'water_capacity', 'condition', 'boat_category', 'boat_class', 'hull_material',
-			'location', 'engine'
+			'location', 'engine', 'nominal_length', 'min_draft', 'cabin_headroom',
+			'engines_json', 'keel_type', 'trim_tabs', 'windlass_type', 'electrical_circuit',
+			'builder_name', 'designer_name', 'additional_detail_html', 'boat_city',
+			'state', 'boat_country', 'wpbs_hull_id'
 		];
 
 		$meta = [];
 		foreach ($fields as $field) {
-			$meta[$field] = get_post_meta($post_id, 'wpbs_' . $field, true);
+			$key = 'wpbs_' . $field;
+			$meta[$field] = isset($all_meta[$key]) ? $all_meta[$key][0] : '';
 		}
 		return $meta;
 	}
@@ -432,6 +485,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				if ($query->have_posts()) {
 					$final_id = $query->posts[0];
 				}
+				wp_reset_postdata();
 			}
 		} else {
 			$final_id = get_the_ID();
@@ -448,21 +502,21 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 
 		$meta = $this->get_boat_meta($final_id);
 
-		// Additional meta fields for accordion
-		$nominal_length = get_post_meta($final_id, 'wpbs_nominal_length', true);
-		$min_draft = get_post_meta($final_id, 'wpbs_min_draft', true);
-		$cabin_headroom = get_post_meta($final_id, 'wpbs_cabin_headroom', true);
-		$engines_json = get_post_meta($final_id, 'wpbs_engines_json', true);
-		$keel_type = get_post_meta($final_id, 'wpbs_keel_type', true);
-		$trim_tabs = get_post_meta($final_id, 'wpbs_trim_tabs', true);
-		$windlass = get_post_meta($final_id, 'wpbs_windlass_type', true);
-		$electrical = get_post_meta($final_id, 'wpbs_electrical_circuit', true);
-		$builder = get_post_meta($final_id, 'wpbs_builder_name', true);
-		$designer = get_post_meta($final_id, 'wpbs_designer_name', true);
-		$additional_detail = get_post_meta($final_id, 'wpbs_additional_detail_html', true);
-		$boat_city = get_post_meta($final_id, 'wpbs_boat_city', true);
-		$state = get_post_meta($final_id, 'wpbs_state', true);
-		$country = get_post_meta($final_id, 'wpbs_boat_country', true);
+		// All meta now fetched in bulk - just reference from $meta array
+		$nominal_length = $meta['nominal_length'];
+		$min_draft = $meta['min_draft'];
+		$cabin_headroom = $meta['cabin_headroom'];
+		$engines_json = $meta['engines_json'];
+		$keel_type = $meta['keel_type'];
+		$trim_tabs = $meta['trim_tabs'];
+		$windlass = $meta['windlass_type'];
+		$electrical = $meta['electrical_circuit'];
+		$builder = $meta['builder_name'];
+		$designer = $meta['designer_name'];
+		$additional_detail = $meta['additional_detail_html'];
+		$boat_city = $meta['boat_city'];
+		$state = $meta['state'];
+		$country = $meta['boat_country'];
 
 		echo '<div class="wpbs-accordion-details">';
 		echo '<h2 class="wpbs-accordion-details__title">Boat Details</h2>';
@@ -528,10 +582,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			if ($meta['cabins']) $misc['Cabins'] = $meta['cabins'];
 			if ($meta['deadrise']) $misc['Deadrise At Transom'] = $meta['deadrise'];
 			if ($meta['heads']) $misc['Heads'] = $meta['heads'];
-			if ($meta['hull_id']) {
-				$hull_id = get_post_meta($final_id, 'wpbs_hull_id', true);
-				$misc['Hull ID'] = $hull_id;
-			}
+			if ($meta['hull_id']) $misc['Hull ID'] = $meta['hull_id'];
 
 			if (!empty($misc)) {
 				echo '<div class="wpbs-details-cell"><h3>Miscellaneous</h3><div class="wpbs-details-cell__content">';
@@ -560,7 +611,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			if (!empty($engines) && is_array($engines)) {
 				$engine_num = 1;
 				foreach ($engines as $eng) {
-					echo '<div class="wpbs-details-cell"><h4>Engine ' . $engine_num . '</h4><div class="wpbs-details-cell__content">';
+					echo '<div class="wpbs-details-cell"><h3>Engine ' . $engine_num . '</h3><div class="wpbs-details-cell__content">';
 					if (!empty($eng['Make'])) echo '<p><span class="wpbs-details-label">Engine Make:</span><span class="wpbs-details-value">' . esc_html($eng['Make']) . '</span></p>';
 					if (!empty($eng['Model'])) echo '<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value">' . esc_html($eng['Model']) . '</span></p>';
 					if (!empty($eng['Year'])) echo '<p><span class="wpbs-details-label">Engine Year:</span><span class="wpbs-details-value">' . esc_html($eng['Year']) . '</span></p>';
@@ -575,7 +626,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				}
 			} else {
 				// Fallback to single engine meta
-				echo '<div class="wpbs-details-cell"><h4>Engine</h4><div class="wpbs-details-cell__content">';
+				echo '<div class="wpbs-details-cell"><h3>Engine</h3><div class="wpbs-details-cell__content">';
 				if ($meta['num_engines']) echo '<p><span class="wpbs-details-label">Number of Engines:</span><span class="wpbs-details-value">' . esc_html($meta['num_engines']) . '</span></p>';
 				if ($meta['engine_make']) echo '<p><span class="wpbs-details-label">Engine Make:</span><span class="wpbs-details-value">' . esc_html($meta['engine_make']) . '</span></p>';
 				if ($meta['engine_model']) echo '<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value">' . esc_html($meta['engine_model']) . '</span></p>';
@@ -595,7 +646,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			if ($meta['range']) $performance['Range'] = $meta['range'];
 
 			if (!empty($performance)) {
-				echo '<div class="wpbs-details-cell"><h4>Performance</h4><div class="wpbs-details-cell__content">';
+				echo '<div class="wpbs-details-cell"><h3>Performance</h3><div class="wpbs-details-cell__content">';
 				foreach ($performance as $label => $value) {
 					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
 				}
@@ -621,7 +672,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			if ($keel_type) $features['Keel Type'] = $keel_type;
 
 			if (!empty($features)) {
-				echo '<div class="wpbs-details-cell"><h4>General</h4><div class="wpbs-details-cell__content">';
+				echo '<div class="wpbs-details-cell"><h3>General</h3><div class="wpbs-details-cell__content">';
 				foreach ($features as $label => $value) {
 					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
 				}
@@ -635,7 +686,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			if ($electrical) $electronics['Electrical Circuit'] = $electrical;
 
 			if (!empty($electronics)) {
-				echo '<div class="wpbs-details-cell"><h4>Electronics & Equipment</h4><div class="wpbs-details-cell__content">';
+				echo '<div class="wpbs-details-cell"><h3>Electronics & Equipment</h3><div class="wpbs-details-cell__content">';
 				foreach ($electronics as $label => $value) {
 					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
 				}
@@ -648,7 +699,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			if ($designer) $builder_info['Designer'] = $designer;
 
 			if (!empty($builder_info)) {
-				echo '<div class="wpbs-details-cell"><h4>Builder & Designer</h4><div class="wpbs-details-cell__content">';
+				echo '<div class="wpbs-details-cell"><h3>Builder & Designer</h3><div class="wpbs-details-cell__content">';
 				foreach ($builder_info as $label => $value) {
 					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
 				}
@@ -661,7 +712,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 		// More Details (Additional Description)
 		if ($settings['show_additional'] === 'yes' && $additional_detail) {
 			echo '<details class="wpbs-accordion-item">';
-			echo '<summary class="wpbs-accordion-item__header"><h4>More Details</h4></summary>';
+			echo '<summary class="wpbs-accordion-item__header"><h3>More Details</h3></summary>';
 			echo '<div class="wpbs-accordion-item__content">';
 			echo '<div class="wpbs-additional-details">' . wp_kses_post($additional_detail) . '</div>';
 			echo '</div></details>';
@@ -670,7 +721,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 		// Location
 		if ($settings['show_location'] === 'yes' && $meta['location']) {
 			echo '<details class="wpbs-accordion-item" open>';
-			echo '<summary class="wpbs-accordion-item__header"><h4>Location</h4></summary>';
+			echo '<summary class="wpbs-accordion-item__header"><h3>Location</h3></summary>';
 			echo '<div class="wpbs-accordion-item__content">';
 			echo '<div class="wpbs-location-info">';
 			echo '<p><strong>' . esc_html($meta['location']) . '</strong></p>';

@@ -97,10 +97,11 @@ class WPBS_Elementor_Gallery_Widget extends \Elementor\Widget_Base
 			[
 				'label' => esc_html__('Height', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::SLIDER,
-				'size_units' => ['px', 'vh'],
+				'size_units' => ['px', 'vh', '%'],
 				'range' => [
 					'px' => ['min' => 200, 'max' => 800],
 					'vh' => ['min' => 20, 'max' => 100],
+                    '%' => ['min' => 20, 'max' => 100],
 				],
 				'selectors' => [
 					'{{WRAPPER}} .wpbs-gallery__main' => 'height: {{SIZE}}{{UNIT}} !important;',
@@ -396,29 +397,29 @@ class WPBS_Elementor_Gallery_Widget extends \Elementor\Widget_Base
 	{
 		$settings = $this->get_settings_for_display();
 		
-		// Get boat ID
-		$boat_id = $settings['boat_id'];
-		$post_id = $settings['post_id'];
-		
-		if ($post_id) {
-			$final_id = $post_id;
-		} elseif ($boat_id && is_numeric($boat_id)) {
-			$final_id = $boat_id;
-		} elseif ($boat_id) {
-			$args = array(
-				'post_type' => 'boats',
-				'meta_query' => array(
-					array(
-						'key' => 'wpbs_boat_id',
-						'value' => $boat_id,
-						'compare' => '='
-					)
-				),
-				'posts_per_page' => 1,
-				'fields' => 'ids'
-			);
-			$query = new \WP_Query($args);
-			$final_id = $query->posts ? $query->posts[0] : 0;
+		// Get boat ID using standardized pattern
+		$final_id = null;
+
+		if (!empty($settings['post_id'])) {
+			$final_id = intval($settings['post_id']);
+		} elseif (!empty($settings['boat_id'])) {
+			$boat_id_setting = $settings['boat_id'];
+			if (is_numeric($boat_id_setting)) {
+				$final_id = intval($boat_id_setting);
+			} else {
+				$args = [
+					'post_type' => 'boats',
+					'meta_key' => 'wpbs_boat_id',
+					'meta_value' => $boat_id_setting,
+					'posts_per_page' => 1,
+					'fields' => 'ids'
+				];
+				$query = new \WP_Query($args);
+				if ($query->have_posts()) {
+					$final_id = $query->posts[0];
+				}
+				wp_reset_postdata();
+			}
 		} else {
 			$final_id = get_the_ID();
 		}
@@ -427,41 +428,56 @@ class WPBS_Elementor_Gallery_Widget extends \Elementor\Widget_Base
 			return;
 		}
 		
-		// Get gallery images
-		$gallery_meta = get_post_meta($final_id, 'wpbs_gallery', true);
-		$gallery_ids = array();
+		// Build gallery from attachment IDs (matching template pattern)
+		$gallery_ids = get_post_meta($final_id, 'wpbs_gallery_attachment_ids', true);
+		if (!is_array($gallery_ids)) {
+			$gallery_ids = array();
+		}
+		$featured_id = (int)get_post_thumbnail_id($final_id);
+		if ($featured_id) {
+			array_unshift($gallery_ids, $featured_id);
+		}
+		$gallery_ids = array_values(array_unique(array_filter(array_map('intval', $gallery_ids))));
 		
-		if ($gallery_meta) {
-			$ids = explode(',', $gallery_meta);
-			foreach ($ids as $id) {
-				$id = trim($id);
-				if ($id && wp_attachment_is_image($id)) {
-					$gallery_ids[] = (int)$id;
+		// Get video URLs (matching template pattern)
+		$video_urls_raw = get_post_meta($final_id, 'wpbs_embedded_video_urls', true);
+		$video_urls = array();
+		if ($video_urls_raw) {
+			$lines = array_map('trim', explode("\n", $video_urls_raw));
+			foreach ($lines as $line) {
+				// Strip any trailing pipe and anything after it (malformed save)
+				$clean = preg_replace('/\|.*$/', '', $line);
+				$clean = trim($clean);
+				if ($clean !== '') {
+					$video_urls[] = $clean;
 				}
 			}
 		}
 		
-		if (empty($gallery_ids) && has_post_thumbnail($final_id)) {
-			$gallery_ids[] = get_post_thumbnail_id($final_id);
+		$total_images = count($gallery_ids);
+		$has_videos = !empty($video_urls);
+		$total_media = $total_images + count($video_urls);
+		
+		$main_large = null;
+		if ($total_images > 0) {
+			$main_id = (int)$gallery_ids[0];
+			$main_large = wp_get_attachment_image_url($main_id, 'large');
 		}
 		
-		$total = count($gallery_ids);
-		if ($total === 0) {
-			return;
-		}
-		
-		$main_id = (int)$gallery_ids[0];
-		$main_large = wp_get_attachment_image_url($main_id, 'large');
 		$lightbox_enabled = $settings['lightbox'] === 'yes';
 		
 		?>
 		<div class="wpbs-gallery" data-wpbs-gallery>
 			<div class="wpbs-gallery__main" data-wpbs-lightbox-trigger>
-				<div class="wpbs-gallery__main-link" id="wpbs-main-link" data-index="0">
-					<img id="wpbs-main-img" class="wpbs-gallery__main-img" src="<?php echo esc_url($main_large); ?>" alt="<?php echo esc_attr(get_the_title($final_id)); ?>">
-				</div>
-				
-				<?php if ($total > 1): ?>
+				<?php if ($main_large): ?>
+					<div class="wpbs-gallery__main-link" id="wpbs-main-link" data-index="0">
+						<img id="wpbs-main-img" class="wpbs-gallery__main-img" src="<?php echo esc_url($main_large); ?>" alt="<?php echo esc_attr(get_the_title($final_id)); ?>">
+					</div>
+				<?php else: ?>
+					<img class="wpbs-gallery__main-img" src="<?php echo esc_url(plugin_dir_url(dirname(dirname(__FILE__))) . 'assets/images/boat-placeholder.png'); ?>" alt="<?php echo esc_attr(get_the_title($final_id)); ?>">
+				<?php endif; ?>
+
+				<?php if ($total_media > 1): ?>
 					<button type="button" class="wpbs-gallery__nav wpbs-gallery__nav--prev" aria-label="Previous" data-wpbs-nav="prev">
 						<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
 					</button>
@@ -469,25 +485,50 @@ class WPBS_Elementor_Gallery_Widget extends \Elementor\Widget_Base
 						<svg viewBox="0 0 24 24"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
 					</button>
 				<?php endif; ?>
-				
-				<button type="button" class="wpbs-gallery__view-btn" data-wpbs-open-lightbox>
-					<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-					View <?php echo $total; ?> Photos
-				</button>
+
+				<?php if ($total_media > 0): ?>
+					<button type="button" class="wpbs-gallery__view-btn" data-wpbs-open-lightbox>
+						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+						View <?php echo $total_images; ?> Photos<?php echo $has_videos ? ' & Video' : ''; ?>
+					</button>
+				<?php endif; ?>
 			</div>
-			
-			<?php if ($total > 1): ?>
+
+			<?php if ($total_media > 1): ?>
 				<div class="wpbs-gallery__thumbs" role="list">
-					<?php foreach (array_slice($gallery_ids, 0, 20) as $i => $aid): 
+					<?php foreach (array_slice($gallery_ids, 0, 20) as $i => $aid):
+						$aid   = (int)$aid;
 						$thumb = wp_get_attachment_image_url($aid, 'thumbnail');
 						$large = wp_get_attachment_image_url($aid, 'large');
-						$full = wp_get_attachment_image_url($aid, 'full');
-						$active = $i === 0 ? ' is-active' : '';
+						$full  = wp_get_attachment_image_url($aid, 'full');
+						if (!$thumb || !$large) continue;
 					?>
-						<button type="button" class="wpbs-gallery__thumb<?php echo $active; ?>" data-index="<?php echo $i; ?>" data-type="image" data-large="<?php echo esc_url($large); ?>" data-full="<?php echo esc_url($full); ?>">
+						<button type="button" class="wpbs-gallery__thumb<?php echo $i === 0 ? ' is-active' : ''; ?>" data-index="<?php echo $i; ?>" data-type="image" data-large="<?php echo esc_url($large); ?>" data-full="<?php echo esc_url($full ?: $large); ?>">
 							<img src="<?php echo esc_url($thumb); ?>" alt="" loading="lazy">
 						</button>
 					<?php endforeach; ?>
+					<?php 
+					// Add video thumbnails
+					$video_index = count($gallery_ids);
+					foreach ($video_urls as $vurl):
+						// Try to extract YouTube/Vimeo thumbnail
+						$video_thumb = '';
+						$vclean = preg_replace('/\|.*$/', '', trim($vurl));
+						if (preg_match('/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/', $vclean, $m) || preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $vclean, $m)) {
+							$video_thumb = 'https://img.youtube.com/vi/' . $m[1] . '/mqdefault.jpg';
+						} elseif (preg_match('/vimeo\.com\/(\d+)/', $vclean, $m)) {
+							$video_thumb = ''; // Vimeo requires API call
+						}
+					?>
+						<button type="button" class="wpbs-gallery__thumb wpbs-gallery__thumb--video" data-index="<?php echo $video_index; ?>" data-type="video" data-video-url="<?php echo esc_url($vclean); ?>">
+							<?php if ($video_thumb): ?>
+								<img src="<?php echo esc_url($video_thumb); ?>" alt="Video" loading="lazy">
+							<?php endif; ?>
+							<span class="wpbs-gallery__thumb-play">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+							</span>
+						</button>
+					<?php $video_index++; endforeach; ?>
 				</div>
 			<?php endif; ?>
 		</div>

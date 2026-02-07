@@ -384,6 +384,7 @@ class WPBS_Elementor_Overview_Widget extends \Elementor\Widget_Base
 			);
 			$query = new \WP_Query($args);
 			$final_id = $query->posts ? $query->posts[0] : 0;
+			wp_reset_postdata();
 		} else {
 			$final_id = get_the_ID();
 		}
