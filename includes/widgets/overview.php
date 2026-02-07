@@ -360,10 +360,53 @@ class WPBS_Elementor_Overview_Widget extends \Elementor\Widget_Base
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_overview([
-			'id' => $settings['boat_id'],
-			'post_id' => $settings['post_id'],
-		]);
+		
+		// Get boat ID
+		$boat_id = $settings['boat_id'];
+		$post_id = $settings['post_id'];
+		
+		if ($post_id) {
+			$final_id = $post_id;
+		} elseif ($boat_id && is_numeric($boat_id)) {
+			$final_id = $boat_id;
+		} elseif ($boat_id) {
+			$args = array(
+				'post_type' => 'boats',
+				'meta_query' => array(
+					array(
+						'key' => 'wpbs_boat_id',
+						'value' => $boat_id,
+						'compare' => '='
+					)
+				),
+				'posts_per_page' => 1,
+				'fields' => 'ids'
+			);
+			$query = new \WP_Query($args);
+			$final_id = $query->posts ? $query->posts[0] : 0;
+		} else {
+			$final_id = get_the_ID();
+		}
+		
+		if (!$final_id) {
+			return;
+		}
+		
+		$post = get_post($final_id);
+		$status = get_post_meta($final_id, 'wpbs_status', true);
+		$is_sold = $status && strtolower($status) !== 'active';
+		$content = $post->post_content;
+		$content = apply_filters('the_content', $content);
+		
+		?>
+		<div class="wpbs-overview">
+			<h2 class="wpbs-overview__title">Boat Overview
+				<?php if ($is_sold): ?>
+					<span class="wpbs-badge wpbs-badge--sold">Sold</span>
+				<?php endif; ?>
+			</h2>
+			<div class="wpbs-overview__content"><?php echo $content; ?></div>
+		</div>
+		<?php
 	}
 }

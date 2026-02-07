@@ -170,88 +170,6 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 
 		$this->end_controls_section();
 
-		// Container Style
-		$this->start_controls_section(
-			'container_style',
-			[
-				'label' => esc_html__('Container', 'wp-boat-sync'),
-				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
-			]
-		);
-
-		$this->add_responsive_control(
-			'items_gap',
-			[
-				'label' => esc_html__('Gap Between Items', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::SLIDER,
-				'size_units' => ['px'],
-				'range' => ['px' => ['min' => 0, 'max' => 50]],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion' => 'gap: {{SIZE}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->end_controls_section();
-
-		// Accordion Item Style
-		$this->start_controls_section(
-			'item_style',
-			[
-				'label' => esc_html__('Item', 'wp-boat-sync'),
-				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
-			]
-		);
-
-		$this->add_control(
-			'item_background',
-			[
-				'label' => esc_html__('Background', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__item' => 'background-color: {{VALUE}} !important;',
-				],
-			]
-		);
-
-		$this->add_group_control(
-			\Elementor\Group_Control_Border::get_type(),
-			[
-				'name' => 'item_border',
-				'selector' => '{{WRAPPER}} .wpbs-accordion__item',
-				'fields_options' => [
-					'border' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__item' => 'border-style: {{VALUE}} !important;']],
-					'width' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__item' => 'border-width: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;']],
-					'color' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__item' => 'border-color: {{VALUE}} !important;']],
-				],
-			]
-		);
-
-		$this->add_responsive_control(
-			'item_border_radius',
-			[
-				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::DIMENSIONS,
-				'size_units' => ['px', '%'],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__item' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->add_group_control(
-			\Elementor\Group_Control_Box_Shadow::get_type(),
-			[
-				'name' => 'item_shadow',
-				'selector' => '{{WRAPPER}} .wpbs-accordion__item',
-				'fields_options' => [
-					'box_shadow' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__item' => 'box-shadow: {{HORIZONTAL}}px {{VERTICAL}}px {{BLUR}}px {{SPREAD}}px {{COLOR}} !important;']],
-				],
-			]
-		);
-
-		$this->end_controls_section();
-
 		// Title/Header Style
 		$this->start_controls_section(
 			'header_style',
@@ -271,7 +189,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Text Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__header' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -282,7 +200,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Background', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__header' => 'background-color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header' => 'background-color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -297,7 +215,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Text Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__header:hover' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header:hover' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -308,7 +226,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Background', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__header:hover' => 'background-color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header:hover' => 'background-color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -323,7 +241,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Text Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion__header' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion-item__header' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -334,7 +252,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Background', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion__header' => 'background-color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion__item.is-active .wpbs-accordion-item__header' => 'background-color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -346,14 +264,14 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			\Elementor\Group_Control_Typography::get_type(),
 			[
 				'name' => 'header_typography',
-				'selector' => '{{WRAPPER}} .wpbs-accordion__header',
+				'selector' => '{{WRAPPER}} .wpbs-accordion-item__header',
 				'separator' => 'before',
 				'fields_options' => [
 					'typography' => ['default' => 'custom'],
-					'font_size' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__header' => 'font-size: {{SIZE}}{{UNIT}} !important;']],
-					'font_weight' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__header' => 'font-weight: {{VALUE}} !important;']],
-					'line_height' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__header' => 'line-height: {{SIZE}}{{UNIT}} !important;']],
-					'font_family' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__header' => 'font-family: {{VALUE}} !important;']],
+					'font_size' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'font-size: {{SIZE}}{{UNIT}} !important;']],
+					'font_weight' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'font-weight: {{VALUE}} !important;']],
+					'line_height' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'line-height: {{SIZE}}{{UNIT}} !important;']],
+					'font_family' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__header' => 'font-family: {{VALUE}} !important;']],
 				],
 			]
 		);
@@ -365,7 +283,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'type' => \Elementor\Controls_Manager::DIMENSIONS,
 				'size_units' => ['px', '%'],
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__header' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__header' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
 				],
 			]
 		);
@@ -387,7 +305,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__icon' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__icon' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -422,7 +340,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Background', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__content' => 'background-color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__content' => 'background-color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -433,7 +351,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Text Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__content' => 'color: {{VALUE}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__content' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -442,13 +360,13 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			\Elementor\Group_Control_Typography::get_type(),
 			[
 				'name' => 'content_typography',
-				'selector' => '{{WRAPPER}} .wpbs-accordion__content',
+				'selector' => '{{WRAPPER}} .wpbs-accordion-item__content',
 				'fields_options' => [
 					'typography' => ['default' => 'custom'],
-					'font_size' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__content' => 'font-size: {{SIZE}}{{UNIT}} !important;']],
-					'font_weight' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__content' => 'font-weight: {{VALUE}} !important;']],
-					'line_height' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__content' => 'line-height: {{SIZE}}{{UNIT}} !important;']],
-					'font_family' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion__content' => 'font-family: {{VALUE}} !important;']],
+					'font_size' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__content' => 'font-size: {{SIZE}}{{UNIT}} !important;']],
+					'font_weight' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__content' => 'font-weight: {{VALUE}} !important;']],
+					'line_height' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__content' => 'line-height: {{SIZE}}{{UNIT}} !important;']],
+					'font_family' => ['selectors' => ['{{WRAPPER}} .wpbs-accordion-item__content' => 'font-family: {{VALUE}} !important;']],
 				],
 			]
 		);
@@ -460,7 +378,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 				'type' => \Elementor\Controls_Manager::DIMENSIONS,
 				'size_units' => ['px', '%'],
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-accordion__content' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+					'{{WRAPPER}} .wpbs-accordion-item__content' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
 				],
 			]
 		);
@@ -468,20 +386,300 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 		$this->end_controls_section();
 	}
 
+	/**
+	 * Helper to get boat meta fields
+	 */
+	private function get_boat_meta($post_id)
+	{
+		$fields = [
+			'length', 'beam', 'draft', 'displacement', 'dry_weight', 'bridge_clearance',
+			'deadrise', 'cabins', 'heads', 'num_engines', 'engine_make', 'engine_model',
+			'engine_type', 'total_power', 'engine_hours', 'fuel_type', 'drive_type',
+			'propeller', 'cruising_speed', 'max_speed', 'fuel_capacity', 'range',
+			'water_capacity', 'condition', 'boat_category', 'boat_class', 'hull_material',
+			'location', 'engine'
+		];
+
+		$meta = [];
+		foreach ($fields as $field) {
+			$meta[$field] = get_post_meta($post_id, 'wpbs_' . $field, true);
+		}
+		return $meta;
+	}
+
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_accordion([
-			'id' => $settings['boat_id'],
-			'post_id' => $settings['post_id'],
-			'show_description' => $settings['show_description'],
-			'show_measurements' => $settings['show_measurements'],
-			'show_propulsion' => $settings['show_propulsion'],
-			'show_features' => $settings['show_features'],
-			'show_additional' => $settings['show_additional'],
-			'show_location' => $settings['show_location'],
-			'default_open' => $settings['default_open'],
-		]);
+
+		// Get boat ID using the same pattern as other widgets
+		$final_id = null;
+
+		if (!empty($settings['post_id'])) {
+			$final_id = intval($settings['post_id']);
+		} elseif (!empty($settings['boat_id'])) {
+			$boat_id_setting = $settings['boat_id'];
+			if (is_numeric($boat_id_setting)) {
+				$final_id = intval($boat_id_setting);
+			} else {
+				$args = [
+					'post_type' => 'boats',
+					'meta_key' => 'wpbs_boat_id',
+					'meta_value' => $boat_id_setting,
+					'posts_per_page' => 1,
+					'fields' => 'ids'
+				];
+				$query = new \WP_Query($args);
+				if ($query->have_posts()) {
+					$final_id = $query->posts[0];
+				}
+			}
+		} else {
+			$final_id = get_the_ID();
+		}
+
+		if (!$final_id) {
+			return;
+		}
+
+		$post = get_post($final_id);
+		if (!$post) {
+			return;
+		}
+
+		$meta = $this->get_boat_meta($final_id);
+
+		// Additional meta fields for accordion
+		$nominal_length = get_post_meta($final_id, 'wpbs_nominal_length', true);
+		$min_draft = get_post_meta($final_id, 'wpbs_min_draft', true);
+		$cabin_headroom = get_post_meta($final_id, 'wpbs_cabin_headroom', true);
+		$engines_json = get_post_meta($final_id, 'wpbs_engines_json', true);
+		$keel_type = get_post_meta($final_id, 'wpbs_keel_type', true);
+		$trim_tabs = get_post_meta($final_id, 'wpbs_trim_tabs', true);
+		$windlass = get_post_meta($final_id, 'wpbs_windlass_type', true);
+		$electrical = get_post_meta($final_id, 'wpbs_electrical_circuit', true);
+		$builder = get_post_meta($final_id, 'wpbs_builder_name', true);
+		$designer = get_post_meta($final_id, 'wpbs_designer_name', true);
+		$additional_detail = get_post_meta($final_id, 'wpbs_additional_detail_html', true);
+		$boat_city = get_post_meta($final_id, 'wpbs_boat_city', true);
+		$state = get_post_meta($final_id, 'wpbs_state', true);
+		$country = get_post_meta($final_id, 'wpbs_boat_country', true);
+
+		echo '<div class="wpbs-accordion-details">';
+		echo '<h2 class="wpbs-accordion-details__title">Boat Details</h2>';
+
+		// Description
+		if ($settings['show_description'] === 'yes') {
+			$is_open = $settings['default_open'] === 'description' ? ' open' : '';
+			echo '<details class="wpbs-accordion-item"' . $is_open . '>';
+			echo '<summary class="wpbs-accordion-item__header"><h3>Description</h3></summary>';
+			echo '<div class="wpbs-accordion-item__content">';
+			if ($post->post_content) {
+				echo '<div class="wpbs-description-text" data-wpbs-expandable>';
+				echo apply_filters('the_content', $post->post_content);
+				echo '</div>';
+				echo '<button type="button" class="wpbs-show-more-btn" data-wpbs-toggle-expand>Show More</button>';
+			} else {
+				echo '<p class="wpbs-description-empty">No description available.</p>';
+			}
+			echo '</div></details>';
+		}
+
+		// Measurements
+		if ($settings['show_measurements'] === 'yes') {
+			$is_open = $settings['default_open'] === 'measurements' ? ' open' : '';
+			echo '<details class="wpbs-accordion-item"' . $is_open . '>';
+			echo '<summary class="wpbs-accordion-item__header"><h3>Measurements</h3></summary>';
+			echo '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
+
+			// Dimensions Cell
+			$dimensions = [];
+			if ($meta['length']) $dimensions['Length Overall'] = $meta['length'];
+			if ($nominal_length) $dimensions['Nominal Length'] = $nominal_length;
+			if ($min_draft) $dimensions['Min Draft'] = $min_draft;
+			if ($meta['beam']) $dimensions['Beam'] = $meta['beam'];
+			if ($meta['bridge_clearance']) $dimensions['Bridge Clearance'] = $meta['bridge_clearance'];
+			if ($cabin_headroom) $dimensions['Cabin Headroom'] = $cabin_headroom;
+			if ($meta['dry_weight']) $dimensions['Dry Weight'] = $meta['dry_weight'];
+			if ($meta['displacement']) $dimensions['Displacement'] = $meta['displacement'];
+
+			if (!empty($dimensions)) {
+				echo '<div class="wpbs-details-cell"><h3>Dimensions</h3><div class="wpbs-details-cell__content">';
+				foreach ($dimensions as $label => $value) {
+					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
+				}
+				echo '</div></div>';
+			}
+
+			// Tanks Cell
+			$tanks = [];
+			if ($meta['water_capacity']) $tanks['Fresh Water Tanks'] = $meta['water_capacity'];
+			if ($meta['fuel_capacity']) $tanks['Fuel Tanks'] = $meta['fuel_capacity'];
+
+			if (!empty($tanks)) {
+				echo '<div class="wpbs-details-cell"><h3>Tanks</h3><div class="wpbs-details-cell__content">';
+				foreach ($tanks as $label => $value) {
+					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
+				}
+				echo '</div></div>';
+			}
+
+			// Miscellaneous Cell
+			$misc = [];
+			if ($meta['cabins']) $misc['Cabins'] = $meta['cabins'];
+			if ($meta['deadrise']) $misc['Deadrise At Transom'] = $meta['deadrise'];
+			if ($meta['heads']) $misc['Heads'] = $meta['heads'];
+			if ($meta['hull_id']) {
+				$hull_id = get_post_meta($final_id, 'wpbs_hull_id', true);
+				$misc['Hull ID'] = $hull_id;
+			}
+
+			if (!empty($misc)) {
+				echo '<div class="wpbs-details-cell"><h3>Miscellaneous</h3><div class="wpbs-details-cell__content">';
+				foreach ($misc as $label => $value) {
+					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
+				}
+				echo '</div></div>';
+			}
+
+			echo '</div></div></details>';
+		}
+
+		// Propulsion
+		if ($settings['show_propulsion'] === 'yes') {
+			$is_open = $settings['default_open'] === 'propulsion' ? ' open' : '';
+			echo '<details class="wpbs-accordion-item"' . $is_open . '>';
+			echo '<summary class="wpbs-accordion-item__header"><h3>Propulsion</h3></summary>';
+			echo '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
+
+			// Parse engines JSON
+			$engines = [];
+			if ($engines_json) {
+				$engines = json_decode($engines_json, true);
+			}
+
+			if (!empty($engines) && is_array($engines)) {
+				$engine_num = 1;
+				foreach ($engines as $eng) {
+					echo '<div class="wpbs-details-cell"><h4>Engine ' . $engine_num . '</h4><div class="wpbs-details-cell__content">';
+					if (!empty($eng['Make'])) echo '<p><span class="wpbs-details-label">Engine Make:</span><span class="wpbs-details-value">' . esc_html($eng['Make']) . '</span></p>';
+					if (!empty($eng['Model'])) echo '<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value">' . esc_html($eng['Model']) . '</span></p>';
+					if (!empty($eng['Year'])) echo '<p><span class="wpbs-details-label">Engine Year:</span><span class="wpbs-details-value">' . esc_html($eng['Year']) . '</span></p>';
+					if (!empty($eng['EnginePower'])) echo '<p><span class="wpbs-details-label">Total Power:</span><span class="wpbs-details-value">' . esc_html($eng['EnginePower']) . '</span></p>';
+					if (!empty($eng['Type'])) echo '<p><span class="wpbs-details-label">Engine Type:</span><span class="wpbs-details-value">' . esc_html($eng['Type']) . '</span></p>';
+					if (!empty($eng['DriveType'])) echo '<p><span class="wpbs-details-label">Drive Type:</span><span class="wpbs-details-value">' . esc_html($eng['DriveType']) . '</span></p>';
+					if (!empty($eng['Fuel'])) echo '<p><span class="wpbs-details-label">Fuel Type:</span><span class="wpbs-details-value">' . esc_html($eng['Fuel']) . '</span></p>';
+					if (!empty($eng['PropellerType'])) echo '<p><span class="wpbs-details-label">Propeller Type:</span><span class="wpbs-details-value">' . esc_html($eng['PropellerType']) . '</span></p>';
+					if (!empty($eng['PropellerMaterial'])) echo '<p><span class="wpbs-details-label">Propeller Material:</span><span class="wpbs-details-value">' . esc_html($eng['PropellerMaterial']) . '</span></p>';
+					echo '</div></div>';
+					$engine_num++;
+				}
+			} else {
+				// Fallback to single engine meta
+				echo '<div class="wpbs-details-cell"><h4>Engine</h4><div class="wpbs-details-cell__content">';
+				if ($meta['num_engines']) echo '<p><span class="wpbs-details-label">Number of Engines:</span><span class="wpbs-details-value">' . esc_html($meta['num_engines']) . '</span></p>';
+				if ($meta['engine_make']) echo '<p><span class="wpbs-details-label">Engine Make:</span><span class="wpbs-details-value">' . esc_html($meta['engine_make']) . '</span></p>';
+				if ($meta['engine_model']) echo '<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value">' . esc_html($meta['engine_model']) . '</span></p>';
+				if ($meta['engine_type']) echo '<p><span class="wpbs-details-label">Engine Type:</span><span class="wpbs-details-value">' . esc_html($meta['engine_type']) . '</span></p>';
+				if ($meta['total_power']) echo '<p><span class="wpbs-details-label">Total Power:</span><span class="wpbs-details-value">' . esc_html($meta['total_power']) . '</span></p>';
+				if ($meta['engine_hours']) echo '<p><span class="wpbs-details-label">Engine Hours:</span><span class="wpbs-details-value">' . esc_html($meta['engine_hours']) . '</span></p>';
+				if ($meta['fuel_type']) echo '<p><span class="wpbs-details-label">Fuel Type:</span><span class="wpbs-details-value">' . esc_html(ucfirst($meta['fuel_type'])) . '</span></p>';
+				if ($meta['drive_type']) echo '<p><span class="wpbs-details-label">Drive Type:</span><span class="wpbs-details-value">' . esc_html($meta['drive_type']) . '</span></p>';
+				if ($meta['propeller']) echo '<p><span class="wpbs-details-label">Propeller:</span><span class="wpbs-details-value">' . esc_html($meta['propeller']) . '</span></p>';
+				echo '</div></div>';
+			}
+
+			// Performance Cell
+			$performance = [];
+			if ($meta['cruising_speed']) $performance['Cruising Speed'] = $meta['cruising_speed'];
+			if ($meta['max_speed']) $performance['Max Speed'] = $meta['max_speed'];
+			if ($meta['range']) $performance['Range'] = $meta['range'];
+
+			if (!empty($performance)) {
+				echo '<div class="wpbs-details-cell"><h4>Performance</h4><div class="wpbs-details-cell__content">';
+				foreach ($performance as $label => $value) {
+					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
+				}
+				echo '</div></div>';
+			}
+
+			echo '</div></div></details>';
+		}
+
+		// Features
+		if ($settings['show_features'] === 'yes') {
+			$is_open = $settings['default_open'] === 'features' ? ' open' : '';
+			echo '<details class="wpbs-accordion-item"' . $is_open . '>';
+			echo '<summary class="wpbs-accordion-item__header"><h3>Features</h3></summary>';
+			echo '<div class="wpbs-accordion-item__content"><div class="wpbs-details-grid">';
+
+			// General Features Cell
+			$features = [];
+			if ($meta['condition']) $features['Condition'] = $meta['condition'];
+			if ($meta['boat_category']) $features['Category'] = $meta['boat_category'];
+			if ($meta['boat_class']) $features['Class'] = $meta['boat_class'];
+			if ($meta['hull_material']) $features['Hull Material'] = $meta['hull_material'];
+			if ($keel_type) $features['Keel Type'] = $keel_type;
+
+			if (!empty($features)) {
+				echo '<div class="wpbs-details-cell"><h4>General</h4><div class="wpbs-details-cell__content">';
+				foreach ($features as $label => $value) {
+					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
+				}
+				echo '</div></div>';
+			}
+
+			// Electronics Cell
+			$electronics = [];
+			if ($trim_tabs) $electronics['Trim Tabs'] = '✓';
+			if ($windlass) $electronics['Windlass'] = $windlass;
+			if ($electrical) $electronics['Electrical Circuit'] = $electrical;
+
+			if (!empty($electronics)) {
+				echo '<div class="wpbs-details-cell"><h4>Electronics & Equipment</h4><div class="wpbs-details-cell__content">';
+				foreach ($electronics as $label => $value) {
+					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
+				}
+				echo '</div></div>';
+			}
+
+			// Builder & Designer Cell
+			$builder_info = [];
+			if ($builder) $builder_info['Builder'] = $builder;
+			if ($designer) $builder_info['Designer'] = $designer;
+
+			if (!empty($builder_info)) {
+				echo '<div class="wpbs-details-cell"><h4>Builder & Designer</h4><div class="wpbs-details-cell__content">';
+				foreach ($builder_info as $label => $value) {
+					echo '<p><span class="wpbs-details-label">' . esc_html($label) . ':</span><span class="wpbs-details-value">' . esc_html($value) . '</span></p>';
+				}
+				echo '</div></div>';
+			}
+
+			echo '</div></div></details>';
+		}
+
+		// More Details (Additional Description)
+		if ($settings['show_additional'] === 'yes' && $additional_detail) {
+			echo '<details class="wpbs-accordion-item">';
+			echo '<summary class="wpbs-accordion-item__header"><h4>More Details</h4></summary>';
+			echo '<div class="wpbs-accordion-item__content">';
+			echo '<div class="wpbs-additional-details">' . wp_kses_post($additional_detail) . '</div>';
+			echo '</div></details>';
+		}
+
+		// Location
+		if ($settings['show_location'] === 'yes' && $meta['location']) {
+			echo '<details class="wpbs-accordion-item" open>';
+			echo '<summary class="wpbs-accordion-item__header"><h4>Location</h4></summary>';
+			echo '<div class="wpbs-accordion-item__content">';
+			echo '<div class="wpbs-location-info">';
+			echo '<p><strong>' . esc_html($meta['location']) . '</strong></p>';
+			if ($boat_city || $state || $country) {
+				echo '<p>' . esc_html(implode(', ', array_filter([$boat_city, $state, $country]))) . '</p>';
+			}
+			echo '</div></div></details>';
+		}
+
+		echo '</div>';
 	}
 }

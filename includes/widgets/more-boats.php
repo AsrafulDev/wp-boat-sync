@@ -479,11 +479,73 @@ class WPBS_Elementor_More_Boats_Widget extends \Elementor\Widget_Base
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_more_boats([
-			'id' => $settings['boat_id'],
-			'post_id' => $settings['post_id'],
-			'limit' => $settings['limit'],
-		]);
+		
+		// Get boat ID to exclude
+		$boat_id = $settings['boat_id'];
+		$post_id = $settings['post_id'];
+		$exclude_id = 0;
+		
+		if ($post_id) {
+			$exclude_id = $post_id;
+		} elseif ($boat_id && is_numeric($boat_id)) {
+			$exclude_id = $boat_id;
+		} elseif ($boat_id) {
+			$args = array(
+				'post_type' => 'boats',
+				'meta_query' => array(
+					array(
+						'key' => 'wpbs_boat_id',
+						'value' => $boat_id,
+						'compare' => '='
+					)
+				),
+				'posts_per_page' => 1,
+				'fields' => 'ids'
+			);
+			$query = new \WP_Query($args);
+			$exclude_id = $query->posts ? $query->posts[0] : 0;
+		} else {
+			$exclude_id = get_the_ID();
+		}
+		
+		$count = max(1, min(12, (int)$settings['limit']));
+		
+		$q = new \WP_Query(array(
+			'post_type' => 'boats',
+			'post_status' => 'publish',
+			'posts_per_page' => $count,
+			'post__not_in' => $exclude_id ? array($exclude_id) : array(),
+			'orderby' => 'rand',
+		));
+		
+		if (!$q->have_posts()) {
+			return;
+		}
+		
+		?>
+		<div class="wpbs-more-boats">
+			<div class="wpbs-more-boats__header">
+				<h2 class="wpbs-more-boats__title">More Boats</h2>
+				<a href="<?php echo esc_url(get_post_type_archive_link('boats')); ?>" class="wpbs-more-boats__link">View All Boats</a>
+			</div>
+			<div class="wpbs-more-boats__grid">
+				<?php while ($q->have_posts()): $q->the_post();
+					$r_price = get_post_meta(get_the_ID(), 'wpbs_price', true);
+					$r_price_num = floatval($r_price);
+					$r_price_display = $r_price_num > 0 ? '$' . number_format($r_price_num) : 'Contact';
+				?>
+					<a href="<?php echo esc_url(get_permalink()); ?>" class="wpbs-more-boats__item">
+						<div class="wpbs-more-boats__img">
+							<?php if (has_post_thumbnail()): ?>
+								<?php the_post_thumbnail('medium'); ?>
+							<?php endif; ?>
+						</div>
+						<div class="wpbs-more-boats__name"><?php echo esc_html(get_the_title()); ?></div>
+						<div class="wpbs-more-boats__price"><?php echo esc_html($r_price_display); ?></div>
+					</a>
+				<?php endwhile; wp_reset_postdata(); ?>
+			</div>
+		</div>
+		<?php
 	}
 }

@@ -128,57 +128,6 @@ class WPBS_Elementor_Dealer_Card_Widget extends \Elementor\Widget_Base
 
 		$this->end_controls_section();
 
-		// Logo Style
-		$this->start_controls_section(
-			'logo_style',
-			[
-				'label' => esc_html__('Logo', 'wp-boat-sync'),
-				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
-			]
-		);
-
-		$this->add_responsive_control(
-			'logo_width',
-			[
-				'label' => esc_html__('Width', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::SLIDER,
-				'size_units' => ['px', '%'],
-				'range' => [
-					'px' => ['min' => 50, 'max' => 300],
-					'%' => ['min' => 10, 'max' => 100],
-				],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__logo' => 'width: {{SIZE}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->add_responsive_control(
-			'logo_margin',
-			[
-				'label' => esc_html__('Margin', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::DIMENSIONS,
-				'size_units' => ['px', '%'],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__logo' => 'margin: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->add_responsive_control(
-			'logo_border_radius',
-			[
-				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::DIMENSIONS,
-				'size_units' => ['px', '%'],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__logo img' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->end_controls_section();
-
 		// Dealer Name Style
 		$this->start_controls_section(
 			'name_style',
@@ -187,214 +136,182 @@ class WPBS_Elementor_Dealer_Card_Widget extends \Elementor\Widget_Base
 				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
 			]
 		);
+        $this->add_control(
+            'name_color',
+            [
+                'label' => esc_html__('Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__header h3' => 'color: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'name_font_size',
+            [
+                'label' => esc_html__('Font Size', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::SLIDER,
+                'size_units' => ['px'],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__header h3' => 'font-size: {{SIZE}}{{UNIT}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'name_font_weight',
+            [
+                'label' => esc_html__('Font Weight', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    '' => esc_html__('Default', 'wp-boat-sync'),
+                    '100' => '100',
+                    '200' => '200',
+                    '300' => '300',
+                    '400' => '400',
+                    '500' => '500',
+                    '600' => '600',
+                    '700' => '700',
+                    '800' => '800',
+                    '900' => '900',
+                ],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__header h3' => 'font-weight: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'content_color',
+            [
+                'label' => esc_html__('Content Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__body, {{WRAPPER}} .wpbs-dealer-card__body a' => 'color: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'content_link_color',
+            [
+                'label' => esc_html__('Content Link Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__body a' => 'color: {{VALUE}} !important;',
+                ],
+            ]
+         );
+        $this->add_control(
+            'content_font_size',
+            [
+                'label' => esc_html__('Content Font Size', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::SLIDER,
+                'size_units' => ['px'],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__body, {{WRAPPER}} .wpbs-dealer-card__body a' => 'font-size: {{SIZE}}{{UNIT}} !important;',
+                ],
+            ]
+        );  
 
-		$this->add_control(
-			'name_color',
-			[
-				'label' => esc_html__('Color', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__name' => 'color: {{VALUE}} !important;',
-				],
-			]
-		);
+        $this->start_controls_tabs('button_tabs');
 
-		$this->add_group_control(
-			\Elementor\Group_Control_Typography::get_type(),
-			[
-				'name' => 'name_typography',
-				'selector' => '{{WRAPPER}} .wpbs-dealer-card__name',
-			]
-		);
-
-		$this->add_responsive_control(
-			'name_margin',
-			[
-				'label' => esc_html__('Margin', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::DIMENSIONS,
-				'size_units' => ['px', '%'],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__name' => 'margin: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->end_controls_section();
-
-		// Contact Info Style
-		$this->start_controls_section(
-			'contact_style',
-			[
-				'label' => esc_html__('Contact Info', 'wp-boat-sync'),
-				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
-			]
-		);
-
-		$this->add_control(
-			'contact_color',
-			[
-				'label' => esc_html__('Color', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__contact' => 'color: {{VALUE}} !important;',
-				],
-			]
-		);
-
-		$this->add_group_control(
-			\Elementor\Group_Control_Typography::get_type(),
-			[
-				'name' => 'contact_typography',
-				'selector' => '{{WRAPPER}} .wpbs-dealer-card__contact',
-			]
-		);
-
-		$this->add_responsive_control(
-			'contact_gap',
-			[
-				'label' => esc_html__('Gap Between Items', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::SLIDER,
-				'size_units' => ['px'],
-				'range' => ['px' => ['min' => 0, 'max' => 30]],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__contact' => 'gap: {{SIZE}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->end_controls_section();
-
-		// Icon Style
-		$this->start_controls_section(
-			'icon_style',
-			[
-				'label' => esc_html__('Icons', 'wp-boat-sync'),
-				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
-			]
-		);
-
-		$this->add_control(
-			'icon_color',
-			[
-				'label' => esc_html__('Color', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__icon' => 'color: {{VALUE}} !important;',
-				],
-			]
-		);
-
-		$this->add_responsive_control(
-			'icon_size',
-			[
-				'label' => esc_html__('Size', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::SLIDER,
-				'size_units' => ['px'],
-				'range' => ['px' => ['min' => 10, 'max' => 40]],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__icon' => 'font-size: {{SIZE}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->end_controls_section();
-
-		// Button Style
-		$this->start_controls_section(
-			'button_style',
-			[
-				'label' => esc_html__('Contact Button', 'wp-boat-sync'),
-				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
-			]
-		);
-
-		$this->start_controls_tabs('button_tabs');
-
-		$this->start_controls_tab('button_normal', ['label' => esc_html__('Normal', 'wp-boat-sync')]);
-
-		$this->add_control(
-			'button_color',
-			[
-				'label' => esc_html__('Text Color', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__button' => 'color: {{VALUE}} !important;',
-				],
-			]
-		);
-
-		$this->add_control(
-			'button_background',
-			[
-				'label' => esc_html__('Background', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__button' => 'background-color: {{VALUE}} !important;',
-				],
-			]
-		);
-
-		$this->end_controls_tab();
-
-		$this->start_controls_tab('button_hover', ['label' => esc_html__('Hover', 'wp-boat-sync')]);
-
-		$this->add_control(
-			'button_hover_color',
-			[
-				'label' => esc_html__('Text Color', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'color: {{VALUE}} !important;',
-				],
-			]
-		);
-
-		$this->add_control(
-			'button_hover_background',
-			[
-				'label' => esc_html__('Background', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::COLOR,
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'background-color: {{VALUE}} !important;',
-				],
-			]
-		);
-
-		$this->end_controls_tab();
-		$this->end_controls_tabs();
-
-		$this->add_group_control(
-			\Elementor\Group_Control_Typography::get_type(),
-			[
-				'name' => 'button_typography',
-				'selector' => '{{WRAPPER}} .wpbs-dealer-card__button',
-				'separator' => 'before',
-			]
-		);
-
-		$this->add_responsive_control(
-			'button_padding',
-			[
-				'label' => esc_html__('Padding', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::DIMENSIONS,
-				'size_units' => ['px', '%'],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__button' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
-				],
-			]
-		);
-
-		$this->add_responsive_control(
-			'button_border_radius',
-			[
-				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::DIMENSIONS,
-				'size_units' => ['px', '%'],
-				'selectors' => [
-					'{{WRAPPER}} .wpbs-dealer-card__button' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
-				],
-			]
-		);
+        $this->start_controls_tab(
+            'button_style_normal',
+            [
+                'label' => esc_html__('Normal', 'wp-boat-sync'),
+            ]
+        );
+        $this->add_control(
+            'button_color',
+            [
+                'label' => esc_html__('Button Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button' => 'background-color: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'button_text_color',
+            [
+                'label' => esc_html__('Button Text Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button' => 'color: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'button_border_radius',
+            [
+                'label' => esc_html__('Button Border Radius', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::SLIDER,
+                'size_units' => ['px'],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button' => 'border-radius: {{SIZE}}{{UNIT}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'button_padding',
+            [
+                'label' => esc_html__('Button Padding', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::DIMENSIONS,
+                'size_units' => ['px', '%'],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+                ],
+            ]
+        );
+        $this->end_controls_tab();
+        $this->start_controls_tab(
+            'button_style_hover',
+            [
+                'label' => esc_html__('Hover', 'wp-boat-sync'),
+            ]
+        );
+        $this->add_control(
+            'button_hover_background_color',
+            [
+                'label' => esc_html__('Button Hover Background Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'background-color: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'button_hover_background_color',
+            [
+                'label' => esc_html__('Button Hover Background Color', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'background-color: {{VALUE}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'button_hover_border_radius',
+            [
+                'label' => esc_html__('Button Hover Border Radius', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::SLIDER,
+                'size_units' => ['px'],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'border-radius: {{SIZE}}{{UNIT}} !important;',
+                ],
+            ]
+        );
+        $this->add_control(
+            'button_hover_padding',
+            [
+                'label' => esc_html__('Button Hover Padding', 'wp-boat-sync'),
+                'type' => \Elementor\Controls_Manager::DIMENSIONS,
+                'size_units' => ['px', '%'],
+                'selectors' => [
+                    '{{WRAPPER}} .wpbs-dealer-card__button:hover' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+                ],
+            ]
+        );
+        $this->end_controls_tab();
+        $this->end_controls_tabs();
 
 		$this->end_controls_section();
 	}
@@ -402,10 +319,66 @@ class WPBS_Elementor_Dealer_Card_Widget extends \Elementor\Widget_Base
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_dealer_card([
-			'id' => $settings['boat_id'],
-			'post_id' => $settings['post_id'],
-		]);
+		
+		// Get boat ID
+		$boat_id = $settings['boat_id'];
+		$post_id = $settings['post_id'];
+		
+		if ($post_id) {
+			$final_id = $post_id;
+		} elseif ($boat_id && is_numeric($boat_id)) {
+			$final_id = $boat_id;
+		} elseif ($boat_id) {
+			$args = array(
+				'post_type' => 'boats',
+				'meta_query' => array(
+					array(
+						'key' => 'wpbs_boat_id',
+						'value' => $boat_id,
+						'compare' => '='
+					)
+				),
+				'posts_per_page' => 1,
+				'fields' => 'ids'
+			);
+			$query = new \WP_Query($args);
+			$final_id = $query->posts ? $query->posts[0] : 0;
+		} else {
+			$final_id = get_the_ID();
+		}
+		
+		if (!$final_id) {
+			return;
+		}
+		
+		$dealer = get_post_meta($final_id, 'wpbs_dealer', true);
+		$office_phone = get_post_meta($final_id, 'wpbs_office_phone', true);
+		$office_email = get_post_meta($final_id, 'wpbs_office_email', true);
+		$location = get_post_meta($final_id, 'wpbs_location', true);
+		
+		?>
+		<div class="wpbs-dealer-card">
+			<div class="wpbs-dealer-card__header">
+				<h3><?php esc_html_e('Dealer Information', 'wp-boat-sync'); ?></h3>
+			</div>
+			<div class="wpbs-dealer-card__body">
+				<?php if ($dealer): ?>
+					<div class="wpbs-dealer-card__row"><strong>Dealer:</strong> <?php echo esc_html($dealer); ?></div>
+				<?php endif; ?>
+				<?php if ($office_phone): ?>
+					<div class="wpbs-dealer-card__row"><strong>Phone:</strong> <a href="tel:<?php echo esc_attr($office_phone); ?>"><?php echo esc_html($office_phone); ?></a></div>
+				<?php endif; ?>
+				<?php if ($office_email): ?>
+					<div class="wpbs-dealer-card__row"><strong>Email:</strong> <a href="mailto:<?php echo esc_attr($office_email); ?>"><?php echo esc_html($office_email); ?></a></div>
+				<?php endif; ?>
+				<?php if ($location): ?>
+					<div class="wpbs-dealer-card__row"><strong>Location:</strong> <?php echo esc_html($location); ?></div>
+				<?php endif; ?>
+			</div>
+			<div class="wpbs-dealer-card__actions">
+				<a href="<?php echo esc_url(get_post_type_archive_link('boats')); ?>" class="wpbs-btn wpbs-btn--outline">View All Boats</a>
+			</div>
+		</div>
+		<?php
 	}
 }

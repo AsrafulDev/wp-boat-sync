@@ -184,13 +184,13 @@ class WPBS_Shortcodes
 
 		if ($total === 0) return '';
 
-		$out = '<div class="wpbs-card-slider" data-wpbs-card-slider style="position:relative;aspect-ratio:4/3;background:#e9ecef;border-radius:8px;overflow:hidden;">';
+		$out = '<div class="wpbs-card-slider" data-wpbs-card-slider>';
 
 		foreach ($slider_images as $idx => $img_id) {
 			$url = wp_get_attachment_image_url($img_id, 'medium_large');
 			if (!$url) continue;
 			$active = $idx === 0 ? ' is-active' : '';
-			$out .= '<div class="wpbs-card-slider__slide' . $active . '"><img src="' . esc_url($url) . '" alt="' . esc_attr(get_the_title($post_id)) . '" loading="lazy" style="width:100%;height:100%;object-fit:cover;"></div>';
+			$out .= '<div class="wpbs-card-slider__slide' . $active . '"><img src="' . esc_url($url) . '" alt="' . esc_attr(get_the_title($post_id)) . '" loading="lazy"></div>';
 		}
 
 		if ($total > 1) {
@@ -292,7 +292,7 @@ class WPBS_Shortcodes
 		$out .= '</div>';
 
 		if ($atts['lightbox'] === 'yes') {
-			$out .= '<div class="wpbs-lightbox" id="wpbs-lightbox" style="display:none;">';
+			$out .= '<div class="wpbs-lightbox" id="wpbs-lightbox">';
 			$out .= '<div class="wpbs-lightbox__overlay"></div>';
 			$out .= '<div class="wpbs-lightbox__container">';
 			$out .= '<button type="button" class="wpbs-lightbox__close" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>';
@@ -494,7 +494,7 @@ class WPBS_Shortcodes
 			$out .= '</div>';
 			$out .= '<button type="button" class="wpbs-show-more-btn" data-wpbs-toggle-expand>Show More</button>';
 		} else {
-			$out .= '<p style="color:#666;">No description available.</p>';
+			$out .= '<p class="wpbs-description-empty">No description available.</p>';
 		}
 		$out .= '</div></details>';
 		}
@@ -717,11 +717,12 @@ class WPBS_Shortcodes
 	private function render_tab_description($post_id, $display = 'block')
 	{
 		$post = get_post($post_id);
-		$out = '<div class="wpbs-tab-pane" data-pane="description" style="display:' . $display . ';">';
+		$class = $display === 'block' ? 'wpbs-tab-pane is-active' : 'wpbs-tab-pane';
+		$out = '<div class="' . $class . '" data-pane="description">';
 		if ($post->post_content) {
 			$out .= apply_filters('the_content', $post->post_content);
 		} else {
-			$out .= '<p style="color:#666;">No description available.</p>';
+			$out .= '<p class="wpbs-description-empty">No description available.</p>';
 		}
 		$out .= '</div>';
 		return $out;
@@ -740,7 +741,8 @@ class WPBS_Shortcodes
 	private function render_tab_measurements($post_id, $display = 'block')
 	{
 		$meta = $this->get_boat_meta($post_id);
-		$out = '<div class="wpbs-tab-pane" data-pane="measurements" style="display:' . $display . ';">';
+		$class = $display === 'block' ? 'wpbs-tab-pane is-active' : 'wpbs-tab-pane';
+		$out = '<div class="' . $class . '" data-pane="measurements">';
 		$out .= '<div class="wpbs-specs-table">';
 
 		$specs = array(
@@ -778,7 +780,8 @@ class WPBS_Shortcodes
 	private function render_tab_propulsion($post_id, $display = 'block')
 	{
 		$meta = $this->get_boat_meta($post_id);
-		$out = '<div class="wpbs-tab-pane" data-pane="propulsion" style="display:' . $display . ';">';
+		$class = $display === 'block' ? 'wpbs-tab-pane is-active' : 'wpbs-tab-pane';
+		$out = '<div class="' . $class . '" data-pane="propulsion">';
 		$out .= '<div class="wpbs-specs-table">';
 
 		$specs = array(
@@ -821,7 +824,8 @@ class WPBS_Shortcodes
 	private function render_tab_features($post_id, $display = 'block')
 	{
 		$meta = $this->get_boat_meta($post_id);
-		$out = '<div class="wpbs-tab-pane" data-pane="features" style="display:' . $display . ';">';
+		$class = $display === 'block' ? 'wpbs-tab-pane is-active' : 'wpbs-tab-pane';
+		$out = '<div class="' . $class . '" data-pane="features">';
 		$out .= '<div class="wpbs-specs-table">';
 
 		$specs = array(
@@ -866,15 +870,15 @@ class WPBS_Shortcodes
 		
 		// Header with title, year/make/model, location, brand
 		$out .= '<div class="wpbs-price-card__header">';
-		$out .= '<h1 style="font-size:18px;font-weight:600;margin:0 0 8px;">' . esc_html($title) . '</h1>';
+		$out .= '<h1 class="wpbs-overview__title">' . esc_html($title) . '</h1>';
 		
 		$year_make_model = trim(($year ?: '') . ' ' . ($make ?: '') . ' ' . ($model ?: ''));
 		if ($year_make_model) {
-			$out .= '<div style="font-size:13px;color:#666;margin-bottom:8px;">' . esc_html($year_make_model) . '</div>';
+			$out .= '<div class="wpbs-overview__subtitle">' . esc_html($year_make_model) . '</div>';
 		}
 		
 		if ($location) {
-			$out .= '<div style="font-size:12px;color:#999;display:flex;align-items:center;gap:4px;">';
+			$out .= '<div class="wpbs-overview__meta">';
 			$out .= '<svg width="12" height="12" viewBox="0 0 24 24" fill="#999"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>';
 			$out .= esc_html($location);
 			$out .= '</div>';
@@ -887,11 +891,11 @@ class WPBS_Shortcodes
 			foreach ($brand_terms as $bt) {
 				$link = get_term_link($bt);
 				if (!is_wp_error($link)) {
-					$brand_links[] = '<a href="' . esc_url($link) . '" style="color:#0066cc;text-decoration:none;">' . esc_html($bt->name) . '</a>';
+					$brand_links[] = '<a href="' . esc_url($link) . '">' . esc_html($bt->name) . '</a>';
 				}
 			}
 			if (!empty($brand_links)) {
-				$out .= '<div style="font-size:12px;color:#999;margin-top:6px;">Brand: ' . wp_kses_post(implode(', ', $brand_links)) . '</div>';
+				$out .= '<div class="wpbs-overview__brand">Brand: ' . wp_kses_post(implode(', ', $brand_links)) . '</div>';
 			}
 		}
 		$out .= '</div>';
@@ -922,9 +926,9 @@ class WPBS_Shortcodes
 					$monthly_payment = $loan_term_months > 0 ? $loan_amount / $loan_term_months : 0;
 				}
 				
-				$out .= '<div class="wpbs-price-card__monthly" style="font-size:14px;color:#666;margin-top:4px;">';
-				$out .= 'Est. <strong style="color:#333;">$' . number_format($monthly_payment) . '/mo</strong>';
-				$out .= '<span style="font-size:11px;color:#999;display:block;margin-top:2px;">';
+				$out .= '<div class="wpbs-price-card__monthly">';
+				$out .= 'Est. <strong>$' . number_format($monthly_payment) . '/mo</strong>';
+				$out .= '<span class="wpbs-price-card__monthly-terms">';
 				$out .= (int)($down_payment_percent * 100) . '% down, ' . number_format($annual_rate * 100, 2) . '% APR, ';
 				$out .= $loan_term_years . ' yr' . ($loan_term_years > 1 ? 's' : '');
 				$out .= '</span></div>';
@@ -935,11 +939,11 @@ class WPBS_Shortcodes
 		
 		// Sold badge
 		if ($is_sold) {
-			$out .= '<span class="wpbs-badge wpbs-badge--sold" style="margin-top:8px;display:inline-block;">Sold</span>';
+			$out .= '<span class="wpbs-badge wpbs-badge--sold wpbs-badge--sold-inline">Sold</span>';
 		}
 		
 		// Buttons
-		$out .= '<div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">';
+		$out .= '<div class="wpbs-buttons-container">';
 		$out .= '<a href="' . esc_url(get_permalink($post_id)) . '#contact" class="wpbs-btn wpbs-btn--primary">';
 		$out .= '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>';
 		$out .= 'Contact Seller</a>';
@@ -976,7 +980,7 @@ class WPBS_Shortcodes
 
 		$out = '<span class="wpbs-price">' . esc_html($price['display']) . '</span>';
 		if ($atts['monthly'] === 'yes' && $price['monthly']) {
-			$out .= ' <span class="wpbs-price-monthly" style="font-size:12px;color:#0066cc;">' . esc_html($price['monthly']) . '</span>';
+			$out .= ' <span class="wpbs-price-monthly">' . esc_html($price['monthly']) . '</span>';
 		}
 		return $out;
 	}
@@ -992,7 +996,7 @@ class WPBS_Shortcodes
 		$location = get_post_meta($post_id, 'wpbs_location', true);
 		if (!$location) return '';
 
-		return '<span class="wpbs-location"><svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>' . esc_html($location) . '</span>';
+		return '<span class="wpbs-location"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>' . esc_html($location) . '</span>';
 	}
 
 	/**
@@ -1263,29 +1267,25 @@ class WPBS_Shortcodes
 
 		// Layout class based on filter position
 		$layout_class = $show_filter ? 'wpbs-filter-layout--' . $filter_position : '';
-
-		// Inline responsive styles scoped to this instance
-		$style = '<style id="' . esc_attr($uid) . '-styles">';
-		$style .= '#' . esc_attr($uid) . ' .wpbs-grid{grid-template-columns:repeat(' . esc_attr($desktop_cols) . ',1fr);}';
-		$style .= '@media (max-width:900px){#' . esc_attr($uid) . ' .wpbs-grid{grid-template-columns:repeat(' . esc_attr($tablet_cols) . ',1fr);}}';
-		$style .= '@media (max-width:600px){#' . esc_attr($uid) . ' .wpbs-grid{grid-template-columns:repeat(' . esc_attr($mobile_cols) . ',1fr);}}';
-		$style .= '</style>';
+		
+		// Grid column classes
+		$grid_classes = 'wpbs-grid wpbs-grid--cols-' . $desktop_cols . ' wpbs-grid--tablet-' . $tablet_cols . ' wpbs-grid--mobile-' . $mobile_cols;
 
 		if (!$q->have_posts()) {
 
-			$out = $style . '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
+			$out = '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 			if ($show_filter) {
 				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_featured, $f_orderby);
 			}
 			$out .= '<div class="wpbs-filter-content">';
 			$out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
-			$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($desktop_cols) . ',1fr);">';
-			$out .= '<div class="wpbs-no-results" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background:#fff; border-radius:8px;"><p style="color:#666;">No boats found.</p></div>';
+			$out .= '<div class="' . esc_attr($grid_classes) . '" data-wpbs-grid>';
+			$out .= '<div class="wpbs-no-results"><p>No boats found.</p></div>';
 			$out .= '</div></div></div>';
 			return $out;
 		}
 
-		$out = $style . '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
+		$out = '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 
 		// Render filter bar if enabled
 		if ($show_filter) {
@@ -1311,10 +1311,10 @@ class WPBS_Shortcodes
 
 		// Loading overlay
 		if ($show_filter) {
-			$out .= '<div class="wpbs-filter-loading" data-wpbs-filter-loading style="display:none;"><div class="wpbs-filter-loading__spinner"></div><span>Loading boats...</span></div>';
+			$out .= '<div class="wpbs-filter-loading" data-wpbs-filter-loading><div class="wpbs-filter-loading__spinner"></div><span>Loading boats...</span></div>';
 		}
 
-		$out .= '<div class="wpbs-grid" data-wpbs-grid style="grid-template-columns:repeat(' . esc_attr($desktop_cols) . ',1fr);">';
+		$out .= '<div class="' . esc_attr($grid_classes) . '" data-wpbs-grid>';
 
 		while ($q->have_posts()) {
 			$q->the_post();
@@ -1408,7 +1408,7 @@ class WPBS_Shortcodes
 		
 		// Pagination for filtered grid (when filter is enabled) or static pagination (when filter is disabled but pagination is enabled)
 		if ($max_pages > 1 && ($show_filter || $show_pagination)) {
-			$out .= '<nav class="wpbs-pagination" data-wpbs-pagination data-max-pages="' . esc_attr($max_pages) . '" data-current-page="1" style="margin-top: 24px; text-align: center;">';
+			$out .= '<nav class="wpbs-pagination" data-wpbs-pagination data-max-pages="' . esc_attr($max_pages) . '" data-current-page="1">';
 			$out .= '<button type="button" class="wpbs-pagination__btn wpbs-pagination__btn--prev" data-wpbs-page="prev" disabled>← Previous</button>';
 			$out .= '<span class="wpbs-pagination__info">Page 1 of ' . esc_html($max_pages) . ' (' . number_format($total) . ' boats)</span>';
 			$out .= '<button type="button" class="wpbs-pagination__btn wpbs-pagination__btn--next" data-wpbs-page="next">Next →</button>';

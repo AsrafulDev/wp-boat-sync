@@ -6,7 +6,7 @@
  *              inventories. Features include API credentials management, field mapping, image import,
  *              delta updates to minimize API usage, deletion handling, detailed logging, WP-CLI commands,
  *              and admin UI for monitoring sync status and run history.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Plugin URI: https://github.com/AsrafulDev/wp-boat-sync
@@ -25,7 +25,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('WPBS_VERSION', '1.1.0');
+define('WPBS_VERSION', '1.1.1');
 define('WPBS_PLUGIN_FILE', __FILE__);
 define('WPBS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPBS_PLUGIN_URL', plugin_dir_url(__FILE__));

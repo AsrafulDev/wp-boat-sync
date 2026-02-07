@@ -788,6 +788,7 @@ class WPBS_Elementor_Price_Card_Widget extends \Elementor\Widget_Base
 		$model = get_post_meta($post_id, 'wpbs_model', true);
 		$location = get_post_meta($post_id, 'wpbs_location', true);
 		$office_phone = get_post_meta($post_id, 'wpbs_office_phone', true);
+        $office_email = get_post_meta($post_id, 'wpbs_office_email', true);
 		
 		// Format price
 		$price_num = floatval($price_raw);
@@ -891,7 +892,7 @@ class WPBS_Elementor_Price_Card_Widget extends \Elementor\Widget_Base
 		
 		// Buttons
 		echo '<div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">';
-		echo '<a href="' . esc_url(get_permalink($post_id)) . '#contact" class="wpbs-btn wpbs-btn--primary">';
+		echo '<a href="mailto:' . esc_url($office_email) . '" class="wpbs-btn wpbs-btn--primary">';
 		echo '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>';
 		echo 'Contact Seller</a>';
 		

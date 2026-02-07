@@ -352,9 +352,33 @@ class WPBS_Elementor_Brand_List_Widget extends \Elementor\Widget_Base
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_brand_list([
-			'show_count' => $settings['show_count'],
-		]);
+		
+		$terms = get_terms(array(
+			'taxonomy' => 'brand',
+			'orderby' => 'name',
+			'hide_empty' => true,
+		));
+		
+		if (is_wp_error($terms) || empty($terms)) {
+			return;
+		}
+		
+		?>
+		<ul class="wpbs-brand-list">
+			<?php foreach ($terms as $t):
+				$link = get_term_link($t);
+				if (is_wp_error($link)) continue;
+			?>
+				<li>
+					<a href="<?php echo esc_url($link); ?>">
+						<?php echo esc_html($t->name); ?>
+						<?php if ($settings['show_count'] === 'yes'): ?>
+							<span class="wpbs-brand-count">(<?php echo intval($t->count); ?>)</span>
+						<?php endif; ?>
+					</a>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<?php
 	}
 }

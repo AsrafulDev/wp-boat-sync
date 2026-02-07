@@ -395,11 +395,123 @@ class WPBS_Elementor_Gallery_Widget extends \Elementor\Widget_Base
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_gallery([
-			'id' => $settings['boat_id'],
-			'post_id' => $settings['post_id'],
-			'lightbox' => $settings['lightbox'],
-		]);
+		
+		// Get boat ID
+		$boat_id = $settings['boat_id'];
+		$post_id = $settings['post_id'];
+		
+		if ($post_id) {
+			$final_id = $post_id;
+		} elseif ($boat_id && is_numeric($boat_id)) {
+			$final_id = $boat_id;
+		} elseif ($boat_id) {
+			$args = array(
+				'post_type' => 'boats',
+				'meta_query' => array(
+					array(
+						'key' => 'wpbs_boat_id',
+						'value' => $boat_id,
+						'compare' => '='
+					)
+				),
+				'posts_per_page' => 1,
+				'fields' => 'ids'
+			);
+			$query = new \WP_Query($args);
+			$final_id = $query->posts ? $query->posts[0] : 0;
+		} else {
+			$final_id = get_the_ID();
+		}
+		
+		if (!$final_id) {
+			return;
+		}
+		
+		// Get gallery images
+		$gallery_meta = get_post_meta($final_id, 'wpbs_gallery', true);
+		$gallery_ids = array();
+		
+		if ($gallery_meta) {
+			$ids = explode(',', $gallery_meta);
+			foreach ($ids as $id) {
+				$id = trim($id);
+				if ($id && wp_attachment_is_image($id)) {
+					$gallery_ids[] = (int)$id;
+				}
+			}
+		}
+		
+		if (empty($gallery_ids) && has_post_thumbnail($final_id)) {
+			$gallery_ids[] = get_post_thumbnail_id($final_id);
+		}
+		
+		$total = count($gallery_ids);
+		if ($total === 0) {
+			return;
+		}
+		
+		$main_id = (int)$gallery_ids[0];
+		$main_large = wp_get_attachment_image_url($main_id, 'large');
+		$lightbox_enabled = $settings['lightbox'] === 'yes';
+		
+		?>
+		<div class="wpbs-gallery" data-wpbs-gallery>
+			<div class="wpbs-gallery__main" data-wpbs-lightbox-trigger>
+				<div class="wpbs-gallery__main-link" id="wpbs-main-link" data-index="0">
+					<img id="wpbs-main-img" class="wpbs-gallery__main-img" src="<?php echo esc_url($main_large); ?>" alt="<?php echo esc_attr(get_the_title($final_id)); ?>">
+				</div>
+				
+				<?php if ($total > 1): ?>
+					<button type="button" class="wpbs-gallery__nav wpbs-gallery__nav--prev" aria-label="Previous" data-wpbs-nav="prev">
+						<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+					</button>
+					<button type="button" class="wpbs-gallery__nav wpbs-gallery__nav--next" aria-label="Next" data-wpbs-nav="next">
+						<svg viewBox="0 0 24 24"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+					</button>
+				<?php endif; ?>
+				
+				<button type="button" class="wpbs-gallery__view-btn" data-wpbs-open-lightbox>
+					<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+					View <?php echo $total; ?> Photos
+				</button>
+			</div>
+			
+			<?php if ($total > 1): ?>
+				<div class="wpbs-gallery__thumbs" role="list">
+					<?php foreach (array_slice($gallery_ids, 0, 20) as $i => $aid): 
+						$thumb = wp_get_attachment_image_url($aid, 'thumbnail');
+						$large = wp_get_attachment_image_url($aid, 'large');
+						$full = wp_get_attachment_image_url($aid, 'full');
+						$active = $i === 0 ? ' is-active' : '';
+					?>
+						<button type="button" class="wpbs-gallery__thumb<?php echo $active; ?>" data-index="<?php echo $i; ?>" data-type="image" data-large="<?php echo esc_url($large); ?>" data-full="<?php echo esc_url($full); ?>">
+							<img src="<?php echo esc_url($thumb); ?>" alt="" loading="lazy">
+						</button>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</div>
+		
+		<?php if ($lightbox_enabled): ?>
+			<div class="wpbs-lightbox" id="wpbs-lightbox">
+				<div class="wpbs-lightbox__overlay"></div>
+				<div class="wpbs-lightbox__container">
+					<button type="button" class="wpbs-lightbox__close" aria-label="Close">
+						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+					</button>
+					<button type="button" class="wpbs-lightbox__nav wpbs-lightbox__nav--prev" aria-label="Previous">
+						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+					</button>
+					<button type="button" class="wpbs-lightbox__nav wpbs-lightbox__nav--next" aria-label="Next">
+						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+					</button>
+					<div class="wpbs-lightbox__content">
+						<img class="wpbs-lightbox__main-img" src="" alt="">
+					</div>
+					<div class="wpbs-lightbox__counter"></div>
+				</div>
+			</div>
+		<?php endif; ?>
+		<?php
 	}
 }

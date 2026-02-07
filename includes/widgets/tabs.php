@@ -333,13 +333,195 @@ class WPBS_Elementor_Tabs_Widget extends \Elementor\Widget_Base
 		$this->end_controls_section();
 	}
 
+	private function get_boat_meta($post_id)
+	{
+		return array(
+			'length' => get_post_meta($post_id, 'wpbs_length', true),
+			'beam' => get_post_meta($post_id, 'wpbs_beam', true),
+			'draft' => get_post_meta($post_id, 'wpbs_draft', true),
+			'displacement' => get_post_meta($post_id, 'wpbs_displacement', true),
+			'dry_weight' => get_post_meta($post_id, 'wpbs_dry_weight', true),
+			'bridge_clearance' => get_post_meta($post_id, 'wpbs_bridge_clearance', true),
+			'deadrise' => get_post_meta($post_id, 'wpbs_deadrise', true),
+			'cabins' => get_post_meta($post_id, 'wpbs_cabins', true),
+			'heads' => get_post_meta($post_id, 'wpbs_heads', true),
+			'engine' => get_post_meta($post_id, 'wpbs_engine', true),
+			'num_engines' => get_post_meta($post_id, 'wpbs_num_engines', true),
+			'total_power' => get_post_meta($post_id, 'wpbs_total_power', true),
+			'engine_hours' => get_post_meta($post_id, 'wpbs_engine_hours', true),
+			'engine_type' => get_post_meta($post_id, 'wpbs_engine_type', true),
+			'engine_make' => get_post_meta($post_id, 'wpbs_engine_make', true),
+			'engine_model' => get_post_meta($post_id, 'wpbs_engine_model', true),
+			'fuel_type' => get_post_meta($post_id, 'wpbs_fuel_type', true),
+			'drive_type' => get_post_meta($post_id, 'wpbs_drive_type', true),
+			'propeller' => get_post_meta($post_id, 'wpbs_propeller', true),
+			'cruising_speed' => get_post_meta($post_id, 'wpbs_cruising_speed', true),
+			'max_speed' => get_post_meta($post_id, 'wpbs_max_speed', true),
+			'fuel_capacity' => get_post_meta($post_id, 'wpbs_fuel_capacity', true),
+			'range' => get_post_meta($post_id, 'wpbs_range', true),
+			'hull_material' => get_post_meta($post_id, 'wpbs_hull_material', true),
+			'hull_id' => get_post_meta($post_id, 'wpbs_hull_id', true),
+			'boat_category' => get_post_meta($post_id, 'wpbs_boat_category', true),
+			'boat_class' => get_post_meta($post_id, 'wpbs_boat_class', true),
+			'condition' => get_post_meta($post_id, 'wpbs_condition', true),
+			'water_capacity' => get_post_meta($post_id, 'wpbs_water_capacity', true),
+		);
+	}
+
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_tabs([
-			'id' => $settings['boat_id'],
-			'post_id' => $settings['post_id'],
-		]);
+		
+		// Get boat ID
+		$boat_id = $settings['boat_id'];
+		$post_id = $settings['post_id'];
+		
+		if ($post_id) {
+			$final_id = $post_id;
+		} elseif ($boat_id && is_numeric($boat_id)) {
+			$final_id = $boat_id;
+		} elseif ($boat_id) {
+			$args = array(
+				'post_type' => 'boats',
+				'meta_query' => array(
+					array(
+						'key' => 'wpbs_boat_id',
+						'value' => $boat_id,
+						'compare' => '='
+					)
+				),
+				'posts_per_page' => 1,
+				'fields' => 'ids'
+			);
+			$query = new \WP_Query($args);
+			$final_id = $query->posts ? $query->posts[0] : 0;
+		} else {
+			$final_id = get_the_ID();
+		}
+		
+		if (!$final_id) {
+			return;
+		}
+		
+		$post = get_post($final_id);
+		$meta = $this->get_boat_meta($final_id);
+		
+		?>
+		<div class="wpbs-tabs">
+			<div class="wpbs-tabs__nav">
+				<button type="button" class="wpbs-tabs__btn is-active" data-tab="description">Description</button>
+				<button type="button" class="wpbs-tabs__btn" data-tab="measurements">Measurements</button>
+				<button type="button" class="wpbs-tabs__btn" data-tab="propulsion">Propulsion</button>
+				<button type="button" class="wpbs-tabs__btn" data-tab="features">Features</button>
+			</div>
+			<div class="wpbs-tabs__content" id="wpbs-tab-content">
+				<!-- Description Tab -->
+				<div class="wpbs-tab-pane is-active" data-pane="description">
+					<?php if ($post->post_content): ?>
+						<?php echo apply_filters('the_content', $post->post_content); ?>
+					<?php else: ?>
+						<p class="wpbs-description-empty">No description available.</p>
+					<?php endif; ?>
+				</div>
+				
+				<!-- Measurements Tab -->
+				<div class="wpbs-tab-pane" data-pane="measurements">
+					<div class="wpbs-specs-table">
+						<?php 
+						$measurements = array(
+							'Length Overall' => $meta['length'],
+							'Beam' => $meta['beam'],
+							'Draft' => $meta['draft'],
+							'Displacement' => $meta['displacement'],
+							'Dry Weight' => $meta['dry_weight'],
+							'Bridge Clearance' => $meta['bridge_clearance'],
+							'Deadrise' => $meta['deadrise'],
+							'Cabins' => $meta['cabins'],
+							'Heads' => $meta['heads'],
+						);
+						foreach ($measurements as $label => $value):
+							if ($value):
+						?>
+							<div class="wpbs-specs-row">
+								<span class="wpbs-specs-row__label"><?php echo esc_html($label); ?></span>
+								<span class="wpbs-specs-row__value"><?php echo esc_html($value); ?></span>
+							</div>
+						<?php endif; endforeach; ?>
+					</div>
+				</div>
+				
+				<!-- Propulsion Tab -->
+				<div class="wpbs-tab-pane" data-pane="propulsion">
+					<div class="wpbs-specs-table">
+						<?php 
+						$propulsion = array(
+							'Engine Summary' => $meta['engine'],
+							'Number of Engines' => $meta['num_engines'],
+							'Total Power' => $meta['total_power'],
+							'Engine Hours' => $meta['engine_hours'],
+							'Engine Type' => $meta['engine_type'],
+							'Engine Make' => $meta['engine_make'],
+							'Engine Model' => $meta['engine_model'],
+							'Fuel Type' => $meta['fuel_type'],
+							'Drive Type' => $meta['drive_type'],
+							'Propeller' => $meta['propeller'],
+							'Cruising Speed' => $meta['cruising_speed'],
+							'Max Speed' => $meta['max_speed'],
+							'Fuel Capacity' => $meta['fuel_capacity'],
+							'Range' => $meta['range'],
+						);
+						foreach ($propulsion as $label => $value):
+							if ($value):
+						?>
+							<div class="wpbs-specs-row">
+								<span class="wpbs-specs-row__label"><?php echo esc_html($label); ?></span>
+								<span class="wpbs-specs-row__value"><?php echo esc_html($value); ?></span>
+							</div>
+						<?php endif; endforeach; ?>
+					</div>
+				</div>
+				
+				<!-- Features Tab -->
+				<div class="wpbs-tab-pane" data-pane="features">
+					<div class="wpbs-specs-table">
+						<?php 
+						$features = array(
+							'Hull Material' => $meta['hull_material'],
+							'Hull ID' => $meta['hull_id'],
+							'Boat Category' => $meta['boat_category'],
+							'Boat Class' => $meta['boat_class'],
+							'Condition' => $meta['condition'],
+							'Water Capacity' => $meta['water_capacity'],
+						);
+						foreach ($features as $label => $value):
+							if ($value):
+						?>
+							<div class="wpbs-specs-row">
+								<span class="wpbs-specs-row__label"><?php echo esc_html($label); ?></span>
+								<span class="wpbs-specs-row__value"><?php echo esc_html($value); ?></span>
+							</div>
+						<?php endif; endforeach; ?>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			var btns = document.querySelectorAll(".wpbs-tabs__btn");
+			var panes = document.querySelectorAll(".wpbs-tab-pane");
+			btns.forEach(function(b) {
+				b.addEventListener("click", function() {
+					var t = b.getAttribute("data-tab");
+					btns.forEach(function(x) { x.classList.remove("is-active"); });
+					b.classList.add("is-active");
+					panes.forEach(function(p) {
+						p.style.display = p.getAttribute("data-pane") === t ? "block" : "none";
+					});
+				});
+			});
+		});
+		</script>
+		<?php
 	}
 }

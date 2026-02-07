@@ -457,9 +457,15 @@
   overflow: hidden;
 }
 
+/* New BEM structure for Elementor widget */
+.wpbs-quick-specs__list {
+  display: contents;
+}
+
+.wpbs-quick-specs__item,
 .wpbs-quick-spec {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   gap: 12px;
   padding: 16px;
@@ -467,17 +473,18 @@
   border-bottom: 1px solid var(--wpbs-border-light);
 }
 
+.wpbs-quick-specs__item:nth-child(4n),
 .wpbs-quick-spec:nth-child(4n) {
   border-right: none;
 }
 
+.wpbs-quick-specs__item:nth-last-child(-n+4),
 .wpbs-quick-spec:nth-last-child(-n+4) {
   border-bottom: none;
 }
 
+.wpbs-quick-specs__icon,
 .wpbs-quick-spec__icon {
-  width: 40px;
-  height: 40px;
   flex-shrink: 0;
 }
 
@@ -486,14 +493,17 @@
   min-width: 0;
 }
 
+.wpbs-quick-specs__label,
 .wpbs-quick-spec__label {
   font-size: 11px;
   color: var(--wpbs-text-muted);
   text-transform: uppercase;
   margin-bottom: 2px;
   font-weight: 500;
+  line-height: 1.2;
 }
 
+.wpbs-quick-specs__value,
 .wpbs-quick-spec__value {
   font-size: 14px;
   font-weight: 600;
@@ -1386,9 +1396,15 @@ body:has(#wpadminbar) .wpbs-sidebar {
   right: 0;
   bottom: 0;
   z-index: 999999;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
+}
+
+.wpbs-lightbox[style*="display:block"],
+.wpbs-lightbox[style*="display: block"],
+.wpbs-lightbox.is-visible {
+  display: flex !important;
 }
 
 .wpbs-lightbox__overlay {
@@ -2281,4 +2297,240 @@ body:has(#wpadminbar) .wpbs-sidebar {
   .wpbs-loan-calculator__result-value--large {
     font-size: 20px;
   }
+}
+
+/*--------------------------------------------------------------
+  Grid Column Classes (for Elementor widget)
+--------------------------------------------------------------*/
+.wpbs-grid--cols-1 { grid-template-columns: repeat(1, 1fr); }
+.wpbs-grid--cols-2 { grid-template-columns: repeat(2, 1fr); }
+.wpbs-grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
+.wpbs-grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
+.wpbs-grid--cols-5 { grid-template-columns: repeat(5, 1fr); }
+.wpbs-grid--cols-6 { grid-template-columns: repeat(6, 1fr); }
+
+@media (max-width: 900px) {
+  .wpbs-grid--tablet-1 { grid-template-columns: repeat(1, 1fr) !important; }
+  .wpbs-grid--tablet-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .wpbs-grid--tablet-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  .wpbs-grid--tablet-4 { grid-template-columns: repeat(4, 1fr) !important; }
+}
+
+@media (max-width: 600px) {
+  .wpbs-grid--mobile-1 { grid-template-columns: repeat(1, 1fr) !important; }
+  .wpbs-grid--mobile-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .wpbs-grid--mobile-3 { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+/*--------------------------------------------------------------
+  No Results Styling
+--------------------------------------------------------------*/
+.wpbs-no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--wpbs-white);
+  border-radius: var(--wpbs-radius-lg);
+}
+
+.wpbs-no-results p {
+  color: var(--wpbs-text-light);
+  margin: 0;
+}
+
+/*--------------------------------------------------------------
+  Filter Loading Overlay
+--------------------------------------------------------------*/
+.wpbs-filter-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.wpbs-filter-loading[style*="display:flex"],
+.wpbs-filter-loading[style*="display: flex"] {
+  display: flex !important;
+}
+
+/*--------------------------------------------------------------
+  Pagination
+--------------------------------------------------------------*/
+.wpbs-pagination {
+  margin-top: 24px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.wpbs-pagination__btn {
+  padding: 8px 16px;
+  background: var(--wpbs-primary);
+  color: var(--wpbs-white);
+  border: none;
+  border-radius: var(--wpbs-radius);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.wpbs-pagination__btn:hover:not(:disabled) {
+  background: var(--wpbs-primary-dark);
+}
+
+.wpbs-pagination__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wpbs-pagination__info {
+  color: var(--wpbs-text-light);
+  font-size: 14px;
+}
+
+/*--------------------------------------------------------------
+  Card Slider Inline Styles
+--------------------------------------------------------------*/
+.wpbs-card-slider {
+  position: relative;
+  aspect-ratio: 4/3;
+  background: #e9ecef;
+  border-radius: var(--wpbs-radius-lg);
+  overflow: hidden;
+}
+
+.wpbs-card-slider__slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*--------------------------------------------------------------
+  Lightbox Hidden State
+--------------------------------------------------------------*/
+.wpbs-lightbox[style*="display:none"],
+.wpbs-lightbox[style*="display: none"] {
+  display: none !important;
+}
+
+/*--------------------------------------------------------------
+  Description No Content
+--------------------------------------------------------------*/
+.wpbs-description-empty {
+  color: var(--wpbs-text-light);
+}
+
+/*--------------------------------------------------------------
+  Tab Panes Display
+--------------------------------------------------------------*/
+.wpbs-tab-pane {
+  display: none;
+}
+
+.wpbs-tab-pane.is-active {
+  display: block;
+}
+
+/*--------------------------------------------------------------
+  Boat Overview Title & Meta
+--------------------------------------------------------------*/
+.wpbs-overview__title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.wpbs-overview__subtitle {
+  font-size: 13px;
+  color: var(--wpbs-text-light);
+  margin-bottom: 8px;
+}
+
+.wpbs-overview__meta {
+  font-size: 12px;
+  color: var(--wpbs-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wpbs-overview__brand {
+  font-size: 12px;
+  color: var(--wpbs-text-muted);
+  margin-top: 6px;
+}
+
+.wpbs-overview__brand a {
+  color: var(--wpbs-primary);
+  text-decoration: none;
+}
+
+.wpbs-overview__brand a:hover {
+  text-decoration: underline;
+}
+
+/*--------------------------------------------------------------
+  Price Card Monthly Payment
+--------------------------------------------------------------*/
+.wpbs-price-card__monthly {
+  font-size: 14px;
+  color: var(--wpbs-text-light);
+  margin-top: 4px;
+}
+
+.wpbs-price-card__monthly strong {
+  color: var(--wpbs-text);
+}
+
+.wpbs-price-card__monthly-terms {
+  font-size: 11px;
+  color: var(--wpbs-text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+/*--------------------------------------------------------------
+  Sold Badge Inline
+--------------------------------------------------------------*/
+.wpbs-badge--sold-inline {
+  margin-top: 8px;
+  display: inline-block;
+}
+
+/*--------------------------------------------------------------
+  Buttons Container
+--------------------------------------------------------------*/
+.wpbs-buttons-container {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/*--------------------------------------------------------------
+  Price Monthly Display
+--------------------------------------------------------------*/
+.wpbs-price-monthly {
+  font-size: 12px;
+  color: var(--wpbs-primary);
+}
+
+/*--------------------------------------------------------------
+  Location Icon
+--------------------------------------------------------------*/
+.wpbs-location svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 4px;
 }
