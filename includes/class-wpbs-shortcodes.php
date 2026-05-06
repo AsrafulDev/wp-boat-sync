@@ -1154,16 +1154,32 @@ class WPBS_Shortcodes
 		$filter_position = in_array($atts['filter_position'], array('top', 'left', 'right')) ? $atts['filter_position'] : 'top';
 		$orderby = sanitize_text_field($atts['orderby']);
 
+		// PAGINATION (SINGLE SOURCE OF TRUTH)
+$paged = 1;
+
+if (isset($_GET['paged']) && $_GET['paged'] !== '') {
+    $paged = max(1, (int) $_GET['paged']);
+} else {
+    $paged = max(
+        1,
+        (int) get_query_var('paged'),
+        (int) get_query_var('page')
+    );
+}
+
+$request = array_merge($_GET, $_POST);
+
+
 		// Get filter values from URL if filter is enabled, or from shortcode attributes
-		$f_category = !empty($atts['category']) ? sanitize_text_field($atts['category']) : (isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '');
-		$f_builder = !empty($atts['builder']) ? sanitize_text_field($atts['builder']) : (isset($_GET['builder']) ? sanitize_text_field($_GET['builder']) : '');
-		$f_location = !empty($atts['location']) ? sanitize_text_field($atts['location']) : (isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '');
-		$f_length_min = isset($_GET['length_min']) ? (float)$_GET['length_min'] : '';
-		$f_length_max = isset($_GET['length_max']) ? (float)$_GET['length_max'] : '';
-		$f_year_min = isset($_GET['year_min']) ? (int)$_GET['year_min'] : '';
-		$f_year_max = isset($_GET['year_max']) ? (int)$_GET['year_max'] : '';
-		$f_price_min = isset($_GET['price_min']) ? (float)$_GET['price_min'] : '';
-		$f_price_max = isset($_GET['price_max']) ? (float)$_GET['price_max'] : '';
+		$f_category = !empty($atts['category']) ? sanitize_text_field($atts['category']) : (isset($request['category']) ? sanitize_text_field($_GET['category']) : '');
+		$f_builder = !empty($atts['builder']) ? sanitize_text_field($atts['builder']) : (isset($request['builder']) ? sanitize_text_field($_GET['builder']) : '');
+		$f_location = !empty($atts['location']) ? sanitize_text_field($atts['location']) : (isset($request['location']) ? sanitize_text_field($_GET['location']) : '');
+		$f_length_min = isset($_GET['length_min']) ? (float)$request['length_min'] : '';
+		$f_length_max = isset($_GET['length_max']) ? (float)$request['length_max'] : '';
+		$f_year_min = isset($_GET['year_min']) ? (int)$request['year_min'] : '';
+		$f_year_max = isset($_GET['year_max']) ? (int)$request['year_max'] : '';
+		$f_price_min = isset($_GET['price_min']) ? (float)$request['price_min'] : '';
+		$f_price_max = isset($_GET['price_max']) ? (float)$request['price_max'] : '';
 		
 		// Handle condition from shortcode attribute or URL
 		$condition_attr = strtolower($atts['condition']);
@@ -1174,8 +1190,8 @@ class WPBS_Shortcodes
 			$f_condition_new = false;
 			$f_condition_used = true;
 		} else {
-			$f_condition_new = isset($_GET['condition_new']) && $_GET['condition_new'] === '1';
-			$f_condition_used = isset($_GET['condition_used']) && $_GET['condition_used'] === '1';
+			$f_condition_new = isset($request['condition_new']) && $request['condition_new'] === '1';
+			$f_condition_used = isset($request['condition_used']) && $request['condition_used'] === '1';
 		}
 		
 		// Handle featured from shortcode attribute or URL
@@ -1188,56 +1204,142 @@ class WPBS_Shortcodes
 			$f_condition_new = true;
 			$f_condition_used = true;
 		}
+	$args = array(
+		'post_type'      => WPBS_POST_TYPE,
+		'post_status'    => 'publish',
+		'posts_per_page' => $ppp,
+		'paged'          => $paged,
+	);
 
-		// Build query args
-		$args = array(
-			'post_type' => WPBS_POST_TYPE,
-			'post_status' => 'publish',
-			'posts_per_page' => $ppp,
-		);
+// ALWAYS initialize meta_query properly
+$meta_query = array();
 
-		// Apply filters to initial query (from both URL and shortcode attributes)
-		$meta_query = array('relation' => 'AND');
+// -------------------------------------------------
+//  SOLD EXCLUSION (FIXED STRUCTURE)
+// -------------------------------------------------
+$meta_query[] = array(
+    'relation' => 'OR',
+    array(
+        'key'     => '_wpbs_is_sold',
+        'value'   => '1',
+        'compare' => '!=',
+        'type'    => 'NUMERIC',
+    ),
+    array(
+        'key'     => '_wpbs_is_sold',
+        'compare' => 'NOT EXISTS',
+    ),
+);
 
-		if ($f_category) {
-			$meta_query[] = array('key' => 'wpbs_boat_category', 'value' => $f_category, 'compare' => '=');
-		}
-		if ($f_builder) {
-			$meta_query[] = array('key' => 'wpbs_make', 'value' => $f_builder, 'compare' => '=');
-		}
-		if ($f_location) {
-			$meta_query[] = array('key' => 'wpbs_location', 'value' => $f_location, 'compare' => 'LIKE');
-		}
-		if ($f_length_min !== '') {
-			$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_min, 'compare' => '>=', 'type' => 'NUMERIC');
-		}
-		if ($f_length_max !== '') {
-			$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $f_length_max, 'compare' => '<=', 'type' => 'NUMERIC');
-		}
-		if ($f_year_min !== '') {
-			$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_min, 'compare' => '>=', 'type' => 'NUMERIC');
-		}
-		if ($f_year_max !== '') {
-			$meta_query[] = array('key' => 'wpbs_model_year', 'value' => $f_year_max, 'compare' => '<=', 'type' => 'NUMERIC');
-		}
-		if ($f_price_min !== '' && $f_price_min > 0) {
-			$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_min, 'compare' => '>=', 'type' => 'NUMERIC');
-		}
-		if ($f_price_max !== '' && $f_price_max > 0) {
-			$meta_query[] = array('key' => 'wpbs_price', 'value' => $f_price_max, 'compare' => '<=', 'type' => 'NUMERIC');
-		}
-		if ($f_condition_new && !$f_condition_used) {
-			$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'new', 'compare' => '=');
-		} elseif ($f_condition_used && !$f_condition_new) {
-			$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'used', 'compare' => '=');
-		}
-		if ($f_featured) {
-			$meta_query[] = array('key' => 'wpbs_featured', 'value' => '1', 'compare' => '=');
-		}
+// -------------------------------------------------
+// OTHER FILTERS
+// -------------------------------------------------
+if ($f_category) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_boat_category',
+        'value'   => $f_category,
+        'compare' => '='
+    );
+}
 
-		if (count($meta_query) > 1) {
-			$args['meta_query'] = $meta_query;
-		}
+if ($f_builder) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_make',
+        'value'   => $f_builder,
+        'compare' => '='
+    );
+}
+
+if ($f_location) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_location',
+        'value'   => $f_location,
+        'compare' => 'LIKE'
+    );
+}
+
+if ($f_length_min !== '') {
+    $meta_query[] = array(
+        'key'     => 'wpbs_length_overall',
+        'value'   => $f_length_min,
+        'compare' => '>=',
+        'type'    => 'NUMERIC'
+    );
+}
+
+if ($f_length_max !== '') {
+    $meta_query[] = array(
+        'key'     => 'wpbs_length_overall',
+        'value'   => $f_length_max,
+        'compare' => '<=',
+        'type'    => 'NUMERIC'
+    );
+}
+
+if ($f_year_min !== '') {
+    $meta_query[] = array(
+        'key'     => 'wpbs_model_year',
+        'value'   => $f_year_min,
+        'compare' => '>=',
+        'type'    => 'NUMERIC'
+    );
+}
+
+if ($f_year_max !== '') {
+    $meta_query[] = array(
+        'key'     => 'wpbs_model_year',
+        'value'   => $f_year_max,
+        'compare' => '<=',
+        'type'    => 'NUMERIC'
+    );
+}
+
+if ($f_price_min !== '' && $f_price_min > 0) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_price',
+        'value'   => $f_price_min,
+        'compare' => '>=',
+        'type'    => 'NUMERIC'
+    );
+}
+
+if ($f_price_max !== '' && $f_price_max > 0) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_price',
+        'value'   => $f_price_max,
+        'compare' => '<=',
+        'type'    => 'NUMERIC'
+    );
+}
+
+// CONDITION FILTER
+if ($f_condition_new && !$f_condition_used) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_condition',
+        'value'   => 'new',
+        'compare' => '='
+    );
+} elseif ($f_condition_used && !$f_condition_new) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_condition',
+        'value'   => 'used',
+        'compare' => '='
+    );
+}
+
+// FEATURED
+if ($f_featured) {
+    $meta_query[] = array(
+        'key'     => 'wpbs_featured',
+        'value'   => '1',
+        'compare' => '='
+    );
+}
+
+// ONLY attach if we actually have conditions
+if (!empty($meta_query)) {
+    $args['meta_query'] = $meta_query;
+}
 
 		// Orderby from URL
 		switch ($f_orderby) {
@@ -1278,7 +1380,7 @@ class WPBS_Shortcodes
 				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_featured, $f_orderby);
 			}
 			$out .= '<div class="wpbs-filter-content">';
-			$out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
+			// $out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
 			$out .= '<div class="' . esc_attr($grid_classes) . '" data-wpbs-grid>';
 			$out .= '<div class="wpbs-no-results"><p>No boats found.</p></div>';
 			$out .= '</div></div></div>';
@@ -1297,7 +1399,7 @@ class WPBS_Shortcodes
 
 		// Header with count and sort
 		$out .= '<div class="wpbs-archive-header">';
-		$out .= '<div class="wpbs-archive-count" data-wpbs-total-count>' . number_format($total) . ' boats</div>';
+		// $out .= '<div class="wpbs-archive-count" data-wpbs-total-count>' . number_format($total) . ' boats</div>';
 		if ($show_filter) {
 			$out .= '<div class="wpbs-archive-sort"><span>Sort:</span>';
 			$out .= '<select data-wpbs-filter="orderby">';
@@ -1319,14 +1421,17 @@ class WPBS_Shortcodes
 		while ($q->have_posts()) {
 			$q->the_post();
 			$post_id = get_the_ID();
+			
 			$gallery_ids = $this->get_gallery_ids($post_id);
 			$slider_images = array_slice($gallery_ids, 0, 4);
 			$total_images = count($gallery_ids);
 			$meta = $this->get_boat_meta($post_id);
 			$price = $this->format_price($meta['price']);
-			
 			// Check if boat is sold (via meta or taxonomy)
 			$is_sold = get_post_meta($post_id, '_wpbs_is_sold', true) === '1';
+			if ($is_sold) {
+    continue;
+}
 			if (!$is_sold) {
 				$boat_statuses = wp_get_object_terms($post_id, 'boat_status', array('fields' => 'slugs'));
 				$is_sold = is_array($boat_statuses) && in_array('sold', $boat_statuses, true);
@@ -1410,7 +1515,7 @@ class WPBS_Shortcodes
 		if ($max_pages > 1 && ($show_filter || $show_pagination)) {
 			$out .= '<nav class="wpbs-pagination" data-wpbs-pagination data-max-pages="' . esc_attr($max_pages) . '" data-current-page="1">';
 			$out .= '<button type="button" class="wpbs-pagination__btn wpbs-pagination__btn--prev" data-wpbs-page="prev" disabled>← Previous</button>';
-			$out .= '<span class="wpbs-pagination__info">Page 1 of ' . esc_html($max_pages) . ' (' . number_format($total) . ' boats)</span>';
+			$out .= '<span class="wpbs-pagination__info">Page 1 of ' . esc_html($max_pages) . ' </span>';
 			$out .= '<button type="button" class="wpbs-pagination__btn wpbs-pagination__btn--next" data-wpbs-page="next">Next →</button>';
 			$out .= '</nav>';
 		}
@@ -1458,9 +1563,14 @@ class WPBS_Shortcodes
 		// Builder
 		$out .= '<div class="wpbs-filter-bar__field"><label>Builder</label>';
 		$out .= '<select name="builder" data-wpbs-filter="builder" onchange="(function(){var b=document.querySelector(\'[data-wpbs-filter-submit]\'); if(b) b.click();})();"><option value="">Any Builder</option>';
-		foreach ($filter_options['builders'] as $b) {
-			$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
-		}
+		// foreach ($filter_options['builders'] as $b) {
+		// 	$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
+		// }
+		$active_builders = $this->get_active_builders();
+
+foreach ($active_builders as $b) {
+	$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
+}
 		$out .= '</select></div>';
 
 		// Location
@@ -1551,6 +1661,39 @@ class WPBS_Shortcodes
 
 		return $out;
 	}
+
+private function get_active_builders()
+{
+	global $wpdb;
+
+	$sql = "
+		SELECT DISTINCT pm_make.meta_value
+		FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->postmeta} pm_make
+			ON p.ID = pm_make.post_id
+			AND pm_make.meta_key = 'wpbs_make'
+		LEFT JOIN {$wpdb->postmeta} pm_sold
+			ON p.ID = pm_sold.post_id
+			AND pm_sold.meta_key = '_wpbs_is_sold'
+		WHERE p.post_type = %s
+		  AND p.post_status = 'publish'
+		  AND (pm_sold.meta_value IS NULL OR pm_sold.meta_value != '1')
+		ORDER BY pm_make.meta_value ASC
+	";
+
+	return array_filter(
+		$wpdb->get_col(
+			$wpdb->prepare($sql, WPBS_POST_TYPE)
+		)
+	);
+}
+
+
+
+
+
+
+
 
 	/**
 	 * Format price for short display (e.g. $1.5M, $500K)

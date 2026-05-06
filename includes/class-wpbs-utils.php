@@ -20,7 +20,7 @@ class WPBS_Utils
 			'rows_per_page' => 100,
 			'download_images' => 1,
 			'max_images_per_boat' => 25,
-			'treat_missing_as_sold' => 1,
+			'treat_missing_as_sold' => 0,
 			'delete_after_days' => 15,
 			'processor_batch_size' => 20,
 			'processor_initial_delay_seconds' => 2,

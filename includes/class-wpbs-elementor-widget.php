@@ -1056,7 +1056,7 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 				'label' => esc_html__('Color', 'wp-boat-sync'),
 				'type' => \Elementor\Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .wpbs-archive-count' => 'color: {{VALUE}} !important;',
+					// '{{WRAPPER}} .wpbs-archive-count' => 'color: {{VALUE}} !important;',
 				],
 			]
 		);
@@ -1065,7 +1065,7 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			\Elementor\Group_Control_Typography::get_type(),
 			[
 				'name' => 'sort_count_typography',
-				'selector' => '{{WRAPPER}} .wpbs-archive-count',
+				// 'selector' => '{{WRAPPER}} .wpbs-archive-count',
 			]
 		);
 
@@ -1234,9 +1234,21 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			}
 		}
 
-		// Call the shortcode
-		$shortcodes = new WPBS_Shortcodes();
-		echo $shortcodes->shortcode_grid($atts);
+		// Detect current page (Elementor-safe)
+$paged = 1;
+
+if (isset($_GET['paged'])) {
+    $paged = max(1, (int) $_GET['paged']);
+} elseif (isset($_POST['paged'])) {
+    $paged = max(1, (int) $_POST['paged']);
+}
+
+// Pass paged to shortcode
+$atts['paged'] = $paged;
+
+// Call the shortcode
+$shortcodes = new WPBS_Shortcodes();
+echo $shortcodes->shortcode_grid($atts);
 	}
 
 }

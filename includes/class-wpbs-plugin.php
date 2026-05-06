@@ -341,6 +341,16 @@ class WPBS_Plugin
 			'paged' => $paged,
 		);
 
+    // --- 1. EXCLUDE SOLD TAXONOMY ---
+    // $args['tax_query'] = array(
+    //     array(
+    //         'taxonomy' => 'boat_status',
+    //         'field'    => 'slug',
+    //         'terms'    => array('sold'),
+    //         'operator' => 'NOT IN',
+    //     ),
+    // );
+
 		// Orderby
 		switch ($orderby) {
 			case 'price_low':
@@ -365,6 +375,20 @@ class WPBS_Plugin
 
 		// Meta query
 		$meta_query = array('relation' => 'AND');
+
+		// --- 2. EXCLUDE SOLD META ---
+		$meta_query[] = array(
+		'relation' => 'OR',
+		array(
+			'key' => '_wpbs_is_sold',
+			'compare' => 'NOT EXISTS',
+		),
+		array(
+			'key' => '_wpbs_is_sold',
+			'value' => '1',
+			'compare' => '!=',
+		),
+		);
 
 		if ($category) {
 			$meta_query[] = array('key' => 'wpbs_boat_category', 'value' => $category, 'compare' => '=');
@@ -405,9 +429,8 @@ class WPBS_Plugin
 			$meta_query[] = array('key' => 'wpbs_featured', 'value' => '1', 'compare' => '=');
 		}
 
-		if (count($meta_query) > 1) {
-			$args['meta_query'] = $meta_query;
-		}
+		// Always assign the meta_query now that it contains the Sold exclusion
+		$args['meta_query'] = $meta_query;
 
 		$query = new WP_Query($args);
 		$total = $query->found_posts;

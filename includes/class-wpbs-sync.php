@@ -578,6 +578,12 @@ class WPBS_Sync
 	{
 		$post_ids = $this->get_post_ids_by_document_id($document_id);
 		$post_id = !empty($post_ids) ? (int)$post_ids[0] : 0;
+		// DO NOT CREATE A NEW POST IF BOAT STATUS IS SOLD
+
+		// if (!$post_id && !empty($data['SalesStatus']) && strtolower($data['SalesStatus']) === 'sold') {
+		// 	return null;
+		// }
+
 		if (count($post_ids) > 1 && $post_id > 0) {
 			$this->dedupe_duplicate_boat_posts($document_id, $post_ids, $post_id);
 		}
@@ -1152,6 +1158,10 @@ class WPBS_Sync
 
 	private function extract_image_urls($data)
 	{
+		// if (!empty($data['SalesStatus']) && strtolower($data['SalesStatus']) === 'sold') {
+		// 	return [];
+		// }
+
 		$urls = array();
 		if (isset($data['Images']) && is_array($data['Images'])) {
 			foreach ($data['Images'] as $img) {

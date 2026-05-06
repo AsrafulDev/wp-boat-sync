@@ -474,7 +474,9 @@
 
       var formData = new FormData();
       formData.append('action', 'wpbs_filter_boats');
-      formData.append('nonce', wpbsFilter.nonce);
+      // formData.append('nonce', wpbsFilter.nonce);
+      formData.append('nonce', wpbsFilter?.nonce || '');
+      console.log('nonce being sent:', wpbsFilter?.nonce);
       formData.append('paged', page);
 
       for (var key in filters) {
