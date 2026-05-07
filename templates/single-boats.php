@@ -145,6 +145,25 @@ while (have_posts()) : the_post();
 					</button>
 					<?php endif; ?>
 
+					<?php
+					// Condition badge for gallery
+					$gallery_badge_label = '';
+					$gallery_badge_slug = '';
+					if ($is_sold) {
+						$gallery_badge_label = 'Sold';
+						$gallery_badge_slug = 'sold';
+					} elseif ($condition && strtolower($condition) === 'new') {
+						$gallery_badge_label = 'New';
+						$gallery_badge_slug = 'new';
+					} elseif ($condition && strtolower($condition) === 'used') {
+						$gallery_badge_label = 'Used';
+						$gallery_badge_slug = 'used';
+					}
+					if ($gallery_badge_label) :
+					?>
+					<div class="wpbs-gallery__condition-badge wpbs-gallery__condition-badge--<?php echo esc_attr($gallery_badge_slug); ?>"><?php echo esc_html($gallery_badge_label); ?></div>
+					<?php endif; ?>
+
 					<?php if ($total_media > 0) : ?>
 					<button type="button" class="wpbs-gallery__view-btn" data-wpbs-open-lightbox>
 						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>

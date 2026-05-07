@@ -1186,12 +1186,19 @@ $request = array_merge($_GET, $_POST);
 		if ($condition_attr === 'new') {
 			$f_condition_new = true;
 			$f_condition_used = false;
+			$f_condition_sold = false;
 		} elseif ($condition_attr === 'used') {
 			$f_condition_new = false;
 			$f_condition_used = true;
+			$f_condition_sold = false;
+		} elseif ($condition_attr === 'sold') {
+			$f_condition_new = false;
+			$f_condition_used = false;
+			$f_condition_sold = true;
 		} else {
 			$f_condition_new = isset($request['condition_new']) && $request['condition_new'] === '1';
 			$f_condition_used = isset($request['condition_used']) && $request['condition_used'] === '1';
+			$f_condition_sold = isset($request['condition_sold']) && $request['condition_sold'] === '1';
 		}
 		
 		// Handle featured from shortcode attribute or URL
@@ -1199,10 +1206,11 @@ $request = array_merge($_GET, $_POST);
 		
 		$f_orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : $orderby;
 
-		// Default both conditions if neither specified and no attribute given
-		if (!$f_condition_new && !$f_condition_used && empty($condition_attr)) {
+		// Default all conditions if none specified and no attribute given
+		if (!$f_condition_new && !$f_condition_used && !$f_condition_sold && empty($condition_attr)) {
 			$f_condition_new = true;
 			$f_condition_used = true;
+			$f_condition_sold = true;
 		}
 	$args = array(
 		'post_type'      => WPBS_POST_TYPE,
@@ -1215,21 +1223,25 @@ $request = array_merge($_GET, $_POST);
 $meta_query = array();
 
 // -------------------------------------------------
-//  SOLD EXCLUSION (FIXED STRUCTURE)
+//  CONDITION FILTER (New / Used / Sold)
 // -------------------------------------------------
-$meta_query[] = array(
-    'relation' => 'OR',
-    array(
-        'key'     => '_wpbs_is_sold',
-        'value'   => '1',
-        'compare' => '!=',
-        'type'    => 'NUMERIC',
-    ),
-    array(
-        'key'     => '_wpbs_is_sold',
-        'compare' => 'NOT EXISTS',
-    ),
-);
+$condition_terms = array();
+if ($f_condition_new)  $condition_terms[] = 'new';
+if ($f_condition_used)  $condition_terms[] = 'used';
+if ($f_condition_sold)  $condition_terms[] = 'sold';
+
+// Only apply a filter when a subset is selected (not all three, not zero).
+if (count($condition_terms) > 0 && count($condition_terms) < 3) {
+	$cond_meta = array('relation' => 'OR');
+	foreach ($condition_terms as $ct) {
+		if ($ct === 'sold') {
+			$cond_meta[] = array('key' => '_wpbs_is_sold', 'value' => '1', 'compare' => '=');
+		} else {
+			$cond_meta[] = array('key' => 'wpbs_condition', 'value' => $ct, 'compare' => '=');
+		}
+	}
+	$meta_query[] = $cond_meta;
+}
 
 // -------------------------------------------------
 // OTHER FILTERS
@@ -1312,20 +1324,7 @@ if ($f_price_max !== '' && $f_price_max > 0) {
     );
 }
 
-// CONDITION FILTER
-if ($f_condition_new && !$f_condition_used) {
-    $meta_query[] = array(
-        'key'     => 'wpbs_condition',
-        'value'   => 'new',
-        'compare' => '='
-    );
-} elseif ($f_condition_used && !$f_condition_new) {
-    $meta_query[] = array(
-        'key'     => 'wpbs_condition',
-        'value'   => 'used',
-        'compare' => '='
-    );
-}
+
 
 // FEATURED
 if ($f_featured) {
@@ -1377,7 +1376,7 @@ if (!empty($meta_query)) {
 
 			$out = '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 			if ($show_filter) {
-				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_featured, $f_orderby);
+				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby);
 			}
 			$out .= '<div class="wpbs-filter-content">';
 			// $out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
@@ -1391,7 +1390,7 @@ if (!empty($meta_query)) {
 
 		// Render filter bar if enabled
 		if ($show_filter) {
-			$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_featured, $f_orderby);
+			$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby);
 		}
 
 		// Wrap content for layout
@@ -1427,14 +1426,23 @@ if (!empty($meta_query)) {
 			$total_images = count($gallery_ids);
 			$meta = $this->get_boat_meta($post_id);
 			$price = $this->format_price($meta['price']);
-			// Check if boat is sold (via meta or taxonomy)
+			// Determine boat condition for badge
 			$is_sold = get_post_meta($post_id, '_wpbs_is_sold', true) === '1';
-			if ($is_sold) {
-    continue;
-}
 			if (!$is_sold) {
 				$boat_statuses = wp_get_object_terms($post_id, 'boat_status', array('fields' => 'slugs'));
 				$is_sold = is_array($boat_statuses) && in_array('sold', $boat_statuses, true);
+			}
+			$condition_label = '';
+			$condition_slug = '';
+			if ($is_sold) {
+				$condition_label = 'Sold';
+				$condition_slug = 'sold';
+			} elseif ($meta['condition'] && strtolower($meta['condition']) === 'new') {
+				$condition_label = 'New';
+				$condition_slug = 'new';
+			} elseif ($meta['condition']) {
+				$condition_label = 'Used';
+				$condition_slug = 'used';
 			}
 
 			$card_class = 'wpbs-card';
@@ -1444,12 +1452,12 @@ if (!empty($meta_query)) {
 
 			$out .= '<article class="' . esc_attr($card_class) . '">';
 			$out .= '<div class="wpbs-card__media wpbs-card-slider" data-wpbs-card-slider>';
-			
-			// Sold badge at top of media
-			if ($is_sold) {
-				$out .= '<div class="wpbs-card__badge--sold">Sold</div>';
+
+			// Condition badge overlay
+			if ($condition_label) {
+				$out .= '<div class="wpbs-card__condition-badge wpbs-card__condition-badge--' . esc_attr($condition_slug) . '">' . esc_html($condition_label) . '</div>';
 			}
-			
+
 			$out .= '<a href="' . esc_url(get_permalink()) . '" class="wpbs-card-slider__link">';
 
 			if (!empty($slider_images)) {
@@ -1474,11 +1482,6 @@ if (!empty($meta_query)) {
 					$out .= '<span class="wpbs-card-slider__dot' . $active . '"></span>';
 				}
 				$out .= '</div>';
-			}
-
-			// New badge only (sold badge is already at top)
-			if (!$is_sold && $meta['condition'] && strtolower($meta['condition']) === 'new') {
-				$out .= '<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--new">New</span></div>';
 			}
 
 			if ($total_images > 0) {
@@ -1529,7 +1532,7 @@ if (!empty($meta_query)) {
 	/**
 	 * Render filter bar HTML
 	 */
-	private function render_filter_bar($category, $builder, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $featured, $orderby)
+	private function render_filter_bar($category, $builder, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $condition_sold, $featured, $orderby)
 	{
 		$filter_options = WPBS_Plugin::get_filter_options();
 
@@ -1568,9 +1571,9 @@ if (!empty($meta_query)) {
 		// }
 		$active_builders = $this->get_active_builders();
 
-foreach ($active_builders as $b) {
-	$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
-}
+		foreach ($active_builders as $b) {
+			$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
+		}
 		$out .= '</select></div>';
 
 		// Location
@@ -1652,6 +1655,7 @@ foreach ($active_builders as $b) {
 		$out .= '<div class="wpbs-filter-bar__checkboxes">';
 		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_new" data-wpbs-filter="condition_new" value="1"' . checked($condition_new, true, false) . '><span>New</span></label>';
 		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_used" data-wpbs-filter="condition_used" value="1"' . checked($condition_used, true, false) . '><span>Used</span></label>';
+		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_sold" data-wpbs-filter="condition_sold" value="1"' . checked($condition_sold, true, false) . '><span>Sold</span></label>';
 		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="featured" data-wpbs-filter="featured" value="1"' . checked($featured, true, false) . '><span>Featured Listings</span></label>';
 		$out .= '</div>';
 		$out .= '<button type="button" class="wpbs-filter-bar__clear" data-wpbs-filter-clear>Clear Filters</button>';

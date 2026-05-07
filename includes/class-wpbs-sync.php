@@ -47,7 +47,29 @@ class WPBS_Sync
 	{
 		$settings = WPBS_Utils::get_settings();
 		$batch_size = max(1, (int)$settings['processor_batch_size']);
-		$this->process_queue_batch($batch_size);
+		$burst_batches = isset($settings['processor_burst_batches']) ? max(1, (int)$settings['processor_burst_batches']) : 8;
+		$burst_timeout = isset($settings['processor_burst_timeout_seconds']) ? max(5, (int)$settings['processor_burst_timeout_seconds']) : 28;
+		$burst_deadline = microtime(true) + $burst_timeout;
+
+		$total_processed = 0;
+		for ($i = 0; $i < $burst_batches; $i++) {
+			if (microtime(true) >= $burst_deadline) {
+				break;
+			}
+			$processed = $this->process_queue_batch($batch_size);
+			$total_processed += $processed;
+			if ($processed === 0) {
+				break;
+			}
+		}
+
+		if ($this->has_pending_jobs()) {
+			$delay = isset($settings['processor_reschedule_seconds']) ? (int)$settings['processor_reschedule_seconds'] : 10;
+			$delay = max(0, min(300, $delay));
+			$this->ensure_processor_scheduled($delay);
+		}
+
+		return $total_processed;
 	}
 
 	/**
@@ -55,13 +77,12 @@ class WPBS_Sync
 	 */
 	public function process_queue_batch($batch_size)
 	{
-		$settings = WPBS_Utils::get_settings();
 		$batch_size = max(1, (int)$batch_size);
 		$start = microtime(true);
 
-		// If a previous PHP request died mid-job (timeout/fatal), jobs can remain stuck in "processing" forever.
-		// Recover those stale locks so the queue can continue.
-		$this->recover_stale_processing_jobs(10 * MINUTE_IN_SECONDS);
+		if ($this->has_processing_jobs()) {
+			$this->recover_stale_processing_jobs(10 * MINUTE_IN_SECONDS);
+		}
 
 		$jobs = $this->lock_next_jobs($batch_size);
 		if (empty($jobs)) {
@@ -73,13 +94,6 @@ class WPBS_Sync
 		}
 
 		$this->record_queue_metrics(count($jobs), microtime(true) - $start);
-
-		// If there are still pending jobs, schedule another processor run.
-		if ($this->has_pending_jobs()) {
-			$delay = isset($settings['processor_reschedule_seconds']) ? (int)$settings['processor_reschedule_seconds'] : 10;
-			$delay = max(0, min(300, $delay));
-			$this->ensure_processor_scheduled($delay);
-		}
 
 		return count($jobs);
 	}
@@ -314,7 +328,11 @@ class WPBS_Sync
 		}
 
 		$eligible_list = implode(',', array_map('intval', $eligible_ids));
-		$wpdb->query("UPDATE {$table} SET status='processing', locked_at='{$now}', not_before=NULL, updated_at='{$now}' WHERE id IN ({$eligible_list}) AND status IN ('pending','failed')");
+		$wpdb->query($wpdb->prepare(
+			"UPDATE {$table} SET status='processing', locked_at=%s, not_before=NULL, updated_at=%s WHERE id IN ({$eligible_list}) AND status IN ('pending','failed')",
+			$now,
+			$now
+		));
 
 		$jobs = $wpdb->get_results("SELECT * FROM {$table} WHERE id IN ({$eligible_list}) AND status='processing' ORDER BY id ASC", ARRAY_A);
 		if (!is_array($jobs)) {
@@ -394,10 +412,15 @@ class WPBS_Sync
 
 	private function run_job($job)
 	{
-		$type = $job['type'];
-		$payload = WPBS_Utils::json_decode_assoc($job['payload']);
+		$job_id = isset($job['id']) ? (int)$job['id'] : 0;
+		$type = isset($job['type']) ? (string)$job['type'] : '';
+		$payload = isset($job['payload']) ? WPBS_Utils::json_decode_assoc($job['payload']) : null;
 		if (!is_array($payload)) {
 			$payload = array();
+		}
+
+		if ($job_id <= 0 || $type === '') {
+			return;
 		}
 
 		try {
@@ -411,13 +434,16 @@ class WPBS_Sync
 				case 'reconcile':
 					$this->job_reconcile($payload);
 					break;
+				case 'download_image':
+					$this->job_download_image($payload);
+					break;
 				default:
 					throw new Exception('Unknown job type: ' . $type);
 			}
 
-			$this->mark_job_done($job['id']);
-		} catch (Throwable $e) {
-			$this->mark_job_failed($job['id'], $e->getMessage());
+			$this->mark_job_done($job_id);
+		} catch (\Throwable $e) {
+			$this->mark_job_failed($job_id, $e->getMessage());
 		}
 	}
 
@@ -962,10 +988,6 @@ class WPBS_Sync
 		$max = max(1, min(200, $max));
 		$image_urls = array_slice($image_urls, 0, $max);
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/media.php';
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-
 		$attachment_ids = array();
 
 		foreach ($image_urls as $idx => $url) {
@@ -973,12 +995,7 @@ class WPBS_Sync
 			$this->upsert_image_row($document_id, $url, $is_featured ? 1 : 0);
 
 			$existing_attachment_id = $this->get_attachment_id_by_source_url($url);
-			if (!$existing_attachment_id) {
-				$existing_attachment_id = $this->download_image_as_attachment($url, $post_id, $document_id);
-			}
-
 			if ($existing_attachment_id) {
-				// If this attachment belongs to this boat, keep its parent pointing at this boat post.
 				$att_doc = (string)get_post_meta((int)$existing_attachment_id, '_wpbs_document_id', true);
 				if ($att_doc === $document_id) {
 					$parent = (int)get_post_field('post_parent', (int)$existing_attachment_id);
@@ -992,16 +1009,88 @@ class WPBS_Sync
 				if ($is_featured && !get_post_thumbnail_id($post_id)) {
 					set_post_thumbnail($post_id, (int)$existing_attachment_id);
 				}
+			} else {
+				$this->enqueue_job('download_image', array(
+					'document_id' => $document_id,
+					'post_id' => $post_id,
+					'url' => $url,
+					'is_featured' => $is_featured,
+				));
 			}
 		}
 
 		$attachment_ids = array_values(array_unique(array_filter(array_map('intval', $attachment_ids))));
 		if (!empty($attachment_ids)) {
-			// Store a gallery list for theme/shortcodes, and optionally for ACF gallery field if present.
 			update_post_meta($post_id, 'wpbs_gallery_attachment_ids', $attachment_ids);
 			if (function_exists('update_field')) {
 				@update_field('wpbs_gallery', $attachment_ids, $post_id);
 			}
+		}
+	}
+
+	private function job_download_image($payload)
+	{
+		$document_id = isset($payload['document_id']) ? WPBS_Utils::sanitize_document_id($payload['document_id']) : '';
+		$post_id = isset($payload['post_id']) ? (int)$payload['post_id'] : 0;
+		$url = isset($payload['url']) ? (string)$payload['url'] : '';
+		$is_featured = !empty($payload['is_featured']);
+
+		if ($document_id === '' || $post_id <= 0 || $url === '') {
+			throw new Exception('Missing required fields for image download.');
+		}
+
+		if (!get_post($post_id)) {
+			throw new Exception('Boat post not found: ' . $post_id);
+		}
+
+		// Race-condition guard: another job may have already downloaded this URL.
+		$existing_id = $this->get_attachment_id_by_source_url($url);
+		if ($existing_id) {
+			$this->link_image_attachment($document_id, $url, (int)$existing_id);
+			$this->append_gallery_attachment($post_id, (int)$existing_id);
+			if ($is_featured && !get_post_thumbnail_id($post_id)) {
+				set_post_thumbnail($post_id, (int)$existing_id);
+			}
+			return;
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$attachment_id = $this->download_image_as_attachment($url, $post_id, $document_id);
+		if (!$attachment_id) {
+			throw new Exception('Failed to download image: ' . $url);
+		}
+
+		$this->link_image_attachment($document_id, $url, $attachment_id);
+		$this->append_gallery_attachment($post_id, $attachment_id);
+		if ($is_featured && !get_post_thumbnail_id($post_id)) {
+			set_post_thumbnail($post_id, $attachment_id);
+		}
+	}
+
+	private function append_gallery_attachment($post_id, $attachment_id)
+	{
+		$post_id = (int)$post_id;
+		$attachment_id = (int)$attachment_id;
+		if ($post_id <= 0 || $attachment_id <= 0) {
+			return;
+		}
+
+		$existing = get_post_meta($post_id, 'wpbs_gallery_attachment_ids', true);
+		if (!is_array($existing)) {
+			$existing = array();
+		}
+		$existing = array_map('intval', $existing);
+		if (!in_array($attachment_id, $existing, true)) {
+			$existing[] = $attachment_id;
+		}
+		$existing = array_values(array_unique(array_filter($existing)));
+		update_post_meta($post_id, 'wpbs_gallery_attachment_ids', $existing);
+
+		if (function_exists('update_field')) {
+			@update_field('wpbs_gallery', $existing, $post_id);
 		}
 	}
 
@@ -1362,7 +1451,11 @@ class WPBS_Sync
 
 		$id_list = implode(',', array_map('intval', $ids));
 		if ($id_list !== '') {
-			$wpdb->query("UPDATE {$table} SET status='processing', locked_at='{$now}', updated_at='{$now}' WHERE id IN ({$id_list}) AND status='pending'");
+			$wpdb->query($wpdb->prepare(
+				"UPDATE {$table} SET status='processing', locked_at=%s, updated_at=%s WHERE id IN ({$id_list}) AND status='pending'",
+				$now,
+				$now
+			));
 		}
 
 		return $rows;
@@ -1411,6 +1504,14 @@ class WPBS_Sync
 		global $wpdb;
 		$table = WPBS_DB::table_queue();
 		$count = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status='pending'");
+		return $count > 0;
+	}
+
+	private function has_processing_jobs()
+	{
+		global $wpdb;
+		$table = WPBS_DB::table_queue();
+		$count = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status='processing'");
 		return $count > 0;
 	}
 

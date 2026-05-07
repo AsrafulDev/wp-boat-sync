@@ -23,6 +23,8 @@ class WPBS_Utils
 			'treat_missing_as_sold' => 0,
 			'delete_after_days' => 15,
 			'processor_batch_size' => 20,
+			'processor_burst_batches' => 8,
+			'processor_burst_timeout_seconds' => 28,
 			'processor_initial_delay_seconds' => 2,
 			'processor_reschedule_seconds' => 5,
 			'use_default_templates' => 1,

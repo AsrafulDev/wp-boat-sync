@@ -71,13 +71,15 @@ class WPBS_Plugin
 		}
 
 		$this->shortcodes->init();
+
+		WPBS_DB::add_missing_indexes();
 	}
 
 	public static function activate()
 	{
 		WPBS_DB::install();
+		WPBS_DB::add_missing_indexes();
 		self::schedule_cron_events();
-		// Ensure rewrite rules include our /brand/ index
 		flush_rewrite_rules();
 		self::schedule_cleanup_cron();
 	}
@@ -126,7 +128,7 @@ class WPBS_Plugin
 	public static function reschedule_auto_sync($frequency)
 	{
 		$frequency = is_string($frequency) ? strtolower($frequency) : 'off';
-		$frequency = in_array($frequency, array('off', 'hourly', 'daily'), true) ? $frequency : 'off';
+		$frequency = in_array($frequency, array('off', 'hourly', '6hours', 'daily'), true) ? $frequency : 'off';
 
 		wp_clear_scheduled_hook(WPBS_CRON_AUTO_SYNC);
 		if ($frequency === 'off') {
@@ -140,6 +142,10 @@ class WPBS_Plugin
 
 	public function add_cron_schedules($schedules)
 	{
+		$schedules['6hours'] = array(
+			'interval' => 6 * HOUR_IN_SECONDS,
+			'display' => __('Every 6 Hours', 'wpbs'),
+		);
 		return $schedules;
 	}
 
@@ -331,6 +337,7 @@ class WPBS_Plugin
 		$price_max = isset($_POST['price_max']) ? (float)$_POST['price_max'] : '';
 		$condition_new = isset($_POST['condition_new']) && $_POST['condition_new'] === '1';
 		$condition_used = isset($_POST['condition_used']) && $_POST['condition_used'] === '1';
+		$condition_sold = isset($_POST['condition_sold']) && $_POST['condition_sold'] === '1';
 		$featured = isset($_POST['featured']) && $_POST['featured'] === '1';
 
 		// Build query args
@@ -376,19 +383,23 @@ class WPBS_Plugin
 		// Meta query
 		$meta_query = array('relation' => 'AND');
 
-		// --- 2. EXCLUDE SOLD META ---
-		$meta_query[] = array(
-		'relation' => 'OR',
-		array(
-			'key' => '_wpbs_is_sold',
-			'compare' => 'NOT EXISTS',
-		),
-		array(
-			'key' => '_wpbs_is_sold',
-			'value' => '1',
-			'compare' => '!=',
-		),
-		);
+		// --- 2. CONDITION FILTER (New / Used / Sold) ---
+		$condition_terms = array();
+		if ($condition_new)  $condition_terms[] = 'new';
+		if ($condition_used)  $condition_terms[] = 'used';
+		if ($condition_sold)  $condition_terms[] = 'sold';
+
+		if (count($condition_terms) > 0 && count($condition_terms) < 3) {
+			$cond_meta = array('relation' => 'OR');
+			foreach ($condition_terms as $ct) {
+				if ($ct === 'sold') {
+					$cond_meta[] = array('key' => '_wpbs_is_sold', 'value' => '1', 'compare' => '=');
+				} else {
+					$cond_meta[] = array('key' => 'wpbs_condition', 'value' => $ct, 'compare' => '=');
+				}
+			}
+			$meta_query[] = $cond_meta;
+		}
 
 		if ($category) {
 			$meta_query[] = array('key' => 'wpbs_boat_category', 'value' => $category, 'compare' => '=');
@@ -418,12 +429,7 @@ class WPBS_Plugin
 			$meta_query[] = array('key' => 'wpbs_price', 'value' => $price_max, 'compare' => '<=', 'type' => 'NUMERIC');
 		}
 
-		// Condition filter (New/Used)
-		if ($condition_new && !$condition_used) {
-			$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'new', 'compare' => '=');
-		} elseif ($condition_used && !$condition_new) {
-			$meta_query[] = array('key' => 'wpbs_condition', 'value' => 'used', 'compare' => '=');
-		}
+
 
 		if ($featured) {
 			$meta_query[] = array('key' => 'wpbs_featured', 'value' => '1', 'compare' => '=');
@@ -514,10 +520,22 @@ class WPBS_Plugin
 					<?php endforeach; ?>
 				</div>
 				<?php endif; ?>
-				<?php if ($is_sold) : ?>
-				<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--sold">Sold</span></div>
-				<?php elseif ($condition && strtolower($condition) === 'new') : ?>
-				<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--new">New</span></div>
+				<?php
+				$badge_label = '';
+				$badge_slug = '';
+				if ($is_sold) {
+					$badge_label = 'Sold';
+					$badge_slug = 'sold';
+				} elseif ($condition && strtolower($condition) === 'new') {
+					$badge_label = 'New';
+					$badge_slug = 'new';
+				} elseif ($condition) {
+					$badge_label = 'Used';
+					$badge_slug = 'used';
+				}
+				if ($badge_label) :
+				?>
+				<div class="wpbs-card__condition-badge wpbs-card__condition-badge--<?php echo esc_attr($badge_slug); ?>"><?php echo esc_html($badge_label); ?></div>
 				<?php endif; ?>
 				<?php if ($total_images > 0) : ?>
 				<div class="wpbs-card__photo-count">

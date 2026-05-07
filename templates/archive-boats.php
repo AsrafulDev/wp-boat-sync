@@ -32,13 +32,16 @@ $f_price_min = isset($_GET['price_min']) ? (float)$_GET['price_min'] : '';
 $f_price_max = isset($_GET['price_max']) ? (float)$_GET['price_max'] : '';
 $f_condition_new = isset($_GET['condition_new']) && $_GET['condition_new'] === '1';
 $f_condition_used = isset($_GET['condition_used']) && $_GET['condition_used'] === '1';
+$f_condition_sold = isset($_GET['condition_sold']) && $_GET['condition_sold'] === '1';
+
 $f_featured = isset($_GET['featured']) && $_GET['featured'] === '1';
 $f_orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'date';
 
-// Default both conditions checked if neither specified
-if (!$f_condition_new && !$f_condition_used) {
+// Default all conditions if none specified
+if (!$f_condition_new && !$f_condition_used && !$f_condition_sold) {
 	$f_condition_new = true;
 	$f_condition_used = true;
+	$f_condition_sold = true;
 }
 
 // If viewing a brand taxonomy archive, preselect the builder filter and mark brand page
@@ -189,6 +192,10 @@ function wpbs_format_price_short($price) {
 					<span>Used</span>
 				</label>
 				<label class="wpbs-filter-bar__checkbox">
+					<input type="checkbox" name="condition_sold" data-wpbs-filter="condition_sold" value="1" <?php checked($f_condition_sold); ?>>
+					<span>Sold</span>
+				</label>
+				<label class="wpbs-filter-bar__checkbox">
 					<input type="checkbox" name="featured" data-wpbs-filter="featured" value="1" <?php checked($f_featured); ?>>
 					<span>Featured Listings</span>
 				</label>
@@ -296,10 +303,22 @@ function wpbs_format_price_short($price) {
 						<?php endforeach; ?>
 					</div>
 					<?php endif; ?>
-					<?php if ($is_sold) : ?>
-					<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--sold">Sold</span></div>
-					<?php elseif ($condition && strtolower($condition) === 'new') : ?>
-					<div class="wpbs-card__badge"><span class="wpbs-badge wpbs-badge--new">New</span></div>
+					<?php
+					$badge_label = '';
+					$badge_slug = '';
+					if ($is_sold) {
+						$badge_label = 'Sold';
+						$badge_slug = 'sold';
+					} elseif ($condition && strtolower($condition) === 'new') {
+						$badge_label = 'New';
+						$badge_slug = 'new';
+					} elseif ($condition) {
+						$badge_label = 'Used';
+						$badge_slug = 'used';
+					}
+					if ($badge_label) :
+					?>
+					<div class="wpbs-card__condition-badge wpbs-card__condition-badge--<?php echo esc_attr($badge_slug); ?>"><?php echo esc_html($badge_label); ?></div>
 					<?php endif; ?>
 					<?php if ($total_images > 0) : ?>
 					<div class="wpbs-card__photo-count">

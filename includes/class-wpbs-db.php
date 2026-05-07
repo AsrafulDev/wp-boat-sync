@@ -91,4 +91,31 @@ class WPBS_DB
 
 		add_option('wpbs_db_version', WPBS_VERSION);
 	}
+
+	/**
+	 * Add missing indexes for queue performance.
+	 * Safe to call on every init — uses IF NOT EXISTS.
+	 */
+	public static function add_missing_indexes()
+	{
+		global $wpdb;
+		$queue = self::table_queue();
+
+		// Composite index for the common lock query:
+		// WHERE status='pending' AND (not_before IS NULL OR not_before <= NOW()) ORDER BY id ASC
+		$index_name = 'status_not_before_id';
+		$exists = $wpdb->get_var($wpdb->prepare(
+			"SELECT COUNT(*) FROM information_schema.statistics
+			 WHERE table_schema = DATABASE()
+			   AND table_name = %s
+			   AND index_name = %s",
+			$queue,
+			$index_name
+		));
+
+		if (!$exists) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query("ALTER TABLE {$queue} ADD INDEX `{$index_name}` (`status`, `not_before`, `id`)");
+		}
+	}
 }

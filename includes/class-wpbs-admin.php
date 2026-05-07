@@ -96,8 +96,8 @@ class WPBS_Admin
 		wp_localize_script('wpbs-admin-worker-popup', 'WPBS_WORKER', array(
 			'ajaxUrl' => admin_url('admin-ajax.php'),
 			'nonce' => wp_create_nonce('wpbs_queue_worker_ajax'),
-			'tickMs' => 500,
-			'batchSize' => 5,
+			'tickMs' => 800,
+			'batchSize' => 2,
 		));
 		wp_enqueue_script('wpbs-admin-worker-popup');
 
@@ -144,14 +144,19 @@ class WPBS_Admin
 			if ($job_id > 0) {
 				if ((string)$_GET['wpbs_action'] === 'run_one') {
 					$res = $this->sync->run_queue_jobs_by_ids(array($job_id));
-					wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&ran=' . (int)$res['ran'] . '&done=' . (int)$res['done'] . '&failed=' . (int)$res['failed']));
+					$url = admin_url('admin.php?page=wpbs-queue') . '&ran=' . (int)$res['ran'] . '&done=' . (int)$res['done'] . '&failed=' . (int)$res['failed'];
+					nocache_headers();
+					wp_safe_redirect($url);
 					exit;
 				}
 				if ((string)$_GET['wpbs_action'] === 'delete_one') {
 					global $wpdb;
-					$table = WPBS_DB::table_queue();
-					$wpdb->delete($table, array('id' => $job_id), array('%d'));
-					wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&deleted=1'));
+					$qtable = WPBS_DB::table_queue();
+					$db_result = $wpdb->delete($qtable, array('id' => $job_id), array('%d'));
+					$deleted = ($db_result !== false) ? (int)$db_result : 0;
+					$url = admin_url('admin.php?page=wpbs-queue') . '&deleted=' . $deleted;
+					nocache_headers();
+					wp_safe_redirect($url);
 					exit;
 				}
 			}
@@ -162,7 +167,7 @@ class WPBS_Admin
 		// Handle bulk actions.
 		$action = $table->current_action();
 		if ($action) {
-			check_admin_referer('bulk-queue');
+			check_admin_referer('bulk-queue', 'wpbs_queue_nonce');
 			$job_ids = isset($_REQUEST['queue_ids']) ? (array)$_REQUEST['queue_ids'] : array();
 			$job_ids = array_map('intval', $job_ids);
 			$job_ids = array_values(array_filter($job_ids));
@@ -171,21 +176,27 @@ class WPBS_Admin
 				switch ($action) {
 					case 'run_selected':
 						$res = $this->sync->run_queue_jobs_by_ids($job_ids);
-						wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&ran=' . (int)$res['ran'] . '&done=' . (int)$res['done'] . '&failed=' . (int)$res['failed']));
+						$url = admin_url('admin.php?page=wpbs-queue') . '&ran=' . (int)$res['ran'] . '&done=' . (int)$res['done'] . '&failed=' . (int)$res['failed'];
+						nocache_headers();
+						wp_safe_redirect($url);
 						exit;
 					case 'delete_selected':
 						global $wpdb;
 						$qtable = WPBS_DB::table_queue();
 						$id_list = implode(',', array_map('intval', $job_ids));
+						$deleted = 0;
 						if ($id_list !== '') {
-							$wpdb->query("DELETE FROM {$qtable} WHERE id IN ({$id_list})");
+							$deleted = (int)$wpdb->query("DELETE FROM {$qtable} WHERE id IN ({$id_list})");
 						}
-						wp_safe_redirect(admin_url('admin.php?page=wpbs-queue&deleted=' . count($job_ids)));
+						$url = admin_url('admin.php?page=wpbs-queue') . '&deleted=' . $deleted;
+						nocache_headers();
+						wp_safe_redirect($url);
 						exit;
 				}
 			}
 
-			wp_safe_redirect(admin_url('admin.php?page=wpbs-queue'));
+			nocache_headers();
+			wp_redirect(admin_url('admin.php?page=wpbs-queue'));
 			exit;
 		}
 
@@ -219,8 +230,8 @@ class WPBS_Admin
 		// Single POST form so bulk actions + search/filter all work together.
 		echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=wpbs-queue')) . '">';
 		echo '<input type="hidden" name="page" value="wpbs-queue" />';
-		wp_nonce_field('bulk-queue');
 		$table->search_box(__('Search jobs'), 'wpbs-queue');
+		wp_nonce_field('bulk-queue', 'wpbs_queue_nonce', false);
 		$table->display();
 		echo '</form>';
 
@@ -454,7 +465,7 @@ class WPBS_Admin
 		// Handle bulk actions.
 		$action = $table->current_action();
 		if ($action) {
-			check_admin_referer('bulk-boats');
+			check_admin_referer('bulk-boats', 'wpbs_boats_nonce');
 			$post_ids = isset($_REQUEST['post_ids']) ? (array)$_REQUEST['post_ids'] : array();
 			$post_ids = array_map('intval', $post_ids);
 			$post_ids = array_values(array_filter($post_ids));
@@ -491,8 +502,8 @@ class WPBS_Admin
 		// Single POST form so bulk actions + search/filter all work together.
 		echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=wpbs-boats')) . '">';
 		echo '<input type="hidden" name="page" value="wpbs-boats" />';
-		wp_nonce_field('bulk-boats');
 		$table->search_box(__('Search boats'), 'wpbs-boats');
+		wp_nonce_field('bulk-boats', 'wpbs_boats_nonce', false);
 		$table->display();
 		echo '</form>';
 
@@ -735,10 +746,10 @@ class WPBS_Admin
 			'failed' => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$queue_table} WHERE status='failed'"),
 		);
 
-		// Queue hourly overview (last 24 hours): how many jobs were updated each hour into each status.
+		// Queue hourly overview (last 24 hours). Pending by created_at; processing/done/failed by updated_at.
 		$hours = 24;
 		$end_ts = current_time('timestamp');
-		$start_ts = $end_ts - (($hours - 1) * HOUR_IN_SECONDS);
+		$start_ts = ($end_ts + 2) - (($hours - 3) * HOUR_IN_SECONDS);
 		$labels_hours = array();
 		$keys_hours = array();
 		for ($i = 0; $i < $hours; $i++) {
@@ -754,25 +765,46 @@ class WPBS_Admin
 			'failed' => array(),
 		);
 		$since_mysql = wp_date('Y-m-d H:00:00', $start_ts);
-		$hour_rows = $wpdb->get_results(
+		// Pending: when jobs were created (incoming work rate).
+		$pending_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:00:00') AS h, COUNT(*) AS c
+				 FROM {$queue_table}
+				 WHERE created_at >= %s AND status = 'pending'
+				 GROUP BY h
+				 ORDER BY h ASC",
+				$since_mysql
+			),
+			ARRAY_A
+		);
+		if (is_array($pending_rows)) {
+			foreach ($pending_rows as $pr) {
+				$h = isset($pr['h']) ? (string)$pr['h'] : '';
+				if ($h !== '') {
+					$hourly_map['pending'][$h] = (int)$pr['c'];
+				}
+			}
+		}
+
+		// Processing / done / failed: when status last changed.
+		$status_rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT DATE_FORMAT(updated_at, '%%Y-%%m-%%d %%H:00:00') AS h, status, COUNT(*) AS c
 				 FROM {$queue_table}
 				 WHERE updated_at >= %s
-				   AND status IN ('pending','processing','done','failed')
+				   AND status IN ('processing','done','failed')
 				 GROUP BY h, status
 				 ORDER BY h ASC",
 				$since_mysql
 			),
 			ARRAY_A
 		);
-		if (is_array($hour_rows)) {
-			foreach ($hour_rows as $hr) {
-				$h = isset($hr['h']) ? (string)$hr['h'] : '';
-				$st = isset($hr['status']) ? (string)$hr['status'] : '';
-				$c = isset($hr['c']) ? (int)$hr['c'] : 0;
+		if (is_array($status_rows)) {
+			foreach ($status_rows as $sr) {
+				$h = isset($sr['h']) ? (string)$sr['h'] : '';
+				$st = isset($sr['status']) ? (string)$sr['status'] : '';
 				if ($h !== '' && isset($hourly_map[$st])) {
-					$hourly_map[$st][$h] = $c;
+					$hourly_map[$st][$h] = (int)$sr['c'];
 				}
 			}
 		}
@@ -802,9 +834,11 @@ class WPBS_Admin
 		} elseif ($remaining_jobs > 0) {
 			$settings = WPBS_Utils::get_settings();
 			$batch = isset($settings['processor_batch_size']) ? max(1, (int)$settings['processor_batch_size']) : 10;
+			$burst = isset($settings['processor_burst_batches']) ? max(1, (int)$settings['processor_burst_batches']) : 8;
 			$delay = isset($settings['processor_reschedule_seconds']) ? max(1, (int)$settings['processor_reschedule_seconds']) : 10;
-			$runs_needed = (int)ceil($remaining_jobs / $batch);
-			$eta_seconds = $runs_needed * $delay;
+			$jobs_per_tick = $batch * $burst;
+			$ticks_needed = (int)ceil($remaining_jobs / $jobs_per_tick);
+			$eta_seconds = $ticks_needed * $delay;
 		}
 
 		// Status counts + last sync + series from custom boats table.
@@ -818,7 +852,7 @@ class WPBS_Admin
 		// Sync activity: last 7 days hourly (168 hours)
 		$sync_hours = 7 * 24; // 168 hours = 7 days
 		$sync_end_ts = current_time('timestamp');
-		$sync_start_ts = $sync_end_ts - (($sync_hours - 1) * HOUR_IN_SECONDS);
+		$sync_start_ts = ($sync_end_ts + 2) - (($sync_hours - 3) * HOUR_IN_SECONDS);
 		$labels = array();
 		$values = array();
 		$sync_keys = array();
@@ -894,6 +928,7 @@ class WPBS_Admin
 		$freq = isset($settings['auto_sync_frequency']) ? (string)$settings['auto_sync_frequency'] : 'off';
 		echo '<option value="off" ' . selected($freq, 'off', false) . '>Off</option>';
 		echo '<option value="hourly" ' . selected($freq, 'hourly', false) . '>Hourly</option>';
+		echo '<option value="6hours" ' . selected($freq, '6hours', false) . '>Every 6 Hours</option>';
 		echo '<option value="daily" ' . selected($freq, 'daily', false) . '>Daily</option>';
 		echo '</select></td></tr>';
 		echo '<tr><th scope="row"><label for="rows_per_page">Rows per page</label></th><td><input name="rows_per_page" id="rows_per_page" type="number" min="1" max="100" value="' . esc_attr($settings['rows_per_page']) . '" /> <span style="opacity:.75;">(Boats.com API max 100)</span></td></tr>';
@@ -901,8 +936,10 @@ class WPBS_Admin
 		echo '<tr><th scope="row">Download images</th><td><label><input type="checkbox" name="download_images" value="1" ' . checked(!empty($settings['download_images']), true, false) . ' /> Enable</label></td></tr>';
 		echo '<tr><th scope="row"><label for="max_images_per_boat">Max images per boat</label></th><td><input name="max_images_per_boat" id="max_images_per_boat" type="number" min="1" max="200" value="' . esc_attr($settings['max_images_per_boat']) . '" /></td></tr>';
 		echo '<tr><th scope="row">Treat missing as sold</th><td><label><input type="checkbox" name="treat_missing_as_sold" value="1" ' . checked(!empty($settings['treat_missing_as_sold']), true, false) . ' /> Mark missing listings as sold and schedule delete</label></td></tr>';
-		echo '<tr><th scope="row"><label for="processor_batch_size">Queue batch size</label></th><td><input name="processor_batch_size" id="processor_batch_size" type="number" min="1" max="100" value="' . esc_attr($settings['processor_batch_size']) . '" /> <p class="description">How many jobs to process per cron run (higher = faster, but heavier).</p></td></tr>';
-		echo '<tr><th scope="row"><label for="processor_reschedule_seconds">Queue reschedule (seconds)</label></th><td><input name="processor_reschedule_seconds" id="processor_reschedule_seconds" type="number" min="0" max="300" value="' . esc_attr($settings['processor_reschedule_seconds']) . '" /> <p class="description">Delay before the next worker run while jobs are pending.</p></td></tr>';
+		echo '<tr><th scope="row"><label for="processor_batch_size">Queue batch size</label></th><td><input name="processor_batch_size" id="processor_batch_size" type="number" min="1" max="100" value="' . esc_attr($settings['processor_batch_size']) . '" /> <p class="description">Jobs per batch. Higher = more work per tick.</p></td></tr>';
+		echo '<tr><th scope="row"><label for="processor_burst_batches">Burst batches</label></th><td><input name="processor_burst_batches" id="processor_burst_batches" type="number" min="1" max="50" value="' . esc_attr(isset($settings['processor_burst_batches']) ? (int)$settings['processor_burst_batches'] : 8) . '" /> <p class="description">How many batches to run per cron execution before yielding. Higher = processes more of the queue each tick.</p></td></tr>';
+		echo '<tr><th scope="row"><label for="processor_burst_timeout_seconds">Burst timeout (seconds)</label></th><td><input name="processor_burst_timeout_seconds" id="processor_burst_timeout_seconds" type="number" min="5" max="55" value="' . esc_attr(isset($settings['processor_burst_timeout_seconds']) ? (int)$settings['processor_burst_timeout_seconds'] : 28) . '" /> <p class="description">Max time a cron run may spend processing before yielding. Keep well below PHP max_execution_time.</p></td></tr>';
+		echo '<tr><th scope="row"><label for="processor_reschedule_seconds">Queue reschedule (seconds)</label></th><td><input name="processor_reschedule_seconds" id="processor_reschedule_seconds" type="number" min="0" max="300" value="' . esc_attr($settings['processor_reschedule_seconds']) . '" /> <p class="description">Delay before next cron tick when work remains.</p></td></tr>';
 		echo '<tr><th scope="row">Use plugin templates</th><td><label><input type="checkbox" name="use_default_templates" value="1" ' . checked(!empty($settings['use_default_templates']), true, false) . ' /> Use built-in single and archive templates</label><p class="description">When disabled, your theme\'s templates will be used instead.</p></td></tr>';
 		echo '<tr><th scope="row"><label for="style_grid_columns">Grid columns</label></th><td><input name="style_grid_columns" id="style_grid_columns" type="number" min="1" max="6" value="' . esc_attr($settings['style_grid_columns']) . '" /></td></tr>';
 		echo '<tr><th scope="row"><label for="style_grid_gap">Grid spacing (px)</label></th><td><input name="style_grid_gap" id="style_grid_gap" type="number" min="0" max="80" value="' . esc_attr($settings['style_grid_gap']) . '" /></td></tr>';
@@ -1444,6 +1481,8 @@ class WPBS_Admin
 			'max_images_per_boat' => isset($_POST['max_images_per_boat']) ? (int)$_POST['max_images_per_boat'] : 25,
 			'treat_missing_as_sold' => !empty($_POST['treat_missing_as_sold']) ? 1 : 0,
 			'processor_batch_size' => isset($_POST['processor_batch_size']) ? (int)$_POST['processor_batch_size'] : 10,
+			'processor_burst_batches' => isset($_POST['processor_burst_batches']) ? (int)$_POST['processor_burst_batches'] : 8,
+			'processor_burst_timeout_seconds' => isset($_POST['processor_burst_timeout_seconds']) ? (int)$_POST['processor_burst_timeout_seconds'] : 28,
 			'processor_reschedule_seconds' => isset($_POST['processor_reschedule_seconds']) ? (int)$_POST['processor_reschedule_seconds'] : 10,
 			'use_default_templates' => !empty($_POST['use_default_templates']) ? 1 : 0,
 			'style_grid_columns' => isset($_POST['style_grid_columns']) ? (int)$_POST['style_grid_columns'] : 3,
@@ -1496,17 +1535,19 @@ class WPBS_Admin
 		check_ajax_referer('wpbs_queue_worker_ajax', 'nonce');
 
 		$batch_size = isset($_POST['batchSize']) ? (int)$_POST['batchSize'] : 1;
-		$batch_size = max(1, min(5, $batch_size));
+		$batch_size = max(1, min(3, $batch_size));
+
+		// Recover jobs stuck from previous timed-out AJAX ticks.
+		$this->sync->recover_stale_processing_jobs(90);
 
 		try {
-			// Run a small batch to avoid timeouts.
 			$processed = $this->sync->process_queue_batch($batch_size);
 
 			wp_send_json_success(array(
 				'queueCounts' => $this->get_queue_counts_simple(),
 				'processed' => $processed,
 			));
-		} catch (Exception $e) {
+		} catch (\Throwable $e) {
 			wp_send_json_error(array(
 				'message' => 'Processing error: ' . $e->getMessage(),
 				'queueCounts' => $this->get_queue_counts_simple(),

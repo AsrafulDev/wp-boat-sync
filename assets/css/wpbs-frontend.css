@@ -295,8 +295,77 @@
   color: #fff;
 }
 
+.wpbs-badge--used {
+  background: #6b7280;
+  color: #fff;
+}
+
 .wpbs-badge--featured {
   background: var(--wpbs-orange);
+  color: #fff;
+}
+
+/* Condition badge overlay on card image */
+.wpbs-card__condition-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: auto;
+  z-index: 3;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.wpbs-card__condition-badge--new {
+  background: var(--wpbs-primary);
+  color: #fff;
+}
+
+.wpbs-card__condition-badge--used {
+  background: #6b7280;
+  color: #fff;
+}
+
+.wpbs-card__condition-badge--sold {
+  background: #dc3545;
+  color: #fff;
+}
+
+/* Gallery condition badge (single page / gallery widget) */
+.wpbs-gallery__condition-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: auto;
+  z-index: 5;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.wpbs-gallery__condition-badge--new {
+  background: var(--wpbs-primary);
+  color: #fff;
+}
+
+.wpbs-gallery__condition-badge--used {
+  background: #6b7280;
+  color: #fff;
+}
+
+.wpbs-gallery__condition-badge--sold {
+  background: #dc3545;
   color: #fff;
 }
 

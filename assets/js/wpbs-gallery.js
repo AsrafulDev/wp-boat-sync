@@ -369,7 +369,7 @@
       });
 
       // Checkboxes
-      ['condition_new', 'condition_used', 'featured'].forEach(function (key) {
+      ['condition_new', 'condition_used', 'featured', 'condition_sold'].forEach(function (key) {
         if (params.get(key) === '1') {
           var checkbox = filterBar.querySelector('[data-wpbs-filter="' + key + '"]');
           if (checkbox) {
@@ -433,7 +433,7 @@
       ['category', 'builder', 'location', 'orderby',
        'length_min', 'length_max', 'year_min', 'year_max',
        'price_min', 'price_max', 'condition_new', 'condition_used',
-       'featured', 'paged'].forEach(function (key) {
+       'featured', 'condition_sold', 'paged'].forEach(function (key) {
         params.delete(key);
       });
 

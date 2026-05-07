@@ -66,7 +66,7 @@
 			method: 'POST',
 			dataType: 'json',
 			data: data,
-			timeout: 20000
+			timeout: 45000
 		});
 	}
 

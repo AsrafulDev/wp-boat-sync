@@ -140,6 +140,19 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			]
 		);
 
+		$this->add_control(
+			'show_condition_badge',
+			[
+				'label' => esc_html__('Show Condition Badge', 'wp-boat-sync'),
+				'description' => esc_html__('Display a New/Used/Sold label on the boat image.', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+			]
+		);
+
 		$this->end_controls_section();
 
 		// Pre-Filter Section
@@ -404,6 +417,153 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 				'selectors' => [
 					'{{WRAPPER}} .wpbs-card__slider' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
 					'{{WRAPPER}} .wpbs-card-slider__item img' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->end_controls_section();
+
+		// Condition Badge Style Section
+		$this->start_controls_section(
+			'condition_badge_style_section',
+			[
+				'label' => esc_html__('Condition Badge', 'wp-boat-sync'),
+				'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+				'condition' => [
+					'show_condition_badge' => 'yes',
+				],
+			]
+		);
+
+		$this->add_control(
+			'badge_new_bg',
+			[
+				'label' => esc_html__('New Badge Background', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'default' => '#0b5fff',
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge--new' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_control(
+			'badge_used_bg',
+			[
+				'label' => esc_html__('Used Badge Background', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'default' => '#6b7280',
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge--used' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_control(
+			'badge_sold_bg',
+			[
+				'label' => esc_html__('Sold Badge Background', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'default' => '#dc3545',
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge--sold' => 'background-color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_control(
+			'badge_text_color',
+			[
+				'label' => esc_html__('Text Color', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::COLOR,
+				'default' => '#ffffff',
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge' => 'color: {{VALUE}} !important;',
+				],
+			]
+		);
+
+		$this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'badge_typography',
+				'label' => esc_html__('Typography', 'wp-boat-sync'),
+				'selector' => '{{WRAPPER}} .wpbs-card__condition-badge',
+			]
+		);
+
+		$this->add_control(
+			'badge_border_radius',
+			[
+				'label' => esc_html__('Border Radius', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px', '%'],
+				'default' => [
+					'top' => 3,
+					'right' => 3,
+					'bottom' => 3,
+					'left' => 3,
+					'unit' => 'px',
+				],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'badge_padding',
+			[
+				'label' => esc_html__('Padding', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => ['px'],
+				'default' => [
+					'top' => 4,
+					'right' => 10,
+					'bottom' => 4,
+					'left' => 10,
+					'unit' => 'px',
+				],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'badge_horizontal_position',
+			[
+				'label' => esc_html__('Horizontal Position', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::CHOOSE,
+				'options' => [
+					'left' => [
+						'title' => esc_html__('Left', 'wp-boat-sync'),
+						'icon' => 'eicon-h-align-left',
+					],
+					'right' => [
+						'title' => esc_html__('Right', 'wp-boat-sync'),
+						'icon' => 'eicon-h-align-right',
+					],
+				],
+				'default' => 'left',
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge' => 'left: auto; right: auto; {{VALUE}}: 8px !important;',
+				],
+			]
+		);
+
+		$this->add_responsive_control(
+			'badge_top_offset',
+			[
+				'label' => esc_html__('Top Offset', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => ['px'],
+				'range' => [
+					'px' => ['min' => 0, 'max' => 50],
+				],
+				'default' => ['unit' => 'px', 'size' => 8],
+				'selectors' => [
+					'{{WRAPPER}} .wpbs-card__condition-badge' => 'top: {{SIZE}}{{UNIT}} !important;',
 				],
 			]
 		);
@@ -1176,6 +1336,11 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 	protected function render()
 	{
 		$settings = $this->get_settings_for_display();
+
+		// Hide condition badge when switch is off
+		if (empty($settings['show_condition_badge']) || $settings['show_condition_badge'] !== 'yes') {
+			echo '<style>.elementor-element-' . esc_attr($this->get_id()) . ' .wpbs-card__condition-badge { display: none !important; }</style>';
+		}
 
 		// Get responsive columns
 		$desktop_cols = isset($settings['columns']) ? max(1, min(6, (int)$settings['columns'])) : 3;
