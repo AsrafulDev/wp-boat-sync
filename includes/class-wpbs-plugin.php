@@ -347,7 +347,7 @@ class WPBS_Plugin
 		// 3. Ensure meta keys (wpbs_price, wpbs_model_year, etc.) have database indexes
 		// 4. For the main archive, consider using pre_get_posts hook instead of custom WP_Query
 		$args = array(
-	'post_type' => WPBS_POST_TYPE,
+			'post_type' => WPBS_POST_TYPE,
 			'post_status' => 'publish',
 			'posts_per_page' => $posts_per_page,
 			'paged' => $paged,
