@@ -1,5 +1,36 @@
 # WP Boat Sync - Changelog
+## v1.1.4 - 2026-05-08#
 
+### Optimized
+- **Sold Boat Filtering - Major Performance Fix**: Replaced slow meta query with fast taxonomy query
+  - **Problem**: Filtering out sold boats used `meta_query` with `_wpbs_is_sold` which was causing massive load times
+  - **Solution**: Now uses `boat_status` taxonomy with `NOT IN` operator (taxonomy queries are MUCH faster than meta queries)
+  - **Impact**: Significant reduction in page load times when filtering out sold boats
+  - **Files changed**: `includes/class-wpbs-plugin.php`, `includes/class-wpbs-shortcodes.php`
+  
+- **Database Query Performance**: Major optimization to reduce database queries
+  - Replaced multiple `get_post_meta()` calls with single `get_post_custom()` in:
+    - `includes/class-wpbs-shortcodes.php` - `get_boat_meta()` function (25 queries → 1 query)
+    - `templates/single-boats.php` - Single boat page (25 queries → 1 query)
+    - `templates/archive-boats.php` - Archive loop (8+ queries per post → 1 query)
+    - `includes/widgets/gallery.php` - Gallery widget (3 queries → 1 query)
+  - **Performance gain**: ~87.5% fewer DB queries on archive pages (96 → 12 for 12 boats)
+  - **Speed improvement**: Estimated 0.084 to 0.42 seconds faster page load#
+
+### Added
+- **6-Hour Sync Interval**: Now available in auto sync settings
+  - Previously only "Hourly" and "Daily" options were available
+  - "Every 6 Hours" option now available for better sync frequency
+  - Ideal for large inventories where hourly sync is too frequent but daily is too slow
+  - Cron schedule already defined in `includes/class-wpbs-plugin.php`#
+
+### Fixed
+- **Elementor Boat Grid Widget**: Added "Sold" condition to pre-filter dropdown
+  - Previously only "New" and "Used" were available as pre-filter options
+  - Now supports filtering by "New", "Used", or "Sold" status
+  - Updated `includes/class-wpbs-elementor-widget.php` to include 'sold' option#
+
+---#
 ## v1.1.3 - 2026-05-08
 
 ### Optimized

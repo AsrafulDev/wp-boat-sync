@@ -347,22 +347,25 @@ class WPBS_Plugin
 		// 3. Ensure meta keys (wpbs_price, wpbs_model_year, etc.) have database indexes
 		// 4. For the main archive, consider using pre_get_posts hook instead of custom WP_Query
 		$args = array(
-			'post_type' => WPBS_POST_TYPE,
+	'post_type' => WPBS_POST_TYPE,
 			'post_status' => 'publish',
 			'posts_per_page' => $posts_per_page,
 			'paged' => $paged,
 			// 'fields' => 'ids', // Uncomment if only IDs needed
 		);
 
-    // --- 1. EXCLUDE SOLD TAXONOMY ---
-    // $args['tax_query'] = array(
-    //     array(
-    //         'taxonomy' => 'boat_status',
-    //         'field'    => 'slug',
-    //         'terms'    => array('sold'),
-    //         'operator' => 'NOT IN',
-    //     ),
-    // );
+    // --- 1. EXCLUDE SOLD BOATS (Optimized: Use taxonomy instead of meta query for better performance) ---
+    // Taxonomy queries are MUCH faster than meta queries
+    if (!$condition_sold) {
+        $args['tax_query'] = array(
+            array(
+                'taxonomy' => 'boat_status',
+                'field'    => 'slug',
+                'terms'    => array('sold'),
+                'operator' => 'NOT IN',
+            ),
+        );
+    }
 
 		// Orderby
 		switch ($orderby) {
@@ -388,23 +391,43 @@ class WPBS_Plugin
 
 		// Meta query
 		$meta_query = array('relation' => 'AND');
+		$tax_queries = array();
 
 		// --- 2. CONDITION FILTER (New / Used / Sold) ---
+		// OPTIMIZED: Use taxonomy queries instead of meta queries for better performance
 		$condition_terms = array();
 		if ($condition_new)  $condition_terms[] = 'new';
 		if ($condition_used)  $condition_terms[] = 'used';
 		if ($condition_sold)  $condition_terms[] = 'sold';
 
 		if (count($condition_terms) > 0 && count($condition_terms) < 3) {
-			$cond_meta = array('relation' => 'OR');
+			$cond_tax = array('relation' => 'OR');
 			foreach ($condition_terms as $ct) {
 				if ($ct === 'sold') {
-					$cond_meta[] = array('key' => '_wpbs_is_sold', 'value' => '1', 'compare' => '=');
+					// Use taxonomy for sold (much faster than meta query)
+					$tax_queries[] = array(
+						'taxonomy' => 'boat_status',
+						'field'    => 'slug',
+						'terms'    => array('sold'),
+						'operator' => 'IN',
+					);
 				} else {
-					$cond_meta[] = array('key' => 'wpbs_condition', 'value' => $ct, 'compare' => '=');
+					$cond_tax[] = array(
+						'taxonomy' => 'boat_status',
+						'field'    => 'slug',
+						'terms'    => array($ct),
+						'operator' => 'IN',
+					);
 				}
 			}
-			$meta_query[] = $cond_meta;
+			if (!empty($cond_tax)) {
+				$tax_queries[] = $cond_tax;
+			}
+		}
+
+		// Add tax queries to main args if any
+		if (!empty($tax_queries)) {
+			$args['tax_query'] = $tax_queries;
 		}
 
 		if ($category) {
