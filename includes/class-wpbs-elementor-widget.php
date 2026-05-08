@@ -264,6 +264,7 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 					'' => esc_html__('All', 'wp-boat-sync'),
 					'new' => esc_html__('New', 'wp-boat-sync'),
 					'used' => esc_html__('Used', 'wp-boat-sync'),
+					'sold' => esc_html__('Sold', 'wp-boat-sync'),
 				],
 			]
 		);

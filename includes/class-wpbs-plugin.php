@@ -341,11 +341,17 @@ class WPBS_Plugin
 		$featured = isset($_POST['featured']) && $_POST['featured'] === '1';
 
 		// Build query args
+		// OPTIMIZATION: For better performance:
+		// 1. Use 'fields' => 'ids' if you only need post IDs (reduces memory)
+		// 2. Consider caching query results with wp_cache_set/get for repeated filters
+		// 3. Ensure meta keys (wpbs_price, wpbs_model_year, etc.) have database indexes
+		// 4. For the main archive, consider using pre_get_posts hook instead of custom WP_Query
 		$args = array(
 			'post_type' => WPBS_POST_TYPE,
 			'post_status' => 'publish',
 			'posts_per_page' => $posts_per_page,
 			'paged' => $paged,
+			// 'fields' => 'ids', // Uncomment if only IDs needed
 		);
 
     // --- 1. EXCLUDE SOLD TAXONOMY ---
