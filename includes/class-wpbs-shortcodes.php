@@ -1150,6 +1150,7 @@ class WPBS_Shortcodes
 			'condition' => '',
 			'featured' => 'false',
 			'pagination' => 'yes',
+			'show_sold_filter' => 'no',
 		), $atts);
 
 		$ppp = max(1, (int)$atts['posts_per_page']);
@@ -1169,6 +1170,7 @@ class WPBS_Shortcodes
 		$uid = 'wpbs-grid-' . wp_unique_id();
 		$show_filter = in_array(strtolower($atts['filter']), array('true', 'yes', '1'), true);
 		$filter_position = in_array($atts['filter_position'], array('top', 'left', 'right')) ? $atts['filter_position'] : 'top';
+		$show_sold_filter = in_array(strtolower($atts['show_sold_filter']), array('true', 'yes', '1'), true);
 		$orderby = sanitize_text_field($atts['orderby']);
 
 		// PAGINATION (SINGLE SOURCE OF TRUTH)
@@ -1200,7 +1202,13 @@ $request = array_merge($_GET, $_POST);
 		
 		// Handle condition from shortcode attribute or URL
 		$condition_attr = strtolower($atts['condition']);
-		if ($condition_attr === 'new') {
+		if (strpos($condition_attr, ',') !== false) {
+			// Multi-select from widget: comma-separated values
+			$selected = array_map('trim', explode(',', $condition_attr));
+			$f_condition_new = in_array('new', $selected, true);
+			$f_condition_used = in_array('used', $selected, true);
+			$f_condition_sold = in_array('sold', $selected, true);
+		} elseif ($condition_attr === 'new') {
 			$f_condition_new = true;
 			$f_condition_used = false;
 			$f_condition_sold = false;
@@ -1223,11 +1231,11 @@ $request = array_merge($_GET, $_POST);
 		
 		$f_orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : $orderby;
 
-		// Default all conditions if none specified and no attribute given
+		// Default to New + Used only (sold hidden by default)
 		if (!$f_condition_new && !$f_condition_used && !$f_condition_sold && empty($condition_attr)) {
 			$f_condition_new = true;
 			$f_condition_used = true;
-			$f_condition_sold = true;
+			$f_condition_sold = false;
 		}
 	$args = array(
 		'post_type'      => WPBS_POST_TYPE,
@@ -1393,7 +1401,7 @@ if (!empty($meta_query)) {
 
 			$out = '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 			if ($show_filter) {
-				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby);
+				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter);
 			}
 			$out .= '<div class="wpbs-filter-content">';
 			// $out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
@@ -1407,7 +1415,7 @@ if (!empty($meta_query)) {
 
 		// Render filter bar if enabled
 		if ($show_filter) {
-			$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby);
+			$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter);
 		}
 
 		// Wrap content for layout
@@ -1549,7 +1557,7 @@ if (!empty($meta_query)) {
 	/**
 	 * Render filter bar HTML
 	 */
-	private function render_filter_bar($category, $builder, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $condition_sold, $featured, $orderby)
+	private function render_filter_bar($category, $builder, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $condition_sold, $featured, $orderby, $show_sold_filter = false)
 	{
 		$filter_options = WPBS_Plugin::get_filter_options();
 
@@ -1672,7 +1680,9 @@ if (!empty($meta_query)) {
 		$out .= '<div class="wpbs-filter-bar__checkboxes">';
 		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_new" data-wpbs-filter="condition_new" value="1"' . checked($condition_new, true, false) . '><span>New</span></label>';
 		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_used" data-wpbs-filter="condition_used" value="1"' . checked($condition_used, true, false) . '><span>Used</span></label>';
-		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_sold" data-wpbs-filter="condition_sold" value="1"' . checked($condition_sold, true, false) . '><span>Sold</span></label>';
+		if ($show_sold_filter) {
+			$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_sold" data-wpbs-filter="condition_sold" value="1"' . checked($condition_sold, true, false) . '><span>Sold</span></label>';
+			}
 		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="featured" data-wpbs-filter="featured" value="1"' . checked($featured, true, false) . '><span>Featured Listings</span></label>';
 		$out .= '</div>';
 		$out .= '<button type="button" class="wpbs-filter-bar__clear" data-wpbs-filter-clear>Clear Filters</button>';

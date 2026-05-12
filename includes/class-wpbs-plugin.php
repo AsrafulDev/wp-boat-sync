@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 if (!defined('ABSPATH')) {
 	exit;
@@ -391,43 +391,30 @@ class WPBS_Plugin
 
 		// Meta query
 		$meta_query = array('relation' => 'AND');
-		$tax_queries = array();
-
-		// --- 2. CONDITION FILTER (New / Used / Sold) ---
-		// OPTIMIZED: Use taxonomy queries instead of meta queries for better performance
+		// --- CONDITION FILTER (New / Used / Sold) ---
+		// Uses post meta (wpbs_condition and _wpbs_is_sold), matching the shortcode logic.
+		// 'new' and 'used' are stored in wpbs_condition meta; 'sold' is tracked via _wpbs_is_sold.
 		$condition_terms = array();
 		if ($condition_new)  $condition_terms[] = 'new';
 		if ($condition_used)  $condition_terms[] = 'used';
 		if ($condition_sold)  $condition_terms[] = 'sold';
 
-		if (count($condition_terms) > 0 && count($condition_terms) < 3) {
-			$cond_tax = array('relation' => 'OR');
-			foreach ($condition_terms as $ct) {
-				if ($ct === 'sold') {
-					// Use taxonomy for sold (much faster than meta query)
-					$tax_queries[] = array(
-						'taxonomy' => 'boat_status',
-						'field'    => 'slug',
-						'terms'    => array('sold'),
-						'operator' => 'IN',
-					);
-				} else {
-					$cond_tax[] = array(
-						'taxonomy' => 'boat_status',
-						'field'    => 'slug',
-						'terms'    => array($ct),
-						'operator' => 'IN',
-					);
-				}
-			}
-			if (!empty($cond_tax)) {
-				$tax_queries[] = $cond_tax;
-			}
+		// Default to New + Used only (sold hidden by default)
+		if (empty($condition_terms)) {
+			$condition_terms = array('new', 'used');
 		}
 
-		// Add tax queries to main args if any
-		if (!empty($tax_queries)) {
-			$args['tax_query'] = $tax_queries;
+		// Only apply filter when a subset is selected (not all three)
+		if (count($condition_terms) > 0 && count($condition_terms) < 3) {
+			$cond_meta = array('relation' => 'OR');
+			foreach ($condition_terms as $ct) {
+				if ($ct === 'sold') {
+					$cond_meta[] = array('key' => '_wpbs_is_sold', 'value' => '1', 'compare' => '=');
+				} else {
+					$cond_meta[] = array('key' => 'wpbs_condition', 'value' => $ct, 'compare' => '=');
+				}
+			}
+			$meta_query[] = $cond_meta;
 		}
 
 		if ($category) {

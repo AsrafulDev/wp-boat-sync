@@ -114,6 +114,22 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		);
 
 		$this->add_control(
+			'show_sold_filter',
+			[
+				'label' => esc_html__('Show Sold Checkbox', 'wp-boat-sync'),
+				'description' => esc_html__('Show a "Sold" checkbox in the frontend filter so users can include sold boats in results.', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'no',
+				'condition' => [
+					'filter' => 'yes',
+				],
+			]
+		);
+
+		$this->add_control(
 			'orderby',
 			[
 				'label' => esc_html__('Order By', 'wp-boat-sync'),
@@ -258,14 +274,15 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			'prefilter_condition',
 			[
 				'label' => esc_html__('Condition', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::SELECT,
-				'default' => '',
+				'type' => \Elementor\Controls_Manager::SELECT2,
+				'default' => ['new', 'used'],
 				'options' => [
-					'' => esc_html__('All', 'wp-boat-sync'),
 					'new' => esc_html__('New', 'wp-boat-sync'),
 					'used' => esc_html__('Used', 'wp-boat-sync'),
 					'sold' => esc_html__('Sold', 'wp-boat-sync'),
 				],
+				'multiple' => true,
+				'label_block' => true,
 			]
 		);
 
@@ -1355,6 +1372,7 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			'filter' => $settings['filter'] === 'yes' ? 'true' : 'false',
 			'filter_position' => $settings['filter_position'],
 			'orderby' => $settings['orderby'],
+			'show_sold_filter' => (isset($settings['show_sold_filter']) && $settings['show_sold_filter'] === 'yes') ? 'true' : 'false',
 		];
 
 		// Apply pre-filters
@@ -1371,7 +1389,11 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		}
 		
 		if (!empty($settings['prefilter_condition'])) {
-			$atts['condition'] = $settings['prefilter_condition'];
+			if (is_array($settings['prefilter_condition'])) {
+				$atts['condition'] = implode(',', $settings['prefilter_condition']);
+			} else {
+				$atts['condition'] = $settings['prefilter_condition'];
+			}
 		}
 		
 		if ($settings['prefilter_featured'] === 'yes') {
