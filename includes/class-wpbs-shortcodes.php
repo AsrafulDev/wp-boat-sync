@@ -1268,6 +1268,19 @@ if (count($condition_terms) > 0 && count($condition_terms) < 3) {
 	$meta_query[] = $cond_meta;
 }
 
+// Exclude sold boats via taxonomy when sold is not explicitly requested
+// (Meta query alone isn't enough — sold boats still have wpbs_condition = 'new'/'used')
+if (!$f_condition_sold) {
+	$args['tax_query'] = array(
+		array(
+			'taxonomy' => 'boat_status',
+			'field'    => 'slug',
+			'terms'    => array('sold'),
+			'operator' => 'NOT IN',
+		),
+	);
+}
+
 // -------------------------------------------------
 // OTHER FILTERS
 // -------------------------------------------------
