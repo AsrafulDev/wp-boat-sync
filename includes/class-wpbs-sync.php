@@ -784,10 +784,10 @@ class WPBS_Sync
 
 		// Build location string: City, State Country
 		$location_parts = array();
-		if (!empty($boat_location['BoatCityName'])) {
-			$location_parts[] = (string)$boat_location['BoatCityName'];
-		} elseif (!empty($data['BoatCityNameNoCaseAlnumOnly'])) {
+		if (!empty($data['BoatCityNameNoCaseAlnumOnly'])) {
 			$location_parts[] = (string)$data['BoatCityNameNoCaseAlnumOnly'];
+		} elseif (!empty($boat_location['BoatCityName'])) {
+			$location_parts[] = (string)$boat_location['BoatCityName'];
 		}
 		if (!empty($boat_location['BoatStateCode'])) {
 			$location_parts[] = (string)$boat_location['BoatStateCode'];
@@ -979,6 +979,41 @@ class WPBS_Sync
 			}
 			if (!empty($class_slugs)) {
 				@wp_set_object_terms($post_id, $class_slugs, 'boat_class', false);
+			}
+		}
+
+		// Assign boat_category taxonomy from BoatCategoryCode
+		if (taxonomy_exists('boat_category')) {
+			$category_code = isset($data['BoatCategoryCode']) ? trim((string)$data['BoatCategoryCode']) : '';
+			if ($category_code !== '') {
+				$cat_slug = sanitize_title($category_code);
+				if (!get_term_by('slug', $cat_slug, 'boat_category')) {
+					wp_insert_term($category_code, 'boat_category', array('slug' => $cat_slug));
+				}
+				wp_set_object_terms($post_id, $cat_slug, 'boat_category', false);
+			}
+		}
+
+		// Assign boat_location taxonomy from location string
+		if (taxonomy_exists('boat_location')) {
+			if ($location_str !== '') {
+				$loc_slug = sanitize_title($location_str);
+				if (!get_term_by('slug', $loc_slug, 'boat_location')) {
+					wp_insert_term($location_str, 'boat_location', array('slug' => $loc_slug));
+				}
+				wp_set_object_terms($post_id, $loc_slug, 'boat_location', false);
+			}
+		}
+
+		// Assign model_year taxonomy from ModelYear
+		if (taxonomy_exists('model_year')) {
+			$model_year = isset($data['ModelYear']) ? (int)$data['ModelYear'] : 0;
+			if ($model_year > 1900) {
+				$yr_slug = (string)$model_year;
+				if (!get_term_by('slug', $yr_slug, 'model_year')) {
+					wp_insert_term($yr_slug, 'model_year', array('slug' => $yr_slug));
+				}
+				wp_set_object_terms($post_id, $yr_slug, 'model_year', false);
 			}
 		}
 	}

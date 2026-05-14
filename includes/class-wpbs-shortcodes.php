@@ -1153,6 +1153,13 @@ class WPBS_Shortcodes
 			'pagination' => 'yes',
 			'show_sold_filter' => 'no',
 			'show_boat_class_filter' => 'yes',
+			'show_category_filter' => 'yes',
+			'show_builder_filter' => 'yes',
+			'show_location_filter' => 'yes',
+			'show_model_year_filter' => 'yes',
+			'show_condition_filter' => 'yes',
+			'show_featured_filter' => 'yes',
+			'model_year' => '',
 		), $atts);
 
 		$ppp = max(1, (int)$atts['posts_per_page']);
@@ -1174,6 +1181,12 @@ class WPBS_Shortcodes
 		$filter_position = in_array($atts['filter_position'], array('top', 'left', 'right')) ? $atts['filter_position'] : 'top';
 		$show_sold_filter = in_array(strtolower($atts['show_sold_filter']), array('true', 'yes', '1'), true);
 		$show_boat_class_filter = in_array(strtolower($atts['show_boat_class_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
+		$show_category_filter = in_array(strtolower($atts['show_category_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
+		$show_builder_filter = in_array(strtolower($atts['show_builder_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
+		$show_location_filter = in_array(strtolower($atts['show_location_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
+		$show_model_year_filter = in_array(strtolower($atts['show_model_year_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
+		$show_condition_filter = in_array(strtolower($atts['show_condition_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
+		$show_featured_filter = in_array(strtolower($atts['show_featured_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
 		$orderby = sanitize_text_field($atts['orderby']);
 
 		// PAGINATION (SINGLE SOURCE OF TRUTH)
@@ -1197,6 +1210,7 @@ $request = array_merge($_GET, $_POST);
 		$f_builder = !empty($atts['builder']) ? sanitize_text_field($atts['builder']) : (isset($request['builder']) ? sanitize_text_field($_GET['builder']) : '');
 		$f_boat_class = !empty($atts['boat_class']) ? sanitize_text_field($atts['boat_class']) : (isset($request['boat_class']) ? sanitize_text_field($_GET['boat_class']) : '');
 		$f_location = !empty($atts['location']) ? sanitize_text_field($atts['location']) : (isset($request['location']) ? sanitize_text_field($_GET['location']) : '');
+		$f_model_year = !empty($atts['model_year']) ? sanitize_text_field($atts['model_year']) : (isset($request['model_year']) ? sanitize_text_field($_GET['model_year']) : '');
 		$f_length_min = isset($_GET['length_min']) ? (float)$request['length_min'] : '';
 		$f_length_max = isset($_GET['length_max']) ? (float)$request['length_max'] : '';
 		$f_year_min = isset($_GET['year_min']) ? (int)$request['year_min'] : '';
@@ -1288,11 +1302,15 @@ if (!$f_condition_sold) {
 // -------------------------------------------------
 // OTHER FILTERS
 // -------------------------------------------------
-if ($f_category) {
-    $meta_query[] = array(
-        'key'     => 'wpbs_boat_category',
-        'value'   => $f_category,
-        'compare' => '='
+// Boat Category filter via taxonomy
+if ($f_category !== '') {
+    if (!isset($args['tax_query'])) {
+        $args['tax_query'] = array();
+    }
+    $args['tax_query'][] = array(
+        'taxonomy' => 'boat_category',
+        'field'    => 'slug',
+        'terms'    => sanitize_title($f_category),
     );
 }
 
@@ -1316,11 +1334,27 @@ if ($f_boat_class !== '') {
     );
 }
 
-if ($f_location) {
-    $meta_query[] = array(
-        'key'     => 'wpbs_location',
-        'value'   => $f_location,
-        'compare' => 'LIKE'
+// Location filter via taxonomy
+if ($f_location !== '') {
+    if (!isset($args['tax_query'])) {
+        $args['tax_query'] = array();
+    }
+    $args['tax_query'][] = array(
+        'taxonomy' => 'boat_location',
+        'field'    => 'slug',
+        'terms'    => sanitize_title($f_location),
+    );
+}
+
+// Model Year filter via taxonomy
+if ($f_model_year !== '') {
+    if (!isset($args['tax_query'])) {
+        $args['tax_query'] = array();
+    }
+    $args['tax_query'][] = array(
+        'taxonomy' => 'model_year',
+        'field'    => 'slug',
+        'terms'    => sanitize_title($f_model_year),
     );
 }
 
@@ -1430,7 +1464,7 @@ if (!empty($meta_query)) {
 
 			$out = '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 			if ($show_filter) {
-				$out .= $this->render_filter_bar($f_category, $f_builder, $f_boat_class, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter, $show_boat_class_filter);
+				$out .= $this->render_filter_bar($f_category, $f_builder, $f_boat_class, $f_location, $f_model_year, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter, $show_boat_class_filter, $show_category_filter, $show_builder_filter, $show_location_filter, $show_model_year_filter, $show_condition_filter, $show_featured_filter);
 			}
 			$out .= '<div class="wpbs-filter-content">';
 			// $out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
@@ -1444,7 +1478,7 @@ if (!empty($meta_query)) {
 
 		// Render filter bar if enabled
 		if ($show_filter) {
-			$out .= $this->render_filter_bar($f_category, $f_builder, $f_boat_class, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter, $show_boat_class_filter);
+			$out .= $this->render_filter_bar($f_category, $f_builder, $f_boat_class, $f_location, $f_model_year, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter, $show_boat_class_filter, $show_category_filter, $show_builder_filter, $show_location_filter, $show_model_year_filter, $show_condition_filter, $show_featured_filter);
 		}
 
 		// Wrap content for layout
@@ -1586,7 +1620,7 @@ if (!empty($meta_query)) {
 	/**
 	 * Render filter bar HTML
 	 */
-	private function render_filter_bar($category, $builder, $boat_class, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $condition_sold, $featured, $orderby, $show_sold_filter = false, $show_boat_class_filter = true)
+	private function render_filter_bar($category, $builder, $boat_class, $location, $model_year, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $condition_sold, $featured, $orderby, $show_sold_filter = false, $show_boat_class_filter = true, $show_category_filter = true, $show_builder_filter = true, $show_location_filter = true, $show_model_year_filter = true, $show_condition_filter = true, $show_featured_filter = true)
 	{
 		$filter_options = WPBS_Plugin::get_filter_options();
 
@@ -1610,25 +1644,25 @@ if (!empty($meta_query)) {
 		$out .= '<div class="wpbs-filter-bar__row">';
 
 		// Category
-		$out .= '<div class="wpbs-filter-bar__field"><label>Category</label>';
-		$out .= '<select name="category" data-wpbs-filter="category"><option value="">Any Categories</option>';
-		foreach ($filter_options['categories'] as $cat) {
-			$out .= '<option value="' . esc_attr($cat) . '"' . selected($category, $cat, false) . '>' . esc_html($cat) . '</option>';
+		if ($show_category_filter) {
+			$out .= '<div class="wpbs-filter-bar__field"><label>Category</label>';
+			$out .= '<select name="category" data-wpbs-filter="category"><option value="">Any Categories</option>';
+			foreach ($filter_options['categories'] as $cat) {
+				$out .= '<option value="' . esc_attr($cat) . '"' . selected($category, $cat, false) . '>' . esc_html($cat) . '</option>';
+			}
+			$out .= '</select></div>';
 		}
-		$out .= '</select></div>';
 
 		// Builder
-		$out .= '<div class="wpbs-filter-bar__field"><label>Builder</label>';
-		$out .= '<select name="builder" data-wpbs-filter="builder" onchange="(function(){var b=document.querySelector(\'[data-wpbs-filter-submit]\'); if(b) b.click();})();"><option value="">Any Builder</option>';
-		// foreach ($filter_options['builders'] as $b) {
-		// 	$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
-		// }
-		$active_builders = $this->get_active_builders();
-
-		foreach ($active_builders as $b) {
-			$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
+		if ($show_builder_filter) {
+			$out .= '<div class="wpbs-filter-bar__field"><label>Builder</label>';
+			$out .= '<select name="builder" data-wpbs-filter="builder" onchange="(function(){var b=document.querySelector(\'[data-wpbs-filter-submit]\'); if(b) b.click();})();"><option value="">Any Builder</option>';
+			$active_builders = $this->get_active_builders();
+			foreach ($active_builders as $b) {
+				$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
+			}
+			$out .= '</select></div>';
 		}
-		$out .= '</select></div>';
 
 		// Boat Class
 		if ($show_boat_class_filter && !empty($filter_options['boat_classes'])) {
@@ -1641,12 +1675,24 @@ if (!empty($meta_query)) {
 		}
 
 		// Location
-		$out .= '<div class="wpbs-filter-bar__field"><label>Location</label>';
-		$out .= '<select name="location" data-wpbs-filter="location"><option value="">Any Location</option>';
-		foreach ($filter_options['locations'] as $loc) {
-			$out .= '<option value="' . esc_attr($loc) . '"' . selected($location, $loc, false) . '>' . esc_html($loc) . '</option>';
+		if ($show_location_filter) {
+			$out .= '<div class="wpbs-filter-bar__field"><label>Location</label>';
+			$out .= '<select name="location" data-wpbs-filter="location"><option value="">Any Location</option>';
+			foreach ($filter_options['locations'] as $loc) {
+				$out .= '<option value="' . esc_attr($loc) . '"' . selected($location, $loc, false) . '>' . esc_html($loc) . '</option>';
+			}
+			$out .= '</select></div>';
 		}
-		$out .= '</select></div>';
+
+		// Model Year
+		if ($show_model_year_filter && !empty($filter_options['model_years'])) {
+			$out .= '<div class="wpbs-filter-bar__field"><label>Model Year</label>';
+			$out .= '<select name="model_year" data-wpbs-filter="model_year"><option value="">Any Year</option>';
+			foreach ($filter_options['model_years'] as $my) {
+				$out .= '<option value="' . esc_attr($my) . '"' . selected($model_year, $my, false) . '>' . esc_html($my) . '</option>';
+			}
+			$out .= '</select></div>';
+		}
 
 		// Search button
 		$out .= '<div class="wpbs-filter-bar__field wpbs-filter-bar__field--action">';
@@ -1717,12 +1763,16 @@ if (!empty($meta_query)) {
 		// Third row with checkboxes
 		$out .= '<div class="wpbs-filter-bar__row wpbs-filter-bar__row--secondary">';
 		$out .= '<div class="wpbs-filter-bar__checkboxes">';
-		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_new" data-wpbs-filter="condition_new" value="1"' . checked($condition_new, true, false) . '><span>New</span></label>';
-		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_used" data-wpbs-filter="condition_used" value="1"' . checked($condition_used, true, false) . '><span>Used</span></label>';
-		if ($show_sold_filter) {
-			$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_sold" data-wpbs-filter="condition_sold" value="1"' . checked($condition_sold, true, false) . '><span>Sold</span></label>';
+		if ($show_condition_filter) {
+			$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_new" data-wpbs-filter="condition_new" value="1"' . checked($condition_new, true, false) . '><span>New</span></label>';
+			$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_used" data-wpbs-filter="condition_used" value="1"' . checked($condition_used, true, false) . '><span>Used</span></label>';
+			if ($show_sold_filter) {
+				$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="condition_sold" data-wpbs-filter="condition_sold" value="1"' . checked($condition_sold, true, false) . '><span>Sold</span></label>';
 			}
-		$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="featured" data-wpbs-filter="featured" value="1"' . checked($featured, true, false) . '><span>Featured Listings</span></label>';
+		}
+		if ($show_featured_filter) {
+			$out .= '<label class="wpbs-filter-bar__checkbox"><input type="checkbox" name="featured" data-wpbs-filter="featured" value="1"' . checked($featured, true, false) . '><span>Featured Listings</span></label>';
+		}
 		$out .= '</div>';
 		$out .= '<button type="button" class="wpbs-filter-bar__clear" data-wpbs-filter-clear>Clear Filters</button>';
 		$out .= '</div>';

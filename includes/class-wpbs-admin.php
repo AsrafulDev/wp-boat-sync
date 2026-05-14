@@ -522,6 +522,14 @@ class WPBS_Admin
 			return;
 		}
 
+		// Handle taxonomy migration from meta
+		if (isset($_GET['wpbs_migrate_tax']) && $_GET['wpbs_migrate_tax'] === '1') {
+			if (wp_verify_nonce($_GET['_wpnonce'] ?? '', 'wpbs_migrate_tax')) {
+				$migrated = $this->migrate_taxonomy_terms();
+				echo '<div class="notice notice-success is-dismissible"><p>Migration complete: ' . esc_html($migrated) . ' boats updated.</p></div>';
+			}
+		}
+
 		$settings = WPBS_Utils::get_settings();
 		$run = get_option(WPBS_OPTION_RUN_STATE, array());
 		$dash = $this->get_dashboard_data();
@@ -555,9 +563,31 @@ class WPBS_Admin
 		echo '<h2 style="margin-top:0;">Boats</h2>';
 		echo '<p><strong>Total posts:</strong> ' . esc_html((string)$dash['postCounts']['total']) . '</p>';
 		echo '<p><strong>Published:</strong> ' . esc_html((string)$dash['postCounts']['publish']) . ' &nbsp; <strong>Draft:</strong> ' . esc_html((string)$dash['postCounts']['draft']) . '</p>';
-		echo '<p><strong>Active:</strong> ' . esc_html((string)$dash['statusCounts']['active']) . ' &nbsp; <strong>Sold/Other:</strong> ' . esc_html((string)$dash['statusCounts']['sold']) . '</p>';
+		$sc = $dash['statusCounts'];
+	$status_parts = array();
+	foreach ($sc as $slug => $info) {
+		$status_parts[] = '<strong>' . esc_html($info['name']) . ':</strong> ' . esc_html((string)$info['count']);
+	}
+	echo '<p>' . implode(' &nbsp; ', $status_parts) . '</p>';
+	if (empty($sc)) {
+		echo '<p><strong>Status:</strong> No terms yet</p>';
+	}
 		echo '<p><strong>Marked for update:</strong> ' . esc_html((string)$dash['pendingUpdateCount']) . '</p>';
 		echo '<p><strong>Last sync:</strong> ' . esc_html($dash['lastSyncAt'] ? (string)$dash['lastSyncAt'] : '—') . '</p>';
+		echo '</div>';
+
+		$tax_counts = isset($dash['taxonomyCounts']) ? $dash['taxonomyCounts'] : array();
+		echo '<div class="card" style="min-width:220px;flex:1;">';
+		echo '<h2 style="margin-top:0;">Taxonomies</h2>';
+		echo '<p><strong>Categories:</strong> ' . esc_html((string)($tax_counts['boat_category'] ?? 0)) . '</p>';
+		echo '<p><strong>Locations:</strong> ' . esc_html((string)($tax_counts['boat_location'] ?? 0)) . '</p>';
+		echo '<p><strong>Model Years:</strong> ' . esc_html((string)($tax_counts['model_year'] ?? 0)) . '</p>';
+		echo '<p><strong>Boat Classes:</strong> ' . esc_html((string)($tax_counts['boat_class'] ?? 0)) . '</p>';
+		echo '<p><strong>Brands:</strong> ' . esc_html((string)($tax_counts['brand'] ?? 0)) . '</p>';
+		$need_migration = ($tax_counts['boat_category'] ?? 0) == 0 && ($tax_counts['boat_location'] ?? 0) == 0 && ($tax_counts['model_year'] ?? 0) == 0;
+		if ($need_migration) {
+			echo '<p style="margin-top:8px;"><a href="' . esc_url(add_query_arg(['wpbs_migrate_tax' => '1', '_wpnonce' => wp_create_nonce('wpbs_migrate_tax')])) . '" class="button button-small" style="background:#f0ad4e;border-color:#eea236;color:#fff;">Populate Taxonomies from Meta</a></p>';
+		}
 		echo '</div>';
 
 		echo '<div class="card" style="min-width:220px;flex:1;">';
@@ -847,13 +877,34 @@ class WPBS_Admin
 			$eta_seconds = $ticks_needed * $delay;
 		}
 
-		// Status counts + last sync + series from custom boats table.
+		// Status counts from boat_status taxonomy (real term counts)
+		$status_terms = get_terms(array('taxonomy' => 'boat_status', 'hide_empty' => true));
+		$status_counts = array();
+		if (!is_wp_error($status_terms)) {
+			foreach ($status_terms as $st) {
+				$status_counts[$st->slug] = array(
+					'name' => $st->name,
+					'count' => (int)$st->count,
+				);
+			}
+		}
+
+		// Last sync from custom boats table
 		$boats_table = WPBS_DB::table_boats();
-		$active = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$boats_table} WHERE sales_status='Active'");
-		$total_rows = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$boats_table}");
-		$sold = max(0, $total_rows - $active);
 		$last_sync_at = $wpdb->get_var("SELECT MAX(last_sync_at) FROM {$boats_table}");
 		$last_sync_at = $last_sync_at ? (string)$last_sync_at : '';
+
+		// Taxonomy term counts
+		$tax_counts = array();
+		$taxonomies = array('boat_category', 'boat_location', 'model_year', 'boat_class', 'brand');
+		foreach ($taxonomies as $tax) {
+			if (!taxonomy_exists($tax)) {
+				$tax_counts[$tax] = 0;
+				continue;
+			}
+			$terms = get_terms(array('taxonomy' => $tax, 'hide_empty' => true));
+			$tax_counts[$tax] = is_wp_error($terms) ? 0 : count($terms);
+		}
 
 		// Sync activity: last 7 days hourly (168 hours)
 		$sync_hours = 7 * 24; // 168 hours = 7 days
@@ -892,10 +943,76 @@ class WPBS_Admin
 			'queueHourly' => $queue_hourly,
 			'queueMetrics' => $metrics,
 			'queueEtaSeconds' => $eta_seconds,
-			'statusCounts' => array('active' => $active, 'sold' => $sold),
+			// status from boat status taxonomy, not post status - gives active vs sold/other breakdown.
+			'statusCounts' => $status_counts,
+			'taxonomyCounts' => $tax_counts,
 			'lastSyncAt' => $last_sync_at,
 			'syncSeries' => array('labels' => $labels, 'values' => $values),
 		);
+	}
+
+	private function migrate_taxonomy_terms()
+	{
+		global $wpdb;
+		$count = 0;
+
+		$post_ids = $wpdb->get_col($wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
+			WPBS_POST_TYPE
+		));
+
+		foreach ($post_ids as $post_id) {
+			$pid = (int)$post_id;
+			$updated = false;
+
+			// Migrate boat_category
+			if (taxonomy_exists('boat_category')) {
+				$cat = get_post_meta($pid, 'wpbs_boat_category', true);
+				if ($cat) {
+					$slug = sanitize_title($cat);
+					if (!get_term_by('slug', $slug, 'boat_category')) {
+						wp_insert_term($cat, 'boat_category', array('slug' => $slug));
+					}
+					wp_set_object_terms($pid, $slug, 'boat_category', false);
+					$updated = true;
+				}
+			}
+
+			// Migrate boat_location
+			if (taxonomy_exists('boat_location')) {
+				$loc = get_post_meta($pid, 'wpbs_location', true);
+				if ($loc) {
+					$slug = sanitize_title($loc);
+					if (!get_term_by('slug', $slug, 'boat_location')) {
+						wp_insert_term($loc, 'boat_location', array('slug' => $slug));
+					}
+					wp_set_object_terms($pid, $slug, 'boat_location', false);
+					$updated = true;
+				}
+			}
+
+			// Migrate model_year
+			if (taxonomy_exists('model_year')) {
+				$yr = get_post_meta($pid, 'wpbs_model_year', true);
+				if ($yr && (int)$yr > 1900) {
+					$slug = (string)(int)$yr;
+					if (!get_term_by('slug', $slug, 'model_year')) {
+						wp_insert_term($slug, 'model_year', array('slug' => $slug));
+					}
+					wp_set_object_terms($pid, $slug, 'model_year', false);
+					$updated = true;
+				}
+			}
+
+			if ($updated) {
+				$count++;
+			}
+		}
+
+		// Clear filter options cache
+		delete_transient('wpbs_filter_options');
+
+		return $count;
 	}
 
 	private function format_duration($seconds)

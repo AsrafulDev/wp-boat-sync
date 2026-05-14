@@ -81,6 +81,165 @@ class WPBS_Elementor_Breadcrumb_Widget extends \Elementor\Widget_Base
 			]
 		);
 
+		// --- Boats Archive Link ---
+		$this->add_control(
+			'show_boats_archive',
+			[
+				'label' => esc_html__('Show "Boats for Sale" Link', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'boats_archive_text',
+			[
+				'label' => esc_html__('  Archive Link Text', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::TEXT,
+				'default' => 'Boats for Sale',
+				'condition' => ['show_boats_archive' => 'yes'],
+			]
+		);
+
+		// --- Builder (Brand) ---
+		$this->add_control(
+			'show_builder',
+			[
+				'label' => esc_html__('Show Builder', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'builder_link',
+			[
+				'label' => esc_html__('  Link Builder', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'condition' => ['show_builder' => 'yes'],
+			]
+		);
+
+		// --- Boat Class ---
+		$this->add_control(
+			'show_boat_class',
+			[
+				'label' => esc_html__('Show Boat Class', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'boat_class_link',
+			[
+				'label' => esc_html__('  Link Boat Class', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'condition' => ['show_boat_class' => 'yes'],
+			]
+		);
+
+		// --- Boat Category ---
+		$this->add_control(
+			'show_boat_category',
+			[
+				'label' => esc_html__('Show Category', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'boat_category_link',
+			[
+				'label' => esc_html__('  Link Category', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'condition' => ['show_boat_category' => 'yes'],
+			]
+		);
+
+		// --- Location ---
+		$this->add_control(
+			'show_location',
+			[
+				'label' => esc_html__('Show Location', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'location_link',
+			[
+				'label' => esc_html__('  Link Location', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'condition' => ['show_location' => 'yes'],
+			]
+		);
+
+		// --- Model Year ---
+		$this->add_control(
+			'show_model_year',
+			[
+				'label' => esc_html__('Show Model Year', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'model_year_link',
+			[
+				'label' => esc_html__('  Link Model Year', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'condition' => ['show_model_year' => 'yes'],
+			]
+		);
+
 		$this->end_controls_section();
 
 		// Container Style
@@ -307,6 +466,8 @@ class WPBS_Elementor_Breadcrumb_Widget extends \Elementor\Widget_Base
 		$separator = $settings['separator'] ? esc_html($settings['separator']) : '›';
 		$home_text = $settings['home_text'] ? esc_html($settings['home_text']) : 'Home';
 		$show_home = $settings['show_home'] === 'yes';
+		$show_boats_archive = $settings['show_boats_archive'] === 'yes';
+		$boats_archive_text = $settings['boats_archive_text'] ? esc_html($settings['boats_archive_text']) : 'Boats for Sale';
 
 		$breadcrumb_items = [];
 
@@ -316,8 +477,8 @@ class WPBS_Elementor_Breadcrumb_Widget extends \Elementor\Widget_Base
 		}
 
 		// Add boats archive
-		if (is_singular('boats') || is_post_type_archive('boats') || is_tax('brand') || is_tax('boat_status')) {
-			$breadcrumb_items[] = '<a href="' . esc_url(get_post_type_archive_link('boats')) . '">Boats for Sale</a>';
+		if ($show_boats_archive && (is_singular('boats') || is_post_type_archive('boats') || is_tax('brand') || is_tax('boat_status') || is_tax('boat_class') || is_tax('boat_category') || is_tax('boat_location') || is_tax('model_year'))) {
+			$breadcrumb_items[] = '<a href="' . esc_url(get_post_type_archive_link('boats')) . '">' . $boats_archive_text . '</a>';
 		}
 
 		// Add taxonomy term
@@ -328,8 +489,75 @@ class WPBS_Elementor_Breadcrumb_Widget extends \Elementor\Widget_Base
 			}
 		}
 
-		// Add current boat
+		// Add builder, boat class, category, location on single boat pages
 		if (is_singular('boats')) {
+			$post_id = get_the_ID();
+
+			// Builder (brand taxonomy)
+			if ($settings['show_builder'] === 'yes') {
+				$brands = get_the_terms($post_id, 'brand');
+				if ($brands && !is_wp_error($brands)) {
+					$brand = $brands[0];
+					if ($settings['builder_link'] === 'yes') {
+						$breadcrumb_items[] = '<a href="' . esc_url(get_term_link($brand)) . '">' . esc_html($brand->name) . '</a>';
+					} else {
+						$breadcrumb_items[] = '<span>' . esc_html($brand->name) . '</span>';
+					}
+				}
+			}
+
+			// Boat Class (boat_class taxonomy)
+			if ($settings['show_boat_class'] === 'yes') {
+				$classes = get_the_terms($post_id, 'boat_class');
+				if ($classes && !is_wp_error($classes)) {
+					$class = $classes[0];
+					if ($settings['boat_class_link'] === 'yes') {
+						$breadcrumb_items[] = '<a href="' . esc_url(get_term_link($class)) . '">' . esc_html($class->name) . '</a>';
+					} else {
+						$breadcrumb_items[] = '<span>' . esc_html($class->name) . '</span>';
+					}
+				}
+			}
+
+			// Boat Category (boat_category taxonomy)
+			if ($settings['show_boat_category'] === 'yes') {
+				$cats = get_the_terms($post_id, 'boat_category');
+				if ($cats && !is_wp_error($cats)) {
+					$cat = $cats[0];
+					if ($settings['boat_category_link'] === 'yes') {
+						$breadcrumb_items[] = '<a href="' . esc_url(get_term_link($cat)) . '">' . esc_html($cat->name) . '</a>';
+					} else {
+						$breadcrumb_items[] = '<span>' . esc_html($cat->name) . '</span>';
+					}
+				}
+			}
+
+			// Location (boat_location taxonomy)
+			if ($settings['show_location'] === 'yes') {
+				$locs = get_the_terms($post_id, 'boat_location');
+				if ($locs && !is_wp_error($locs)) {
+					$loc = $locs[0];
+					if ($settings['location_link'] === 'yes') {
+						$breadcrumb_items[] = '<a href="' . esc_url(get_term_link($loc)) . '">' . esc_html($loc->name) . '</a>';
+					} else {
+						$breadcrumb_items[] = '<span>' . esc_html($loc->name) . '</span>';
+					}
+				}
+			}
+
+			// Model Year (model_year taxonomy)
+			if ($settings['show_model_year'] === 'yes') {
+				$years = get_the_terms($post_id, 'model_year');
+				if ($years && !is_wp_error($years)) {
+					$yr = $years[0];
+					if ($settings['model_year_link'] === 'yes') {
+						$breadcrumb_items[] = '<a href="' . esc_url(get_term_link($yr)) . '">' . esc_html($yr->name) . '</a>';
+					} else {
+						$breadcrumb_items[] = '<span>' . esc_html($yr->name) . '</span>';
+					}
+				}
+			}
+
 			$breadcrumb_items[] = '<span class="wpbs-breadcrumb__current">' . get_the_title() . '</span>';
 		}
 

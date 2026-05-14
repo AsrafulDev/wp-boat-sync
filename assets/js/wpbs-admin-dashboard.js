@@ -48,18 +48,56 @@
       });
     }
 
-    // Status doughnut chart
+    // Status pie chart from boat_status taxonomy term counts
     var statusCanvas = $('#wpbsChartStatus');
     if (statusCanvas && data.statusCounts) {
+      var sc = data.statusCounts;
+      var colorMap = {
+        active: '#16a34a',
+        available: '#3b82f6',
+        missing: '#f59e0b',
+        'sale-pending': '#8b5cf6',
+        sold: '#ef4444'
+      };
+      var fallbackColors = ['#16a34a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#06b6d4', '#f97316'];
+      var labels = [], values = [], colors = [];
+      var total = 0;
+      var colorIdx = 0;
+
+      Object.keys(sc).forEach(function(slug) {
+        var info = sc[slug];
+        var count = info.count || 0;
+        if (count > 0) {
+          total += count;
+        }
+      });
+
+      Object.keys(sc).forEach(function(slug) {
+        var info = sc[slug];
+        var count = info.count || 0;
+        var pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        labels.push(info.name + ' (' + pct + '%)');
+        values.push(count);
+        colors.push(colorMap[slug] || fallbackColors[colorIdx % fallbackColors.length]);
+        colorIdx++;
+      });
+
+      if (labels.length === 0) {
+        labels = ['No data'];
+        values = [1];
+        colors = ['#d1d5db'];
+      }
+
       new Chart(statusCanvas.getContext('2d'), {
-        type: 'doughnut',
+        type: 'pie',
         data: {
-          labels: ['Active', 'Sold/Other'],
+          labels: labels,
           datasets: [
             {
-              data: [data.statusCounts.active || 0, data.statusCounts.sold || 0],
-              backgroundColor: ['#16a34a', '#ef4444'],
-              borderWidth: 1
+              data: values,
+              backgroundColor: colors,
+              borderWidth: 1,
+              borderColor: '#fff'
             }
           ]
         },
@@ -67,7 +105,14 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ctx.label.split(' (')[0] + ': ' + ctx.raw;
+                }
+              }
+            }
           }
         }
       });

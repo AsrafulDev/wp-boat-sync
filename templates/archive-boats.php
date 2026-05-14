@@ -25,6 +25,7 @@ $f_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) 
 $f_builder = isset($_GET['builder']) ? sanitize_text_field($_GET['builder']) : '';
 $f_boat_class = isset($_GET['boat_class']) ? sanitize_text_field($_GET['boat_class']) : '';
 $f_location = isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '';
+$f_model_year = isset($_GET['model_year']) ? sanitize_text_field($_GET['model_year']) : '';
 $f_length_min = isset($_GET['length_min']) ? (float)$_GET['length_min'] : '';
 $f_length_max = isset($_GET['length_max']) ? (float)$_GET['length_max'] : '';
 $f_year_min = isset($_GET['year_min']) ? (int)$_GET['year_min'] : '';
@@ -66,6 +67,42 @@ if (is_tax('boat_class')) {
 			$f_boat_class = (string)$term->name;
 		}
 		$boat_class_page = true;
+	}
+}
+
+// If viewing a boat_category taxonomy archive, preselect the filter
+$category_page = false;
+if (is_tax('boat_category')) {
+	$term = get_queried_object();
+	if ($term && !empty($term->name)) {
+		if ($f_category === '') {
+			$f_category = (string)$term->name;
+		}
+		$category_page = true;
+	}
+}
+
+// If viewing a boat_location taxonomy archive, preselect the filter
+$location_page = false;
+if (is_tax('boat_location')) {
+	$term = get_queried_object();
+	if ($term && !empty($term->name)) {
+		if ($f_location === '') {
+			$f_location = (string)$term->name;
+		}
+		$location_page = true;
+	}
+}
+
+// If viewing a model_year taxonomy archive, preselect the filter
+$model_year_page = false;
+if (is_tax('model_year')) {
+	$term = get_queried_object();
+	if ($term && !empty($term->name)) {
+		if ($f_model_year === '') {
+			$f_model_year = (string)$term->name;
+		}
+		$model_year_page = true;
 	}
 }
 
@@ -139,6 +176,17 @@ function wpbs_format_price_short($price) {
 					<?php endforeach; ?>
 				</select>
 			</div>
+			<?php if (!empty($filter_options['model_years'])) : ?>
+			<div class="wpbs-filter-bar__field">
+				<label>Model Year</label>
+				<select name="model_year" data-wpbs-filter="model_year">
+					<option value="">Any Year</option>
+					<?php foreach ($filter_options['model_years'] as $my) : ?>
+					<option value="<?php echo esc_attr($my); ?>" <?php selected($f_model_year, $my); ?>><?php echo esc_html($my); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			<?php endif; ?>
 			<div class="wpbs-filter-bar__field wpbs-filter-bar__field--action">
 				<button type="button" class="wpbs-filter-bar__search" data-wpbs-filter-submit>Search</button>
 			</div>

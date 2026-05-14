@@ -224,6 +224,48 @@ class WPBS_Plugin
 			'show_in_rest' => true,
 			'rewrite' => array('slug' => 'boat-class'),
 		));
+
+		// Register Boat Category taxonomy
+		register_taxonomy('boat_category', WPBS_POST_TYPE, array(
+			'labels' => array(
+				'name' => __('Boat Categories', 'wpbs'),
+				'singular_name' => __('Boat Category', 'wpbs'),
+			),
+			'public' => true,
+			'hierarchical' => false,
+			'show_ui' => true,
+			'show_admin_column' => true,
+			'show_in_rest' => true,
+			'rewrite' => array('slug' => 'boat-category'),
+		));
+
+		// Register Boat Location taxonomy
+		register_taxonomy('boat_location', WPBS_POST_TYPE, array(
+			'labels' => array(
+				'name' => __('Boat Locations', 'wpbs'),
+				'singular_name' => __('Boat Location', 'wpbs'),
+			),
+			'public' => true,
+			'hierarchical' => false,
+			'show_ui' => true,
+			'show_admin_column' => true,
+			'show_in_rest' => true,
+			'rewrite' => array('slug' => 'boat-location'),
+		));
+
+		// Register Model Year taxonomy
+		register_taxonomy('model_year', WPBS_POST_TYPE, array(
+			'labels' => array(
+				'name' => __('Model Years', 'wpbs'),
+				'singular_name' => __('Model Year', 'wpbs'),
+			),
+			'public' => true,
+			'hierarchical' => false,
+			'show_ui' => true,
+			'show_admin_column' => true,
+			'show_in_rest' => true,
+			'rewrite' => array('slug' => 'model-year'),
+		));
 	}
 
 	public function template_include($template)
@@ -249,8 +291,8 @@ class WPBS_Plugin
 				return $archive;
 			}
 		}
-		// Brand, boat_status, or boat_class taxonomy archives
-		if (is_tax('brand') || is_tax('boat_status') || is_tax('boat_class')) {
+		// Brand, boat_status, boat_class, boat_category, boat_location, or model_year taxonomy archives
+		if (is_tax('brand') || is_tax('boat_status') || is_tax('boat_class') || is_tax('boat_category') || is_tax('boat_location') || is_tax('model_year')) {
 			// Check if Elementor has a template assigned for this taxonomy
 			if (class_exists('\Elementor\Plugin')) {
 				$term = get_queried_object();
@@ -345,6 +387,7 @@ class WPBS_Plugin
 		$builder = isset($_POST['builder']) ? sanitize_text_field($_POST['builder']) : '';
 		$boat_class = isset($_POST['boat_class']) ? sanitize_text_field($_POST['boat_class']) : '';
 		$location = isset($_POST['location']) ? sanitize_text_field($_POST['location']) : '';
+		$model_year = isset($_POST['model_year']) ? sanitize_text_field($_POST['model_year']) : '';
 		$length_min = isset($_POST['length_min']) ? (float)$_POST['length_min'] : '';
 		$length_max = isset($_POST['length_max']) ? (float)$_POST['length_max'] : '';
 		$year_min = isset($_POST['year_min']) ? (int)$_POST['year_min'] : '';
@@ -392,6 +435,42 @@ class WPBS_Plugin
 				'taxonomy' => 'boat_class',
 				'field'    => 'slug',
 				'terms'    => sanitize_title($boat_class),
+			);
+		}
+
+		// Boat Category filter via taxonomy
+		if ($category !== '') {
+			if (!isset($args['tax_query'])) {
+				$args['tax_query'] = array();
+			}
+			$args['tax_query'][] = array(
+				'taxonomy' => 'boat_category',
+				'field'    => 'slug',
+				'terms'    => sanitize_title($category),
+			);
+		}
+
+		// Location filter via taxonomy
+		if ($location !== '') {
+			if (!isset($args['tax_query'])) {
+				$args['tax_query'] = array();
+			}
+			$args['tax_query'][] = array(
+				'taxonomy' => 'boat_location',
+				'field'    => 'slug',
+				'terms'    => sanitize_title($location),
+			);
+		}
+
+		// Model Year filter via taxonomy
+		if ($model_year !== '') {
+			if (!isset($args['tax_query'])) {
+				$args['tax_query'] = array();
+			}
+			$args['tax_query'][] = array(
+				'taxonomy' => 'model_year',
+				'field'    => 'slug',
+				'terms'    => sanitize_title($model_year),
 			);
 		}
 
@@ -445,14 +524,8 @@ class WPBS_Plugin
 			$meta_query[] = $cond_meta;
 		}
 
-		if ($category) {
-			$meta_query[] = array('key' => 'wpbs_boat_category', 'value' => $category, 'compare' => '=');
-		}
 		if ($builder) {
 			$meta_query[] = array('key' => 'wpbs_make', 'value' => $builder, 'compare' => '=');
-		}
-		if ($location) {
-			$meta_query[] = array('key' => 'wpbs_location', 'value' => $location, 'compare' => 'LIKE');
 		}
 		if ($length_min !== '') {
 			$meta_query[] = array('key' => 'wpbs_length_overall', 'value' => $length_min, 'compare' => '>=', 'type' => 'NUMERIC');
@@ -628,21 +701,19 @@ class WPBS_Plugin
 			'categories' => array(),
 			'builders' => array(),
 			'locations' => array(),
+			'model_years' => array(),
 			'years' => array('min' => 0, 'max' => 0),
 			'prices' => array('min' => 0, 'max' => 0),
 			'lengths' => array('min' => 0, 'max' => 0),
 		);
 
-		// Categories
-		$categories = $wpdb->get_col($wpdb->prepare(
-			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} pm 
-			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
-			 WHERE p.post_type = %s AND p.post_status = 'publish' 
-			 AND pm.meta_key = 'wpbs_boat_category' AND pm.meta_value != '' 
-			 ORDER BY meta_value ASC",
-			WPBS_POST_TYPE
+		// Categories - from taxonomy
+		$cat_terms = get_terms(array(
+			'taxonomy' => 'boat_category',
+			'hide_empty' => true,
+			'fields' => 'names',
 		));
-		$options['categories'] = array_filter($categories);
+		$options['categories'] = is_array($cat_terms) ? $cat_terms : array();
 
 		// Builders (make)
 		$builders = $wpdb->get_col($wpdb->prepare(
@@ -663,16 +734,23 @@ class WPBS_Plugin
 		));
 		$options['boat_classes'] = is_array($boat_class_terms) ? $boat_class_terms : array();
 
-		// Locations
-		$locations = $wpdb->get_col($wpdb->prepare(
-			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} pm 
-			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
-			 WHERE p.post_type = %s AND p.post_status = 'publish' 
-			 AND pm.meta_key = 'wpbs_location' AND pm.meta_value != '' 
-			 ORDER BY meta_value ASC",
-			WPBS_POST_TYPE
+		// Locations - from taxonomy
+		$loc_terms = get_terms(array(
+			'taxonomy' => 'boat_location',
+			'hide_empty' => true,
+			'fields' => 'names',
 		));
-		$options['locations'] = array_filter($locations);
+		$options['locations'] = is_array($loc_terms) ? $loc_terms : array();
+
+		// Model Years - from taxonomy
+		$yr_terms = get_terms(array(
+			'taxonomy' => 'model_year',
+			'hide_empty' => true,
+			'orderby' => 'name',
+			'order' => 'DESC',
+			'fields' => 'names',
+		));
+		$options['model_years'] = is_array($yr_terms) ? $yr_terms : array();
 
 		// Year range
 		$year_range = $wpdb->get_row($wpdb->prepare(

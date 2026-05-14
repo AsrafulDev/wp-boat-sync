@@ -114,38 +114,6 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		);
 
 		$this->add_control(
-			'show_sold_filter',
-			[
-				'label' => esc_html__('Show Sold Checkbox', 'wp-boat-sync'),
-				'description' => esc_html__('Show a "Sold" checkbox in the frontend filter so users can include sold boats in results.', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::SWITCHER,
-				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
-				'label_off' => esc_html__('No', 'wp-boat-sync'),
-				'return_value' => 'yes',
-				'default' => 'no',
-				'condition' => [
-					'filter' => 'yes',
-				],
-			]
-		);
-
-		$this->add_control(
-			'show_boat_class_filter',
-			[
-				'label' => esc_html__('Show Boat Class Filter', 'wp-boat-sync'),
-				'description' => esc_html__('Show a "Boat Class" dropdown in the frontend filter bar.', 'wp-boat-sync'),
-				'type' => \Elementor\Controls_Manager::SWITCHER,
-				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
-				'label_off' => esc_html__('No', 'wp-boat-sync'),
-				'return_value' => 'yes',
-				'default' => 'yes',
-				'condition' => [
-					'filter' => 'yes',
-				],
-			]
-		);
-
-		$this->add_control(
 			'orderby',
 			[
 				'label' => esc_html__('Order By', 'wp-boat-sync'),
@@ -198,23 +166,31 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 
 		// Get fresh filter options (bypass cache for admin)
 		global $wpdb;
-		
-		// Get all categories (no limit)
-		$categories = $wpdb->get_col(
-			"SELECT DISTINCT pm.meta_value 
-			 FROM {$wpdb->postmeta} pm 
-			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
-			 WHERE p.post_type = 'boats' 
-			 AND p.post_status = 'publish' 
-			 AND pm.meta_key = 'wpbs_boat_category' 
-			 AND pm.meta_value != '' 
-			 ORDER BY pm.meta_value ASC"
+
+		// Show Category Filter switch
+		$this->add_control(
+			'show_category_filter',
+			[
+				'label' => esc_html__('Show Category Filter', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
 		);
-		
-		// Build category options
+
+		// Get all categories from boat_category taxonomy
+		$cat_terms = get_terms(array(
+			'taxonomy' => 'boat_category',
+			'hide_empty' => true,
+		));
 		$category_options = ['' => esc_html__('All Categories', 'wp-boat-sync')];
-		foreach (array_filter($categories) as $cat) {
-			$category_options[$cat] = $cat;
+		if (!is_wp_error($cat_terms) && is_array($cat_terms)) {
+			foreach ($cat_terms as $ct) {
+				$category_options[$ct->slug] = $ct->name;
+			}
 		}
 
 		$this->add_control(
@@ -225,6 +201,20 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 				'default' => '',
 				'options' => $category_options,
 				'label_block' => true,
+			]
+		);
+
+		// Show Builder Filter switch
+		$this->add_control(
+			'show_builder_filter',
+			[
+				'label' => esc_html__('Show Builder Filter', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
 			]
 		);
 
@@ -271,6 +261,21 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		}
 
 		$this->add_control(
+			'show_boat_class_filter',
+			[
+				'label' => esc_html__('Show Boat Class Filter', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'condition' => [
+					'filter' => 'yes',
+				],
+			]
+		);
+
+		$this->add_control(
 			'prefilter_boat_class',
 			[
 				'label' => esc_html__('Boat Class', 'wp-boat-sync'),
@@ -281,22 +286,30 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			]
 		);
 
-		// Get all locations (no limit)
-		$locations = $wpdb->get_col(
-			"SELECT DISTINCT pm.meta_value 
-			 FROM {$wpdb->postmeta} pm 
-			 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
-			 WHERE p.post_type = 'boats' 
-			 AND p.post_status = 'publish' 
-			 AND pm.meta_key = 'wpbs_location' 
-			 AND pm.meta_value != '' 
-			 ORDER BY pm.meta_value ASC"
+		// Show Location Filter switch
+		$this->add_control(
+			'show_location_filter',
+			[
+				'label' => esc_html__('Show Location Filter', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
 		);
-		
-		// Build location options
+
+		// Get all locations from boat_location taxonomy
+		$loc_terms = get_terms(array(
+			'taxonomy' => 'boat_location',
+			'hide_empty' => true,
+		));
 		$location_options = ['' => esc_html__('All Locations', 'wp-boat-sync')];
-		foreach (array_filter($locations) as $loc) {
-			$location_options[$loc] = $loc;
+		if (!is_wp_error($loc_terms) && is_array($loc_terms)) {
+			foreach ($loc_terms as $lt) {
+				$location_options[$lt->slug] = $lt->name;
+			}
 		}
 
 		$this->add_control(
@@ -307,6 +320,74 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 				'default' => '',
 				'options' => $location_options,
 				'label_block' => true,
+			]
+		);
+
+		// Show Model Year Filter switch
+		$this->add_control(
+			'show_model_year_filter',
+			[
+				'label' => esc_html__('Show Model Year Filter', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		// Get all model years from model_year taxonomy
+		$yr_terms = get_terms(array(
+			'taxonomy' => 'model_year',
+			'hide_empty' => true,
+			'orderby' => 'name',
+			'order' => 'DESC',
+		));
+		$model_year_options = ['' => esc_html__('All Years', 'wp-boat-sync')];
+		if (!is_wp_error($yr_terms) && is_array($yr_terms)) {
+			foreach ($yr_terms as $yt) {
+				$model_year_options[$yt->slug] = $yt->name;
+			}
+		}
+
+		$this->add_control(
+			'prefilter_model_year',
+			[
+				'label' => esc_html__('Model Year', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SELECT2,
+				'default' => '',
+				'options' => $model_year_options,
+				'label_block' => true,
+			]
+		);
+
+		// Show Condition Filter switch
+		$this->add_control(
+			'show_condition_filter',
+			[
+				'label' => esc_html__('Show Condition Filter', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
+			]
+		);
+
+		$this->add_control(
+			'show_sold_filter',
+			[
+				'label' => esc_html__('Show Sold Checkbox', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'no',
+				'condition' => [
+					'filter' => 'yes',
+				],
 			]
 		);
 
@@ -323,6 +404,20 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 				],
 				'multiple' => true,
 				'label_block' => true,
+			]
+		);
+
+		// Show Featured Filter switch
+		$this->add_control(
+			'show_featured_filter',
+			[
+				'label' => esc_html__('Show Featured Filter', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'separator' => 'before',
 			]
 		);
 
@@ -1414,6 +1509,12 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			'orderby' => $settings['orderby'],
 			'show_sold_filter' => (isset($settings['show_sold_filter']) && $settings['show_sold_filter'] === 'yes') ? 'true' : 'false',
 			'show_boat_class_filter' => (isset($settings['show_boat_class_filter']) && $settings['show_boat_class_filter'] === 'yes') ? 'true' : 'false',
+			'show_category_filter' => (!isset($settings['show_category_filter']) || $settings['show_category_filter'] === 'yes') ? 'true' : 'false',
+			'show_builder_filter' => (!isset($settings['show_builder_filter']) || $settings['show_builder_filter'] === 'yes') ? 'true' : 'false',
+			'show_location_filter' => (!isset($settings['show_location_filter']) || $settings['show_location_filter'] === 'yes') ? 'true' : 'false',
+			'show_model_year_filter' => (!isset($settings['show_model_year_filter']) || $settings['show_model_year_filter'] === 'yes') ? 'true' : 'false',
+			'show_condition_filter' => (!isset($settings['show_condition_filter']) || $settings['show_condition_filter'] === 'yes') ? 'true' : 'false',
+			'show_featured_filter' => (!isset($settings['show_featured_filter']) || $settings['show_featured_filter'] === 'yes') ? 'true' : 'false',
 		];
 
 		// Apply pre-filters
@@ -1432,7 +1533,11 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		if (!empty($settings['prefilter_location'])) {
 			$atts['location'] = $settings['prefilter_location'];
 		}
-		
+
+		if (!empty($settings['prefilter_model_year'])) {
+			$atts['model_year'] = $settings['prefilter_model_year'];
+		}
+
 		if (!empty($settings['prefilter_condition'])) {
 			if (is_array($settings['prefilter_condition'])) {
 				$atts['condition'] = implode(',', $settings['prefilter_condition']);
@@ -1453,22 +1558,39 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		// If on a taxonomy page, auto-filter by that taxonomy
 		if (is_tax('brand')) {
 			$term = get_queried_object();
-			if ($term && isset($term->name)) {
-				// Pre-filter by brand - override if not already set
+			if ($term && isset($term->slug)) {
 				if (empty($atts['builder'])) {
 					$atts['builder'] = $term->name;
 				}
 			}
 		} elseif (is_tax('boat_status')) {
-			$term = get_queried_object();
-			if ($term) {
-				// You can add status filtering here if your shortcode supports it
-			}
+			// Status filtering is handled via tax_query for sold exclusion
 		} elseif (is_tax('boat_class')) {
 			$term = get_queried_object();
-			if ($term && isset($term->name)) {
+			if ($term && isset($term->slug)) {
 				if (empty($atts['boat_class'])) {
-					$atts['boat_class'] = $term->name;
+					$atts['boat_class'] = $term->slug;
+				}
+			}
+		} elseif (is_tax('boat_category')) {
+			$term = get_queried_object();
+			if ($term && isset($term->slug)) {
+				if (empty($atts['category'])) {
+					$atts['category'] = $term->slug;
+				}
+			}
+		} elseif (is_tax('boat_location')) {
+			$term = get_queried_object();
+			if ($term && isset($term->slug)) {
+				if (empty($atts['location'])) {
+					$atts['location'] = $term->slug;
+				}
+			}
+		} elseif (is_tax('model_year')) {
+			$term = get_queried_object();
+			if ($term && isset($term->slug)) {
+				if (empty($atts['model_year'])) {
+					$atts['model_year'] = $term->slug;
 				}
 			}
 		}
