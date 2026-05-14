@@ -962,6 +962,25 @@ class WPBS_Sync
 			// Assign term by slug (non-hierarchical)
 			@wp_set_object_terms($post_id, $slug, 'brand', false);
 		}
+
+		// Assign boat_class taxonomy from BoatClassCode array
+		if (!empty($data['BoatClassCode']) && is_array($data['BoatClassCode'])) {
+			$class_slugs = array();
+			foreach ($data['BoatClassCode'] as $class_code) {
+				$class_code = trim((string)$class_code);
+				if ($class_code === '') {
+					continue;
+				}
+				$slug = sanitize_title($class_code);
+				if (!get_term_by('slug', $slug, 'boat_class')) {
+					wp_insert_term($class_code, 'boat_class', array('slug' => $slug));
+				}
+				$class_slugs[] = $slug;
+			}
+			if (!empty($class_slugs)) {
+				@wp_set_object_terms($post_id, $class_slugs, 'boat_class', false);
+			}
+		}
 	}
 
 	private function update_field_or_meta($post_id, $field_name, $value)
@@ -1301,16 +1320,32 @@ class WPBS_Sync
 		// Treat empty/missing status as active (boat is available)
 		$status_lower = strtolower(trim((string)$sales_status));
 		$is_active = ($status_lower === '' || $status_lower === 'active' || $status_lower === 'available');
-		
+
 		// Ensure 'boat_status' taxonomy exists
 		$this->ensure_boat_status_taxonomy();
-		
+
+		// Auto-create boat_status term from SalesStatus value
+		$status_label = trim((string)$sales_status);
+		if ($status_label === '') {
+			$status_label = 'Active';
+		}
+		$status_slug = sanitize_title($status_label);
+		if (!get_term_by('slug', $status_slug, 'boat_status')) {
+			wp_insert_term($status_label, 'boat_status', array('slug' => $status_slug));
+		}
+		// Also ensure 'sold' term exists for backward compatibility
+		if (!get_term_by('slug', 'sold', 'boat_status')) {
+			wp_insert_term('Sold', 'boat_status', array('slug' => 'sold'));
+		}
+
 		if ($is_active) {
 			// Remove sold status
 			delete_post_meta($post_id, '_wpbs_soldout_at');
 			delete_post_meta($post_id, '_wpbs_is_sold');
-			wp_remove_object_terms($post_id, 'sold', 'boat_status');
-			
+
+			// Assign the active status term (e.g., 'active')
+			wp_set_object_terms($post_id, $status_slug, 'boat_status', false);
+
 			// Ensure post is published
 			if (get_post_status($post_id) !== 'publish') {
 				wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));
@@ -1325,10 +1360,14 @@ class WPBS_Sync
 		}
 		update_post_meta($post_id, '_wpbs_is_sold', '1');
 		update_post_meta($post_id, 'wpbs_sales_status', $sales_status);
-		
-		// Add 'Sold' term to boat_status taxonomy
-		wp_set_object_terms($post_id, 'sold', 'boat_status', false);
-		
+
+		// Assign both the specific status term AND 'sold' for backward compatibility
+		$terms = array($status_slug);
+		if ($status_slug !== 'sold') {
+			$terms[] = 'sold';
+		}
+		wp_set_object_terms($post_id, $terms, 'boat_status', false);
+
 		// Ensure post stays published (not draft)
 		if (get_post_status($post_id) !== 'publish') {
 			wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));

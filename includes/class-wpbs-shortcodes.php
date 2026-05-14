@@ -1146,11 +1146,13 @@ class WPBS_Shortcodes
 			'orderby' => 'date',
 			'category' => '',
 			'builder' => '',
+			'boat_class' => '',
 			'location' => '',
 			'condition' => '',
 			'featured' => 'false',
 			'pagination' => 'yes',
 			'show_sold_filter' => 'no',
+			'show_boat_class_filter' => 'yes',
 		), $atts);
 
 		$ppp = max(1, (int)$atts['posts_per_page']);
@@ -1171,6 +1173,7 @@ class WPBS_Shortcodes
 		$show_filter = in_array(strtolower($atts['filter']), array('true', 'yes', '1'), true);
 		$filter_position = in_array($atts['filter_position'], array('top', 'left', 'right')) ? $atts['filter_position'] : 'top';
 		$show_sold_filter = in_array(strtolower($atts['show_sold_filter']), array('true', 'yes', '1'), true);
+		$show_boat_class_filter = in_array(strtolower($atts['show_boat_class_filter'] ?? 'yes'), array('true', 'yes', '1'), true);
 		$orderby = sanitize_text_field($atts['orderby']);
 
 		// PAGINATION (SINGLE SOURCE OF TRUTH)
@@ -1192,6 +1195,7 @@ $request = array_merge($_GET, $_POST);
 		// Get filter values from URL if filter is enabled, or from shortcode attributes
 		$f_category = !empty($atts['category']) ? sanitize_text_field($atts['category']) : (isset($request['category']) ? sanitize_text_field($_GET['category']) : '');
 		$f_builder = !empty($atts['builder']) ? sanitize_text_field($atts['builder']) : (isset($request['builder']) ? sanitize_text_field($_GET['builder']) : '');
+		$f_boat_class = !empty($atts['boat_class']) ? sanitize_text_field($atts['boat_class']) : (isset($request['boat_class']) ? sanitize_text_field($_GET['boat_class']) : '');
 		$f_location = !empty($atts['location']) ? sanitize_text_field($atts['location']) : (isset($request['location']) ? sanitize_text_field($_GET['location']) : '');
 		$f_length_min = isset($_GET['length_min']) ? (float)$request['length_min'] : '';
 		$f_length_max = isset($_GET['length_max']) ? (float)$request['length_max'] : '';
@@ -1297,6 +1301,18 @@ if ($f_builder) {
         'key'     => 'wpbs_make',
         'value'   => $f_builder,
         'compare' => '='
+    );
+}
+
+// Boat Class filter via taxonomy
+if ($f_boat_class !== '') {
+    if (!isset($args['tax_query'])) {
+        $args['tax_query'] = array();
+    }
+    $args['tax_query'][] = array(
+        'taxonomy' => 'boat_class',
+        'field'    => 'slug',
+        'terms'    => sanitize_title($f_boat_class),
     );
 }
 
@@ -1414,7 +1430,7 @@ if (!empty($meta_query)) {
 
 			$out = '<div id="' . esc_attr($uid) . '" class="wpbs-wrap ' . esc_attr($layout_class) . '" data-wpbs-filter-container data-posts-per-page="' . esc_attr($ppp) . '" data-columns="' . esc_attr($desktop_cols) . '">';
 			if ($show_filter) {
-				$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter);
+				$out .= $this->render_filter_bar($f_category, $f_builder, $f_boat_class, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter, $show_boat_class_filter);
 			}
 			$out .= '<div class="wpbs-filter-content">';
 			// $out .= '<div class="wpbs-archive-header"><div class="wpbs-archive-count" data-wpbs-total-count>0 boats</div></div>';
@@ -1428,7 +1444,7 @@ if (!empty($meta_query)) {
 
 		// Render filter bar if enabled
 		if ($show_filter) {
-			$out .= $this->render_filter_bar($f_category, $f_builder, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter);
+			$out .= $this->render_filter_bar($f_category, $f_builder, $f_boat_class, $f_location, $f_length_min, $f_length_max, $f_year_min, $f_year_max, $f_price_min, $f_price_max, $f_condition_new, $f_condition_used, $f_condition_sold, $f_featured, $f_orderby, $show_sold_filter, $show_boat_class_filter);
 		}
 
 		// Wrap content for layout
@@ -1570,7 +1586,7 @@ if (!empty($meta_query)) {
 	/**
 	 * Render filter bar HTML
 	 */
-	private function render_filter_bar($category, $builder, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $condition_sold, $featured, $orderby, $show_sold_filter = false)
+	private function render_filter_bar($category, $builder, $boat_class, $location, $length_min, $length_max, $year_min, $year_max, $price_min, $price_max, $condition_new, $condition_used, $condition_sold, $featured, $orderby, $show_sold_filter = false, $show_boat_class_filter = true)
 	{
 		$filter_options = WPBS_Plugin::get_filter_options();
 
@@ -1613,6 +1629,16 @@ if (!empty($meta_query)) {
 			$out .= '<option value="' . esc_attr($b) . '"' . selected($builder, $b, false) . '>' . esc_html($b) . '</option>';
 		}
 		$out .= '</select></div>';
+
+		// Boat Class
+		if ($show_boat_class_filter && !empty($filter_options['boat_classes'])) {
+			$out .= '<div class="wpbs-filter-bar__field"><label>Boat Class</label>';
+			$out .= '<select name="boat_class" data-wpbs-filter="boat_class"><option value="">Any Class</option>';
+			foreach ($filter_options['boat_classes'] as $bc) {
+				$out .= '<option value="' . esc_attr($bc) . '"' . selected($boat_class, $bc, false) . '>' . esc_html($bc) . '</option>';
+			}
+			$out .= '</select></div>';
+		}
 
 		// Location
 		$out .= '<div class="wpbs-filter-bar__field"><label>Location</label>';

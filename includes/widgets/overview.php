@@ -394,7 +394,7 @@ class WPBS_Elementor_Overview_Widget extends \Elementor\Widget_Base
 		}
 		
 		$post = get_post($final_id);
-		$status = get_post_meta($final_id, 'wpbs_status', true);
+		$status = get_post_meta($final_id, 'wpbs_sales_status', true);
 		$is_sold = $status && strtolower($status) !== 'active';
 		$content = $post->post_content;
 		$content = apply_filters('the_content', $content);

@@ -23,6 +23,7 @@ $filter_options = WPBS_Plugin::get_filter_options();
 // Get current filter values from URL
 $f_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '';
 $f_builder = isset($_GET['builder']) ? sanitize_text_field($_GET['builder']) : '';
+$f_boat_class = isset($_GET['boat_class']) ? sanitize_text_field($_GET['boat_class']) : '';
 $f_location = isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '';
 $f_length_min = isset($_GET['length_min']) ? (float)$_GET['length_min'] : '';
 $f_length_max = isset($_GET['length_max']) ? (float)$_GET['length_max'] : '';
@@ -53,6 +54,18 @@ if (is_tax('brand')) {
 			$f_builder = (string)$term->name;
 		}
 		$brand_page = true;
+	}
+}
+
+// If viewing a boat_class taxonomy archive, preselect the filter
+$boat_class_page = false;
+if (is_tax('boat_class')) {
+	$term = get_queried_object();
+	if ($term && !empty($term->name)) {
+		if ($f_boat_class === '') {
+			$f_boat_class = (string)$term->name;
+		}
+		$boat_class_page = true;
 	}
 }
 
@@ -106,6 +119,17 @@ function wpbs_format_price_short($price) {
 					<?php endforeach; ?>
 				</select>
 			</div>
+			<?php if (!empty($filter_options['boat_classes'])) : ?>
+			<div class="wpbs-filter-bar__field">
+				<label>Boat Class</label>
+				<select name="boat_class" data-wpbs-filter="boat_class">
+					<option value="">Any Class</option>
+					<?php foreach ($filter_options['boat_classes'] as $bc) : ?>
+					<option value="<?php echo esc_attr($bc); ?>" <?php selected($f_boat_class, $bc); ?>><?php echo esc_html($bc); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			<?php endif; ?>
 			<div class="wpbs-filter-bar__field">
 				<label>Location</label>
 				<select name="location" data-wpbs-filter="location">

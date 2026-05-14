@@ -130,6 +130,22 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		);
 
 		$this->add_control(
+			'show_boat_class_filter',
+			[
+				'label' => esc_html__('Show Boat Class Filter', 'wp-boat-sync'),
+				'description' => esc_html__('Show a "Boat Class" dropdown in the frontend filter bar.', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SWITCHER,
+				'label_on' => esc_html__('Yes', 'wp-boat-sync'),
+				'label_off' => esc_html__('No', 'wp-boat-sync'),
+				'return_value' => 'yes',
+				'default' => 'yes',
+				'condition' => [
+					'filter' => 'yes',
+				],
+			]
+		);
+
+		$this->add_control(
 			'orderby',
 			[
 				'label' => esc_html__('Order By', 'wp-boat-sync'),
@@ -237,6 +253,30 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 				'type' => \Elementor\Controls_Manager::SELECT2,
 				'default' => '',
 				'options' => $builder_options,
+				'label_block' => true,
+			]
+		);
+
+		// Get all boat classes from taxonomy
+		$boat_class_terms = get_terms(array(
+			'taxonomy' => 'boat_class',
+			'hide_empty' => true,
+			'fields' => 'id=>name',
+		));
+		$boat_class_options = array('' => esc_html__('All Classes', 'wp-boat-sync'));
+		if (is_array($boat_class_terms)) {
+			foreach ($boat_class_terms as $bc_name) {
+				$boat_class_options[$bc_name] = $bc_name;
+			}
+		}
+
+		$this->add_control(
+			'prefilter_boat_class',
+			[
+				'label' => esc_html__('Boat Class', 'wp-boat-sync'),
+				'type' => \Elementor\Controls_Manager::SELECT2,
+				'default' => '',
+				'options' => $boat_class_options,
 				'label_block' => true,
 			]
 		);
@@ -1373,6 +1413,7 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 			'filter_position' => $settings['filter_position'],
 			'orderby' => $settings['orderby'],
 			'show_sold_filter' => (isset($settings['show_sold_filter']) && $settings['show_sold_filter'] === 'yes') ? 'true' : 'false',
+			'show_boat_class_filter' => (isset($settings['show_boat_class_filter']) && $settings['show_boat_class_filter'] === 'yes') ? 'true' : 'false',
 		];
 
 		// Apply pre-filters
@@ -1383,7 +1424,11 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 		if (!empty($settings['prefilter_builder'])) {
 			$atts['builder'] = $settings['prefilter_builder'];
 		}
-		
+
+		if (!empty($settings['prefilter_boat_class'])) {
+			$atts['boat_class'] = $settings['prefilter_boat_class'];
+		}
+
 		if (!empty($settings['prefilter_location'])) {
 			$atts['location'] = $settings['prefilter_location'];
 		}
@@ -1415,10 +1460,16 @@ class WPBS_Elementor_Widget extends \Elementor\Widget_Base
 				}
 			}
 		} elseif (is_tax('boat_status')) {
-			// Handle boat_status taxonomy if needed
 			$term = get_queried_object();
 			if ($term) {
 				// You can add status filtering here if your shortcode supports it
+			}
+		} elseif (is_tax('boat_class')) {
+			$term = get_queried_object();
+			if ($term && isset($term->name)) {
+				if (empty($atts['boat_class'])) {
+					$atts['boat_class'] = $term->name;
+				}
 			}
 		}
 

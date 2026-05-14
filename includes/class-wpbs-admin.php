@@ -33,6 +33,12 @@ class WPBS_Admin
 		add_action('admin_post_wpbs_retrofit_brands', array($this, 'handle_retrofit_brands'));
 		// Dry-run version (reports what would change without making assignments)
 		add_action('admin_post_wpbs_retrofit_brands_dryrun', array($this, 'handle_retrofit_brands_dryrun'));
+		// One-off retrofit to assign boat_class terms from existing meta
+		add_action('admin_post_wpbs_retrofit_boat_class', array($this, 'handle_retrofit_boat_class'));
+		// Dry-run version for boat_class
+		add_action('admin_post_wpbs_retrofit_boat_class_dryrun', array($this, 'handle_retrofit_boat_class_dryrun'));
+		// One-off retrofit to assign boat_status terms from existing meta
+		add_action('admin_post_wpbs_retrofit_boat_status', array($this, 'handle_retrofit_boat_status'));
 	}
 
 	public function enqueue_admin_assets($hook)
@@ -978,6 +984,30 @@ class WPBS_Admin
 		echo '<p><button type="submit" class="button">Run dry-run</button> <span style="margin-left:10px; color:#666;">You will be redirected back with a summary of what would change.</span></p>';
 		echo '</form>';
 
+		// One-off retrofit button: assign boat_class terms from existing wpbs_boat_class_codes meta.
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:18px;">';
+		echo '<input type="hidden" name="action" value="wpbs_retrofit_boat_class" />';
+		wp_nonce_field('wpbs_retrofit_boat_class');
+		echo '<p><strong>Retrofit existing boats:</strong> Assign `boat_class` terms from existing <code>wpbs_boat_class_codes</code> post meta. This will create missing boat class terms and attach them to boats.</p>';
+		echo '<p><button type="submit" class="button button-secondary">Run Boat Class retrofit now</button> <span style="margin-left:10px; color:#666;">You will be redirected back with a summary.</span></p>';
+		echo '</form>';
+
+		// Dry-run for boat_class
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:8px;">';
+		echo '<input type="hidden" name="action" value="wpbs_retrofit_boat_class_dryrun" />';
+		wp_nonce_field('wpbs_retrofit_boat_class_dryrun');
+		echo '<p><strong>Dry-run:</strong> Simulate assigning `boat_class` terms and report counts (no changes will be made).</p>';
+		echo '<p><button type="submit" class="button">Run Boat Class dry-run</button> <span style="margin-left:10px; color:#666;">You will be redirected back with a summary of what would change.</span></p>';
+		echo '</form>';
+
+		// One-off retrofit: assign boat_status terms from existing wpbs_sales_status meta.
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:18px;">';
+		echo '<input type="hidden" name="action" value="wpbs_retrofit_boat_status" />';
+		wp_nonce_field('wpbs_retrofit_boat_status');
+		echo '<p><strong>Retrofit existing boats:</strong> Assign `boat_status` terms from existing <code>wpbs_sales_status</code> post meta. This will create missing status terms (Active, Sale Pending, etc.) and attach them to boats.</p>';
+		echo '<p><button type="submit" class="button button-secondary">Run Boat Status retrofit now</button> <span style="margin-left:10px; color:#666;">You will be redirected back with a summary.</span></p>';
+		echo '</form>';
+
 		echo '</div>';
 	}
 
@@ -1107,6 +1137,226 @@ class WPBS_Admin
 		}
 
 		$redirect = add_query_arg(array('page' => 'wpbs-settings', 'dry_assigned' => $assigned, 'dry_skipped' => $skipped, 'dry_would_create' => $would_create), admin_url('admin.php'));
+		wp_safe_redirect($redirect);
+		exit;
+	}
+
+	/**
+	 * Handle admin POST to retrofit boat_class terms for existing boat posts.
+	 */
+	public function handle_retrofit_boat_class()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_die('Forbidden', '', array('response' => 403));
+		}
+		check_admin_referer('wpbs_retrofit_boat_class');
+
+		$assigned = 0;
+		$skipped = 0;
+		$created_terms = 0;
+
+		$paged = 1;
+		$per_page = 200;
+
+		while (true) {
+			$query = new WP_Query(array(
+				'post_type' => WPBS_POST_TYPE,
+				'post_status' => 'any',
+				'posts_per_page' => $per_page,
+				'paged' => $paged,
+				'fields' => 'ids',
+			));
+
+			if (empty($query->posts)) break;
+
+			foreach ($query->posts as $post_id) {
+				$class_codes = (string)get_post_meta($post_id, 'wpbs_boat_class_codes', true);
+				$class_codes = trim($class_codes);
+				if ($class_codes === '') {
+					$skipped++;
+					continue;
+				}
+
+				$codes = array_map('trim', explode(',', $class_codes));
+				$slugs = array();
+				foreach ($codes as $code) {
+					if ($code === '') {
+						continue;
+					}
+					$slug = sanitize_title($code);
+					$term = get_term_by('slug', $slug, 'boat_class');
+					if (!$term) {
+						$res = wp_insert_term($code, 'boat_class', array('slug' => $slug));
+						if (!is_wp_error($res)) {
+							$created_terms++;
+						}
+					}
+					$slugs[] = $slug;
+				}
+
+				if (!empty($slugs)) {
+					wp_set_object_terms($post_id, $slugs, 'boat_class', false);
+					$assigned++;
+				} else {
+					$skipped++;
+				}
+			}
+
+			$paged++;
+			wp_cache_flush();
+			if (function_exists('gc_collect_cycles')) {
+				gc_collect_cycles();
+			}
+		}
+
+		$redirect = add_query_arg(array('page' => 'wpbs-settings', 'bc_retro_assigned' => $assigned, 'bc_retro_skipped' => $skipped, 'bc_retro_created' => $created_terms), admin_url('admin.php'));
+		wp_safe_redirect($redirect);
+		exit;
+	}
+
+	/**
+	 * Dry-run: simulate boat_class retrofit and report counts without making changes.
+	 */
+	public function handle_retrofit_boat_class_dryrun()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_die('Forbidden', '', array('response' => 403));
+		}
+		check_admin_referer('wpbs_retrofit_boat_class_dryrun');
+
+		$assigned = 0;
+		$skipped = 0;
+		$would_create = 0;
+
+		$paged = 1;
+		$per_page = 200;
+
+		while (true) {
+			$query = new WP_Query(array(
+				'post_type' => WPBS_POST_TYPE,
+				'post_status' => 'any',
+				'posts_per_page' => $per_page,
+				'paged' => $paged,
+				'fields' => 'ids',
+			));
+
+			if (empty($query->posts)) break;
+
+			foreach ($query->posts as $post_id) {
+				$class_codes = (string)get_post_meta($post_id, 'wpbs_boat_class_codes', true);
+				$class_codes = trim($class_codes);
+				if ($class_codes === '') {
+					$skipped++;
+					continue;
+				}
+
+				$codes = array_map('trim', explode(',', $class_codes));
+				$has_terms = false;
+				foreach ($codes as $code) {
+					if ($code === '') {
+						continue;
+					}
+					$slug = sanitize_title($code);
+					$term = get_term_by('slug', $slug, 'boat_class');
+					if (!$term) {
+						$would_create++;
+					}
+					$has_terms = true;
+				}
+
+				if ($has_terms) {
+					$assigned++;
+				} else {
+					$skipped++;
+				}
+			}
+
+			$paged++;
+		}
+
+		$redirect = add_query_arg(array('page' => 'wpbs-settings', 'bc_dry_assigned' => $assigned, 'bc_dry_skipped' => $skipped, 'bc_dry_would_create' => $would_create), admin_url('admin.php'));
+		wp_safe_redirect($redirect);
+		exit;
+	}
+
+	/**
+	 * Handle admin POST to retrofit boat_status terms from existing wpbs_sales_status meta.
+	 */
+	public function handle_retrofit_boat_status()
+	{
+		if (!current_user_can('manage_options')) {
+			wp_die('Forbidden', '', array('response' => 403));
+		}
+		check_admin_referer('wpbs_retrofit_boat_status');
+
+		$assigned = 0;
+		$skipped = 0;
+		$created_terms = 0;
+
+		// Ensure 'sold' term exists for backward compatibility
+		if (!get_term_by('slug', 'sold', 'boat_status')) {
+			wp_insert_term('Sold', 'boat_status', array('slug' => 'sold'));
+		}
+
+		$paged = 1;
+		$per_page = 200;
+
+		while (true) {
+			$query = new WP_Query(array(
+				'post_type' => WPBS_POST_TYPE,
+				'post_status' => 'any',
+				'posts_per_page' => $per_page,
+				'paged' => $paged,
+				'fields' => 'ids',
+			));
+
+			if (empty($query->posts)) break;
+
+			foreach ($query->posts as $post_id) {
+				$status = (string)get_post_meta($post_id, 'wpbs_sales_status', true);
+				$status = trim($status);
+				if ($status === '') {
+					$status = 'Active';
+				}
+
+				$slug = sanitize_title($status);
+				$term = get_term_by('slug', $slug, 'boat_status');
+				if (!$term) {
+					$res = wp_insert_term($status, 'boat_status', array('slug' => $slug));
+					if (!is_wp_error($res)) {
+						$created_terms++;
+					}
+				}
+
+				// Determine if active
+				$status_lower = strtolower($status);
+				$is_active = ($status_lower === 'active' || $status_lower === 'available');
+
+				$terms = array($slug);
+				if (!$is_active && $slug !== 'sold') {
+					$terms[] = 'sold';
+				}
+
+				wp_set_object_terms($post_id, $terms, 'boat_status', false);
+
+				// Sync _wpbs_is_sold for non-active boats
+				if (!$is_active) {
+					update_post_meta($post_id, '_wpbs_is_sold', '1');
+				} else {
+					delete_post_meta($post_id, '_wpbs_is_sold');
+				}
+
+				$assigned++;
+			}
+
+			$paged++;
+			wp_cache_flush();
+			if (function_exists('gc_collect_cycles')) {
+				gc_collect_cycles();
+			}
+		}
+
+		$redirect = add_query_arg(array('page' => 'wpbs-settings', 'bs_retro_assigned' => $assigned, 'bs_retro_skipped' => $skipped, 'bs_retro_created' => $created_terms), admin_url('admin.php'));
 		wp_safe_redirect($redirect);
 		exit;
 	}

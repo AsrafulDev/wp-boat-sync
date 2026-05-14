@@ -209,6 +209,21 @@ class WPBS_Plugin
 			'show_in_rest' => true,
 			'rewrite' => array('slug' => 'brand'),
 		));
+
+		// Register Boat Class taxonomy
+		register_taxonomy('boat_class', WPBS_POST_TYPE, array(
+			'labels' => array(
+				'name' => __('Boat Classes', 'wpbs'),
+				'singular_name' => __('Boat Class', 'wpbs'),
+				'show_ui' => __('Show Boat Classes', 'wpbs'),
+			),
+			'public' => true,
+			'hierarchical' => false,
+			'show_ui' => true,
+			'show_admin_column' => true,
+			'show_in_rest' => true,
+			'rewrite' => array('slug' => 'boat-class'),
+		));
 	}
 
 	public function template_include($template)
@@ -234,8 +249,8 @@ class WPBS_Plugin
 				return $archive;
 			}
 		}
-		// Brand or boat_status taxonomy archives
-		if (is_tax('brand') || is_tax('boat_status')) {
+		// Brand, boat_status, or boat_class taxonomy archives
+		if (is_tax('brand') || is_tax('boat_status') || is_tax('boat_class')) {
 			// Check if Elementor has a template assigned for this taxonomy
 			if (class_exists('\Elementor\Plugin')) {
 				$term = get_queried_object();
@@ -328,6 +343,7 @@ class WPBS_Plugin
 		// Filter parameters
 		$category = isset($_POST['category']) ? sanitize_text_field($_POST['category']) : '';
 		$builder = isset($_POST['builder']) ? sanitize_text_field($_POST['builder']) : '';
+		$boat_class = isset($_POST['boat_class']) ? sanitize_text_field($_POST['boat_class']) : '';
 		$location = isset($_POST['location']) ? sanitize_text_field($_POST['location']) : '';
 		$length_min = isset($_POST['length_min']) ? (float)$_POST['length_min'] : '';
 		$length_max = isset($_POST['length_max']) ? (float)$_POST['length_max'] : '';
@@ -366,6 +382,18 @@ class WPBS_Plugin
             ),
         );
     }
+
+		// Boat Class filter via taxonomy
+		if ($boat_class !== '') {
+			if (!isset($args['tax_query'])) {
+				$args['tax_query'] = array();
+			}
+			$args['tax_query'][] = array(
+				'taxonomy' => 'boat_class',
+				'field'    => 'slug',
+				'terms'    => sanitize_title($boat_class),
+			);
+		}
 
 		// Orderby
 		switch ($orderby) {
@@ -626,6 +654,14 @@ class WPBS_Plugin
 			WPBS_POST_TYPE
 		));
 		$options['builders'] = array_filter($builders);
+
+		// Boat Classes
+		$boat_class_terms = get_terms(array(
+			'taxonomy' => 'boat_class',
+			'hide_empty' => true,
+			'fields' => 'names',
+		));
+		$options['boat_classes'] = is_array($boat_class_terms) ? $boat_class_terms : array();
 
 		// Locations
 		$locations = $wpdb->get_col($wpdb->prepare(
