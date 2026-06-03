@@ -443,8 +443,8 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 		$fields = [
 			'length', 'beam', 'draft', 'displacement', 'dry_weight', 'bridge_clearance',
 			'deadrise', 'cabins', 'heads', 'num_engines', 'engine_make', 'engine_model',
-			'engine_type', 'total_power', 'engine_hours', 'fuel_type', 'drive_type',
-			'propeller', 'cruising_speed', 'max_speed', 'fuel_capacity', 'range',
+			'engine_year', 'engine_type', 'total_power', 'engine_hours', 'fuel_type', 'drive_type',
+			'propeller', 'propeller_material', 'cruising_speed', 'max_speed', 'fuel_capacity', 'range',
 			'water_capacity', 'condition', 'boat_category', 'boat_class', 'hull_material',
 			'location', 'engine', 'nominal_length', 'min_draft', 'cabin_headroom',
 			'engines_json', 'keel_type', 'trim_tabs', 'windlass_type', 'electrical_circuit',
@@ -616,6 +616,7 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 					if (!empty($eng['Model'])) echo '<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value">' . esc_html($eng['Model']) . '</span></p>';
 					if (!empty($eng['Year'])) echo '<p><span class="wpbs-details-label">Engine Year:</span><span class="wpbs-details-value">' . esc_html($eng['Year']) . '</span></p>';
 					if (!empty($eng['EnginePower'])) echo '<p><span class="wpbs-details-label">Total Power:</span><span class="wpbs-details-value">' . esc_html($eng['EnginePower']) . '</span></p>';
+					if (!empty($eng['Hours'])) echo '<p><span class="wpbs-details-label">Engine Hours:</span><span class="wpbs-details-value">' . esc_html($eng['Hours']) . '</span></p>';
 					if (!empty($eng['Type'])) echo '<p><span class="wpbs-details-label">Engine Type:</span><span class="wpbs-details-value">' . esc_html($eng['Type']) . '</span></p>';
 					if (!empty($eng['DriveType'])) echo '<p><span class="wpbs-details-label">Drive Type:</span><span class="wpbs-details-value">' . esc_html($eng['DriveType']) . '</span></p>';
 					if (!empty($eng['Fuel'])) echo '<p><span class="wpbs-details-label">Fuel Type:</span><span class="wpbs-details-value">' . esc_html($eng['Fuel']) . '</span></p>';
@@ -627,15 +628,15 @@ class WPBS_Elementor_Accordion_Widget extends \Elementor\Widget_Base
 			} else {
 				// Fallback to single engine meta
 				echo '<div class="wpbs-details-cell"><h3>Engine</h3><div class="wpbs-details-cell__content">';
-				if ($meta['num_engines']) echo '<p><span class="wpbs-details-label">Number of Engines:</span><span class="wpbs-details-value">' . esc_html($meta['num_engines']) . '</span></p>';
 				if ($meta['engine_make']) echo '<p><span class="wpbs-details-label">Engine Make:</span><span class="wpbs-details-value">' . esc_html($meta['engine_make']) . '</span></p>';
 				if ($meta['engine_model']) echo '<p><span class="wpbs-details-label">Engine Model:</span><span class="wpbs-details-value">' . esc_html($meta['engine_model']) . '</span></p>';
-				if ($meta['engine_type']) echo '<p><span class="wpbs-details-label">Engine Type:</span><span class="wpbs-details-value">' . esc_html($meta['engine_type']) . '</span></p>';
+				if ($meta['engine_year']) echo '<p><span class="wpbs-details-label">Engine Year:</span><span class="wpbs-details-value">' . esc_html($meta['engine_year']) . '</span></p>';
 				if ($meta['total_power']) echo '<p><span class="wpbs-details-label">Total Power:</span><span class="wpbs-details-value">' . esc_html($meta['total_power']) . '</span></p>';
 				if ($meta['engine_hours']) echo '<p><span class="wpbs-details-label">Engine Hours:</span><span class="wpbs-details-value">' . esc_html($meta['engine_hours']) . '</span></p>';
+				if ($meta['engine_type']) echo '<p><span class="wpbs-details-label">Engine Type:</span><span class="wpbs-details-value">' . esc_html($meta['engine_type']) . '</span></p>';
 				if ($meta['fuel_type']) echo '<p><span class="wpbs-details-label">Fuel Type:</span><span class="wpbs-details-value">' . esc_html(ucfirst($meta['fuel_type'])) . '</span></p>';
-				if ($meta['drive_type']) echo '<p><span class="wpbs-details-label">Drive Type:</span><span class="wpbs-details-value">' . esc_html($meta['drive_type']) . '</span></p>';
-				if ($meta['propeller']) echo '<p><span class="wpbs-details-label">Propeller:</span><span class="wpbs-details-value">' . esc_html($meta['propeller']) . '</span></p>';
+				if ($meta['propeller']) echo '<p><span class="wpbs-details-label">Propeller Type:</span><span class="wpbs-details-value">' . esc_html($meta['propeller']) . '</span></p>';
+				if ($meta['propeller_material']) echo '<p><span class="wpbs-details-label">Propeller Material:</span><span class="wpbs-details-value">' . esc_html($meta['propeller_material']) . '</span></p>';
 				echo '</div></div>';
 			}
 

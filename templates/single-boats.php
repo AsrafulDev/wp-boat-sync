@@ -218,6 +218,7 @@ while (have_posts()) : the_post();
 
 			<!-- Quick Specs Icons Row (8 items) -->
 			<div class="wpbs-quick-specs">
+				<div class="wpbs-quick-specs__list">
 				<!-- 1. Engine -->
 				<div class="wpbs-quick-spec">
 					<svg class="wpbs-quick-spec__icon" viewBox="0 0 512 512"><circle cx="256" cy="256" r="246" fill="none" stroke="#e0e0e0" stroke-width="10"/><path fill="#104f79" d="m347.35,178.61c-.15,0-.3,0-.45-.02h-165.87c-2.76,0-5-2.24-5-5v-47.05c0-15.55,12.66-28.21,28.22-28.21h119.89c15.56,0,28.21,12.66,28.21,28.21v47.07c0,1.43-.61,2.79-1.68,3.74-.92.82-2.1,1.26-3.32,1.26Zm-161.32-10.02h156.32v-42.05c0-10.04-8.17-18.21-18.21-18.21h-119.89c-10.05,0-18.22,8.17-18.22,18.21v42.05Z"/><path fill="#104f79" d="m318.65,244.53h-108.92c-13.29,0-24.87-9-28.17-21.88l-5.37-20.94c-.1-.41-.16-.82-.16-1.24v-.38c0-2.76,2.24-5,5-5h165.81c.08,0,.15,0,.23,0,1.37-.05,2.72.44,3.71,1.38.99.94,1.57,2.25,1.57,3.61v.39c0,.42-.05.83-.16,1.24l-5.36,20.94c-3.3,12.88-14.89,21.88-28.18,21.88Z"/><path fill="#104f79" d="m233.76,413.24c-14.88,0-26.98-12.1-26.98-26.98v-145.31c0-2.76,2.24-5,5-5h86.82c1.57,0,3.05.74,4,2,.94,1.26,1.24,2.88.81,4.39l-43.73,151.41c-3.31,11.48-13.97,19.49-25.92,19.49Z"/></svg>
@@ -281,6 +282,7 @@ while (have_posts()) : the_post();
 						<div class="wpbs-quick-spec__label">Capacity</div>
 						<div class="wpbs-quick-spec__value"><?php echo esc_html(get_post_meta($post_id, 'wpbs_passenger_capacity', true) ?: '—'); ?></div>
 					</div>
+				</div>
 				</div>
 			</div>
 

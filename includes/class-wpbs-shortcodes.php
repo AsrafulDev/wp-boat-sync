@@ -334,7 +334,7 @@ class WPBS_Shortcodes
 		$meta = $this->get_boat_meta($post_id);
 		$capacity = get_post_meta($post_id, 'wpbs_passenger_capacity', true);
 
-		$out = '<div class="wpbs-quick-specs">';
+		$out = '<div class="wpbs-quick-specs"><div class="wpbs-quick-specs__list">';
 
 		// 1. Engine
 		$engine_label = $meta['engine'] ?: ($meta['engine_make'] && $meta['engine_model'] ? $meta['engine_make'] . ' ' . $meta['engine_model'] : '—');
@@ -395,7 +395,7 @@ class WPBS_Shortcodes
 		$out .= '<div class="wpbs-quick-spec__value">' . esc_html($capacity ?: '—') . '</div>';
 		$out .= '</div>';
 
-		$out .= '</div>';
+		$out .= '</div></div>';
 		return $out;
 	}
 
