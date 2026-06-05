@@ -893,7 +893,6 @@ class WPBS_Sync
 			'wpbs_engine_type' => isset($first_engine['Type']) ? (string)$first_engine['Type'] : '',
 			'wpbs_fuel_type' => isset($first_engine['Fuel']) ? (string)$first_engine['Fuel'] : '',
 			'wpbs_propeller_type' => isset($first_engine['PropellerType']) ? (string)$first_engine['PropellerType'] : '',
-			'wpbs_propeller_material' => isset($first_engine['PropellerMaterial']) ? (string)$first_engine['PropellerMaterial'] : '',
 
 			// Capacity
 			'wpbs_fuel_tank_capacity' => isset($data['FuelTankCapacityMeasure']) ? (string)$data['FuelTankCapacityMeasure'] : '',
