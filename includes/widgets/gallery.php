@@ -679,7 +679,7 @@ class WPBS_Elementor_Gallery_Widget extends \Elementor\Widget_Base
 
 			<?php if ($total_media > 1): ?>
 				<div class="wpbs-gallery__thumbs" role="list">
-					<?php foreach (array_slice($gallery_ids, 0, 20) as $i => $aid):
+					<?php foreach ($gallery_ids as $i => $aid):
 						$aid   = (int)$aid;
 						$thumb = wp_get_attachment_image_url($aid, 'thumbnail');
 						$large = wp_get_attachment_image_url($aid, 'large');
