@@ -197,10 +197,14 @@ while (have_posts()) : the_post();
 						// Try to extract YouTube/Vimeo thumbnail
 						$video_thumb = '';
 						$vclean = preg_replace('/\|.*$/', '', trim($vurl));
-						if (preg_match('/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/', $vclean, $m) || preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $vclean, $m)) {
+						if (preg_match('/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/', $vclean, $m)) {
 							$video_thumb = 'https://img.youtube.com/vi/' . $m[1] . '/mqdefault.jpg';
-						} elseif (preg_match('/vimeo\.com\/(\d+)/', $vclean, $m)) {
+						} elseif (preg_match('/(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/', $vclean, $m)) {
 							$video_thumb = ''; // Vimeo requires API call
+						} elseif (preg_match('/dailymotion\.com\/video\/([a-zA-Z0-9]+)/', $vclean, $m)) {
+							$video_thumb = 'https://www.dailymotion.com/thumbnail/video/' . $m[1];
+						} elseif (preg_match('/(?:loom\.com\/share\/|loom\.com\/embed\/)([a-zA-Z0-9]+)/', $vclean, $m)) {
+							$video_thumb = 'https://cdn.loom.com/sessions/thumbnails/' . $m[1] . '-with-play.gif';
 						}
 					?>
 					<button type="button" class="wpbs-gallery__thumb wpbs-gallery__thumb--video" data-index="<?php echo $video_index; ?>" data-type="video" data-video-url="<?php echo esc_url($vclean); ?>">
