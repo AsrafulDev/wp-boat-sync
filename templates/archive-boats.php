@@ -114,6 +114,13 @@ $yr_max = max($yr_min + 1, (int)($filter_options['years']['max'] ?? date('Y')));
 $pr_min = max(0, (int)($filter_options['prices']['min'] ?? 0));
 $pr_max = max($pr_min + 1000, (int)($filter_options['prices']['max'] ?? 5000000));
 
+// Round price range to step multiples (step=5000) so the slider covers all boats.
+// Without this, boats priced between the slider's max selectable value
+// and the actual DB max (e.g. 1485000–1487900) would be excluded.
+$price_step = 5000;
+$pr_min = floor($pr_min / $price_step) * $price_step;
+$pr_max = ceil($pr_max / $price_step) * $price_step;
+
 // Current slider values
 $cur_length_min = $f_length_min !== '' ? (int)$f_length_min : $len_min;
 $cur_length_max = $f_length_max !== '' ? (int)$f_length_max : $len_max;
